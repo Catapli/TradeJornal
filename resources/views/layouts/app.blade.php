@@ -8,9 +8,9 @@
         <meta name="csrf-token"
               content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Cloud Detrafic') }}</title>
+        <title>{{ config('app.name', 'TradeForge') }}</title>
         <link rel="icon"
-              href="{{ asset('img/favicon/favicon.ico') }}"
+              href="{{ asset('img/favicon/logo.ico') }}"
               type="image/x-icon">
         <!-- Fonts -->
         <link rel="preconnect"
@@ -19,7 +19,7 @@
               rel="stylesheet" />
 
         <link rel="icon"
-              href="{{ asset('img/favicon/favicon.ico') }}"
+              href="{{ asset('img/favicon/logo.ico') }}"
               type="image/x-icon">
 
 
@@ -34,19 +34,15 @@
         <livewire:language-manager />
         <x-banner />
 
-        <div class="min-h-screen bg-white">
+        <div class="bg-white">
             @livewire('navigation-menu')
 
             @include('sidebar-menu')
 
 
             @if (isset($header))
-                <header class="fixed z-10 ml-12 mt-[55px] w-full bg-white shadow">
+                <header class="fixed top-0 z-10 ml-12 mt-[55px] w-full bg-white shadow">
                     <div class="flex max-w-7xl items-center space-x-1.5 px-4 py-3 sm:px-6 lg:px-8">
-                        <img class="h-8"
-                             src="{{ asset('img/detrafic_logo_gradient.png') }}"
-                             alt="">
-                        <span class="text-2xl text-gray-500">></span>
                         {{ $header }}
                     </div>
                 </header>

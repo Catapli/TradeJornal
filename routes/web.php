@@ -44,6 +44,11 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
+    // ? Ruta AccountPage
+    Route::get('/cuentas', function () {
+        return view('accounts.index');
+    })->name('cuentas');
+
     //? Ruta Dashboard
     Route::get('/dashboard', function () {
         return view('dashboard');
@@ -72,7 +77,6 @@ Route::middleware([
 
 
     //? API
-    Route::get('/towns/data', [TownController::class, 'data']);         //? Obtener Municipios    
     Route::get('/logs/data', [LogController::class, 'index']);        //? Obtener Logs
     Route::get('/users/data', [UserController::class, 'data']);       //? Obtener Usuarios
     Route::get('/rols/data', [RolsController::class, 'data']);

@@ -1,5 +1,5 @@
 <a href="/">
-    <img class="h-40 object-scale-down"
-         src="{{ asset('img/bht_logo.png') }}"
+    <img class="object-scale-down"
+         src="{{ asset('img/logo.png') }}"
          alt="">
 </a>

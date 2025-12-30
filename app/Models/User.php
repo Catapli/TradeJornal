@@ -69,21 +69,20 @@ class User extends Authenticatable
         ];
     }
 
-    public function town()
+
+    public function accounts()
     {
-        return $this->belongsTo(Town::class);
+        return $this->hasMany(Account::class);
     }
 
-    public function role()
+    public function activeAccounts()
     {
-        return $this->belongsTo(Role::class);
+        return $this->accounts()->where('status', 'active');
     }
 
 
-    public function canDo(string $section, string $action): bool
-    {
-        return $this->role?->hasPermission($section, $action) ?? false;
-    }
+
+
 
     public function isSuperAdmin(): bool
     {

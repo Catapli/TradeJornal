@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "aleedhillon/meta-five": "^1.1",
         "itsgoingd/clockwork": "^5.3",
         "kreait/laravel-firebase": "^6.1",
         "laravel-lang/common": "^6.4",

@@ -7,6 +7,7 @@ import $ from "jquery";
 import "./bootstrap";
 import "./logs/logs.js";
 import "./users/users.js";
+import "./accounts/accounts.js";
 import translations from "./plugins/translations";
 window.$ = window.jQuery = $;
 window.Chart = Chart;

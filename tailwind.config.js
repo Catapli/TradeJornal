@@ -20,8 +20,8 @@ export default {
             },
             colors: {
                 primary: "#0033a1",
-                secondary: "#333333",
-                secondaryhover: "#202020",
+                secondary: "#374361",
+                secondaryhover: "#535a6b",
                 backbuttons: "#0000ff29",
             },
             height: {

@@ -15,6 +15,44 @@
     display: none;
 }
 
+select option {
+    @apply bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-900 shadow-sm;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+}
+
+/* SELECT OPTIONS PREMIUM */
+/*select option {
+    @apply bg-white font-medium text-gray-500 italic  py-4 px-6 text-lg border-b border-gray-100;
+    padding-left: 2.5rem; /~ Espacio para icono ~/
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+select option:hover {
+    @apply bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-900 shadow-sm;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+}
+
+select option:checked {
+    @apply bg-gradient-to-r from-emerald-500 to-green-600 text-black border-emerald-400 font-black shadow-md;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+select:focus option {
+    @apply shadow-lg;
+}
+*/
+/* Iconos en options (pseudo-element) */
+select option::before {
+    content: "🏦 ";
+    margin-right: 0.5rem;
+    opacity: 0.8;
+}
+
+select option:hover::before {
+    content: "⭐ ";
+    opacity: 1;
+}
+
 .shadow_btn {
     box-shadow: 3px 3px 6px #7a7a7a;
 }

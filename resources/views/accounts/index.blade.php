@@ -1,12 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <i class="fa-solid fa-city text-2xl"></i>
+        <i class="fa-solid fa-circle-dollar-to-slot text-2xl"></i>
         <h2 class="text-xl font-semibold leading-tight text-gray-800">
-            {{ __('Entidades') }}
+            {{ __('menu.accounts') }}
         </h2>
     </x-slot>
 
     <div class="py-4">
-        @livewire('town')
+        @livewire('account-page')
     </div>
 </x-app-layout>
