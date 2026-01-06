@@ -46,15 +46,9 @@ class TradeFactory extends Factory
             'ticket' => 'T' . fake()->unique()->numberBetween(100000, 999999),
             'direction' => $direction,
             'entry_price' => $entryPrice,
-            'exit_price' => round($exitPrice, 5), // ← ROUND 5 decimales
             'size' => $size,
             'pnl' => round($pnl, 2),
-            'pnl_pct' => round($pnlPct, 2), // ← MAX 500.00
-            'rr_ratio' => round(abs($pnl / $riskAmount), 2), // ← MAX 5.00
-            'risk_amount' => round($riskAmount, 2),
-            'reward_amount' => round(abs($pnl), 2),
             'duration_minutes' => fake()->numberBetween(15, 4320),
-            'status' => $isWin ? 'closed' : fake()->randomElement(['closed', 'breakeven']),
             'entry_time' => fake()->dateTimeBetween('-90 days', 'now'),
             'exit_time' => fake()->dateTimeBetween('-90 days', 'now'),
             'notes' => fake()->randomElement([null, 'Breakout', 'RSI div', 'News']),

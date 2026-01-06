@@ -34,8 +34,10 @@ document.addEventListener("alpine:init", () => {
                 this.initChart();
             });
 
-            // ← NUEVO: Escuchar evento de Livewire
-            window.addEventListener("init-chart", () => {});
+            window.addEventListener("account-updated", (event) => {
+                this.timeframe = event.detail.timeframe;
+                this.initChart();
+            });
         },
 
         setTimeframe(value) {

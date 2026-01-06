@@ -10,6 +10,7 @@ class Account extends Model
         'user_id',
         'name',
         'broker',
+        'last_sync',
         'initial_balance',
         'current_balance',
         'max_balance',

@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;   // <-- añade esto
+use App\Events\AccountSynced;           // ← AÑADE
+use App\Listeners\SyncAccountListener;  // ← AÑADE
+use Illuminate\Support\Facades\Event;  // ← AÑADE IMPORT
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,5 +25,8 @@ class AppServiceProvider extends ServiceProvider
         if (session()->has('locale')) {
             app()->setLocale(session()->get('locale'));
         }
+
+        // 🔥 AÑADE ESTAS 2 LÍNEAS
+        Event::listen(AccountSynced::class, SyncAccountListener::class);
     }
 }

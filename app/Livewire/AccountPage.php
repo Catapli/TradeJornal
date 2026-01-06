@@ -2,9 +2,14 @@
 
 namespace App\Livewire;
 
+use App\Jobs\SyncAccountTrades;
+use App\Jobs\SyncMt5Account;
 use App\Models\Account;
 use App\Models\Trade;
+use App\Services\Mt5Gateway;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class AccountPage extends Component
@@ -20,6 +25,11 @@ class AccountPage extends Component
         'labels' => [],
         'datasets' => []
     ];
+    public $lastSyncedAccountId;
+    public $isSyncing = false;  // idle, syncing, done
+    public $firstTradeDate;
+    public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
+
 
     public $selectedTimeframe = 'all'; // ← NUEVO
 
@@ -38,12 +48,82 @@ class AccountPage extends Component
         $this->updateData();
     }
 
+    /**
+     * 🔥 ESTA ES LA FUNCIÓN QUE QUERÍAS EJECUTAR
+     * Aquí pones toda la lógica post-job.
+     */
+    public function onSyncCompleted()
+    {
+        // Ejemplo de lógica:
+        $balance = $this->selectedAccount->balance;
+
+
+        // Calcular algo...
+        // $this->actualizarEstadisticas();
+
+        // Notificar usuario
+        $this->updateData();
+        $this->dispatch('timeframe-updated', timeframe: 'all');
+
+        session()->flash('message', "✅ Sync finalizado. Nuevo balance: $balance");
+
+        Log::info("Livewire: Lógica post-sync ejecutada correctamente.");
+    }
+
+
     //* Para modificar el timeframe del grafico
     public function setTimeframe($timeframe) // ← NUEVO MÉTODO
     {
         $this->selectedTimeframe = $timeframe;
         $this->loadBalanceChart(); // ← Recarga gráfico filtrado
         $this->dispatch('timeframe-updated', timeframe: $timeframe);
+    }
+
+    public function refreshData()
+    {
+        $this->updateData();  // Tu método existente
+        $this->isSyncing = false;
+        session()->flash('message', '✅ Sync completado');
+    }
+
+    /**
+     * Esta función es llamada automáticamente por wire:poll cada X segundos
+     * MIENTRAS $isSyncing sea true.
+     */
+    public function checkSyncStatus()
+    {
+        // Refrescamos modelo para ver si el Job ya tocó la DB
+        $this->selectedAccount->refresh();
+
+        // CONDICIÓN DE ÉXITO: 
+        // Si la cuenta se actualizó DESPUÉS de que empezamos el sync
+        if ($this->selectedAccount->updated_at > $this->syncStartTime) {
+
+            // 1. Detenemos el polling (importante para que deje de preguntar)
+            $this->isSyncing = false;
+
+            // 2. 🔥 EJECUTAMOS TU LÓGICA FINAL AQUÍ
+            $this->onSyncCompleted();
+        }
+    }
+
+
+
+
+    public function syncSelectedAccount(): void
+    {
+        // 1. Inicia el proceso
+        $this->isSyncing = true;
+        $this->syncStartTime = Carbon::now();
+
+        // 2. Manda el Job a la cola
+        SyncMt5Account::dispatch($this->selectedAccount);
+    }
+    public function changeAccount($accountId)
+    {
+        $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
+        $this->updateData();
+        $this->dispatch('timeframe-updated', timeframe: 'all');
     }
 
 
@@ -54,14 +134,16 @@ class AccountPage extends Component
         if ($this->selectedAccount) {
             // ← CALCULA P&L real de trades
             $this->totalPnl = $this->selectedAccount->trades()
-                ->where('status', 'closed')
                 ->sum('pnl');
-
-            // dd($this->totalPnl);
+            Log::info("Total PnL calculado: " . $this->totalPnl);
 
             // ← Actualiza balance con trades REALES
             $this->selectedAccount->current_balance = $this->selectedAccount->initial_balance + $this->totalPnl;
             $this->selectedAccount->save();
+
+            $this->firstTradeDate = $this->selectedAccount->trades()
+                ->orderBy('exit_time', 'asc')
+                ->value('exit_time');
             $this->loadBalanceChart();
         }
     }
@@ -69,7 +151,6 @@ class AccountPage extends Component
     private function loadBalanceChart() // ← MODIFICAR existente
     {
         $trades = $this->selectedAccount->trades()
-            ->where('status', 'closed')
             ->when($this->selectedTimeframe !== 'all', function ($query) {
                 $config = $this->timeframes[$this->selectedTimeframe];
                 if (isset($config['minutes'])) {
@@ -82,6 +163,7 @@ class AccountPage extends Component
             })
             ->orderBy('exit_time')
             ->get();
+
 
         $labels = ['Inicio'];
         $balanceData = [$this->selectedAccount->initial_balance];
@@ -108,28 +190,6 @@ class AccountPage extends Component
         ];
     }
 
-    public function updatedSelectedAccountId($accountId)
-    {
-        // ← MAGIA: Cuando cambia select → busca cuenta
-        // ← Carga cuenta + trades P&L
-        $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
-        $this->updateData();
-    }
-
-
-    public function createAccount()
-    {
-        $this->showCreateModal = true;
-    }
-
-    public function editAccount()
-    {
-        if (!$this->selectedAccount) {
-            session()->flash('error', 'Selecciona una cuenta primero');
-            return;
-        }
-        $this->showEditModal = true;
-    }
 
 
     public function render()

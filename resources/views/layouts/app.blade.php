@@ -41,7 +41,7 @@
 
 
             @if (isset($header))
-                <header class="fixed top-0 z-10 ml-12 mt-[55px] w-full bg-white shadow">
+                <header class="relative top-0 z-10 ml-12 mt-[55px] w-auto bg-white shadow">
                     <div class="flex max-w-7xl items-center space-x-1.5 px-4 py-3 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
@@ -51,7 +51,7 @@
 
 
             {{-- Page Content --}}
-            <main class="ml-12 mt-28">
+            <main class="ml-12">
                 {{ $slot }}
             </main>
         </div>

@@ -17,6 +17,7 @@ export default {
             fontFamily: {
                 sans: ["Figtree", ...defaultTheme.fontFamily.sans],
                 poppins: ["Poppins", "sans-serif"],
+                google: ["Google Sans", ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 primary: "#0033a1",

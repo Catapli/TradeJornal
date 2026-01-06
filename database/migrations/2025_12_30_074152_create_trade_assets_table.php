@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('trade_assets', function (Blueprint $table) {
             $table->id();
             $table->string('symbol'); // "EURUSD", "BTCUSD", "NAS100"
-            $table->string('name'); // "Euro Dólar", "Bitcoin"
-            $table->string('category'); // "Forex", "Crypto", "Indices"
+            $table->string('name')->nullable(); // "Euro Dólar", "Bitcoin"
+            $table->string('category')->nullable(); // "Forex", "Crypto", "Indices"
             $table->string('broker_symbol')->nullable(); // Variación broker
             $table->timestamps();
         });

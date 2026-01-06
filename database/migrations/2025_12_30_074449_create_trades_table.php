@@ -19,20 +19,14 @@ return new class extends Migration
             $table->string('ticket'); // ID único broker
             $table->enum('direction', ['long', 'short']);
             $table->decimal('entry_price', 12, 5);
-            $table->decimal('exit_price', 12, 5);
             $table->decimal('size', 12, 2);
             $table->decimal('pnl', 10, 2);
-            $table->decimal('pnl_pct', 5, 2);
-            $table->decimal('rr_ratio', 4, 2); // 1:2.5
-            $table->decimal('risk_amount', 10, 2);
-            $table->decimal('reward_amount', 10, 2);
-            $table->integer('duration_minutes');
-            $table->enum('status', ['open', 'closed', 'breakeven']);
+            $table->unsignedBigInteger('duration_minutes');
             $table->timestamp('entry_time');
             $table->timestamp('exit_time')->nullable();
             $table->text('notes')->nullable();
             $table->string('screenshot')->nullable();
-            $table->index(['account_id', 'status']);
+            $table->index(['account_id']);
             $table->index('entry_time');
             $table->timestamps();
         });
