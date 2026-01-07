@@ -19,6 +19,7 @@ class Mt5Gateway
         Log::info($account);
 
         $password = decrypt($account->mt5_password);
+        Log::info($password);
         $response = Http::timeout(30)->post('http://185.116.236.222:5000/sync-account', [
             'login' => $account->mt5_login,
             'password' => $password,
@@ -28,11 +29,10 @@ class Mt5Gateway
         ]);
 
         if ($response->failed()) {
-            Log::error('MT5 Sync failed', [
-                'account_id' => $account->id,
-                'error' => $response->json('error', 'Unknown error')
-            ]);
-            return false;
+            $errorMsg = $response->json('error', 'HTTP ' . $response->status());
+
+            // 👇 LANZA para fallar el job automáticamente
+            throw new \RuntimeException("Sync API failed: {$errorMsg}");
         }
 
         $data = $response->json();
@@ -49,12 +49,12 @@ class Mt5Gateway
         $this->importTrades($account, $data['trades']);
 
         // Actualizar cuenta
-        $account->update([
-            'current_balance' => $data['balance'],
-            'equity' => $data['equity'],
-            'margin_free' => $data['margin_free'],
-            'last_sync' => now()
-        ]);
+        // $account->update([
+        //     'current_balance' => $data['balance'],
+        //     'equity' => $data['equity'],
+        //     'margin_free' => $data['margin_free'],
+        //     'last_sync' => now()
+        // ]);
 
         Log::info('✅ Sync OK', [
             'account_id' => $account->id,

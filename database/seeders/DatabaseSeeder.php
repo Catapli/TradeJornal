@@ -58,7 +58,8 @@ class DatabaseSeeder extends Seeder
             'max_total_loss' => 6,
             'mt5_login' => '7727667',
             'mt5_password' => encrypt('9Z35szttsH7@'),
-            'mt5_server' => 'Neomaaa-Live'
+            'mt5_server' => 'Neomaaa-Live',
+            'funded_date' => fake()->dateTimeBetween('-90 days', 'now')
 
         ]);
 
@@ -74,7 +75,8 @@ class DatabaseSeeder extends Seeder
             'max_total_loss' => 6,
             'mt5_login' => '7730373',
             'mt5_password' => encrypt('x83Vgb#mUEsF'),
-            'mt5_server' => 'Neomaaa-Live'
+            'mt5_server' => 'Neomaaa-Live',
+            'funded_date' => fake()->dateTimeBetween('-90 days', 'now')
         ]);
 
 
@@ -90,7 +92,8 @@ class DatabaseSeeder extends Seeder
             'max_total_loss' => 6,
             'mt5_login' => '7733662',
             'mt5_password' => encrypt('j0CMHxCmj#@H'),
-            'mt5_server' => 'Neomaaa-Live'
+            'mt5_server' => 'Neomaaa-Live',
+            'funded_date' => fake()->dateTimeBetween('-90 days', 'now')
         ]);
 
         Account::create([
@@ -103,6 +106,7 @@ class DatabaseSeeder extends Seeder
             'status' => 'burned',
             'max_daily_loss' => 8,
             'max_total_loss' => 6,
+            'funded_date' => fake()->dateTimeBetween('-90 days', 'now')
         ]);
 
         TradeAsset::create([
@@ -124,6 +128,6 @@ class DatabaseSeeder extends Seeder
             'timeframe' => 'M5',
         ]);
 
-        // Trade::factory()->count(300)->create(); // 150 por cuenta x4
+        Trade::factory()->count(300)->create(); // 150 por cuenta x4
     }
 }

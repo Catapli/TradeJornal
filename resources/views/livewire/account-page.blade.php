@@ -6,6 +6,53 @@
         <x-loader></x-loader>
     </div>
 
+    {{-- Top-Right Snackbar --}}
+    @if (session()->has('message'))
+        <div class="{{ session('message') ? 'scale-100 opacity-100' : 'scale-95 opacity-0' }} fixed right-6 top-20 z-50 translate-y-0 transform rounded-3xl border-4 p-6 shadow-2xl transition-all duration-300"
+             x-data
+             x-init="$nextTick(() => setTimeout(() => $el.remove(), 5000))"
+             style="min-width: 320px;">
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20">
+                    <svg class="h-7 w-7 text-emerald-500"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">{{ session('message') }}</h3>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="{{ session('error') ? 'scale-100 opacity-100' : 'scale-95 opacity-0' }} fixed right-6 top-20 z-50 translate-y-0 transform rounded-3xl border-4 border-red-400/50 bg-gradient-to-br from-red-50 to-red-100 p-6 shadow-2xl transition-all duration-300"
+             x-data
+             x-init="$nextTick(() => setTimeout(() => $el.remove(), 7000))"
+             style="min-width: 340px;">
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl bg-red-500/20">
+                    <svg class="h-7 w-7 text-red-500"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                              clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="mb-1 text-xl font-bold text-slate-900">Sync Falló</h3>
+                    <p class="leading-relaxed text-slate-600">{{ session('error') }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+
     <div class="grid grid-cols-12 p-2">
 
         {{-- ? Selector de cuenta --}}
@@ -22,11 +69,10 @@
                             {{-- 👇 VIGILANTE INVISIBLE: Solo aparece cuando estás sincronizando --}}
                             {{-- Ejecuta 'checkSyncStatus' cada 2 segundos para ver si el Job terminó --}}
                             @if ($isSyncing)
-                                <div class="hidden"
-                                     wire:poll.2s="checkSyncStatus"></div>
+                                <div wire:poll.2s="checkSyncStatus"></div>
                             @endif
 
-                            <button class="@if ($isSyncing) from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 cursor-not-allowed @else from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 @endif flex items-center gap-2 rounded-3xl bg-gradient-to-r px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all"
+                            <button class="@if ($isSyncing) from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 cursor-not-allowed @else from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 @endif mx-2 flex items-center gap-2 rounded-3xl bg-gradient-to-r px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all"
                                     wire:click="syncSelectedAccount"
                                     wire:loading.attr="disabled"
                                     {{-- Deshabilitamos si está cargando por red O si está esperando el Job --}}
@@ -74,7 +120,7 @@
                                 </span>
                             </button>
                         @else
-                            <button class="rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
+                            <button class="ml-2 rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
                                     disabled>
                                 ⚙️ Configurar MT5
                             </button>
@@ -259,6 +305,73 @@
             <div class="col-span-12 font-google">
                 {{ __('labels.statsitics_account') }}
             </div>
+
+            <x-card-statistics class="col-span-3"
+                               label="Tasa de Ganancia %"
+                               icono="<i class='fa-solid fa-trophy'></i>"
+                               key="{{ $winRate }}%" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Tiempo Medio de Retención"
+                               icono="<i class='fa-solid fa-stopwatch'></i>"
+                               key="{{ $avgDurationFormatted }}" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Número de Operaciones"
+                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                               key="{{ $totalTrades }}" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Factor de Beneficio"
+                               icono="<i class='fa-solid fa-wallet'></i>"
+                               key="{{ $profitFactor }} " />
+
+
+            <x-card-statistics class="col-span-3"
+                               label="Ganancia más grande"
+                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                               key="{{ $maxWin }} €" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Ganancia media"
+                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                               key="{{ $avgWinTrade }} €" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Pérdida más grande"
+                               icono="<i class='fa-solid fa-arrow-trend-down'></i>"
+                               key="{{ $maxLoss }} €" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Pérdida media"
+                               icono="<i class='fa-solid fa-arrow-trend-down'></i>"
+                               key="{{ $avgLossTrade }} €" />
+
+            <x-card-statistics class="col-span-3"
+                               label="ARRR"
+                               icono="<i class='fa-solid fa-chart-bar'></i>"
+                               key="{{ $arr }} " />
+
+            <x-card-statistics class="col-span-3"
+                               label="Símbolo más operado"
+                               icono="<i class='fa-brands fa-bitcoin'></i>"
+                               key="{{ $topAsset }}" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Días de Trading"
+                               icono="<i class='fa-solid fa-calendar'></i>"
+                               key="{{ $tradingDays }} días" />
+
+            <x-card-statistics class="col-span-3"
+                               label="Antiguedad de la cuenta"
+                               icono="<i class='fa-solid fa-calendar'></i>"
+                               key="{{ $accountAgeFormatted }} " />
+
+
+
+
+
+
         </div>
 
 

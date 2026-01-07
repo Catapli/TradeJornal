@@ -29,11 +29,9 @@ return new class extends Migration
             $table->integer('max_daily_loss')->default(0); // Maxima Perdida Diaria
             $table->integer('max_total_loss')->default(0); // Máxima Perdida Total
             $table->decimal('winrate_pct', 5, 2)->default(0); // Winrate
-            // En trades migration
-            $table->time('time_position')->nullable();  // ✅ HH:MM:SS 00:19:20
-            $table->decimal('factor_beneficio', 10, 2)->default(0); // Factor de Beneficio
-            $table->integer('trades_count')->default(0); // Cuenta de Trades
-
+            $table->timestamp('funded_date')->nullable(); // Fecha de fondeo
+            $table->boolean('sync_error')->default(false); // Error en la última sincronización
+            $table->string('sync_error_message')->nullable(); // Mensaje de error de la última sincronización
 
 
             $table->timestamps();
