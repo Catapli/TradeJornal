@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('account_id')->constrained()->onDelete('cascade');
             $table->foreignId('trade_asset_id')->constrained()->onDelete('cascade');
             $table->foreignId('strategy_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('ticket'); // ID único broker
+            $table->string('ticket')->unique(); // ID único broker
             $table->enum('direction', ['long', 'short']);
             $table->decimal('entry_price', 12, 5);
             $table->decimal('size', 12, 2);

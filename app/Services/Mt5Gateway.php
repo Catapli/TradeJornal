@@ -14,113 +14,98 @@ use function Pest\Laravel\json;
 
 class Mt5Gateway
 {
-    public function syncAccount($account)
+    public function syncAccount($account, $forceAll = false)
     {
-        Log::info($account);
-
         $password = decrypt($account->mt5_password);
-        Log::info($password);
-        $response = Http::timeout(30)->post('http://185.116.236.222:5000/sync-account', [
+        $dateStart = $forceAll ? null : $account->last_sync;
+        // Determinamos si necesitamos pedir la fecha inicial
+        $needFirstDate = is_null($account->funded_date);
+
+        $response = Http::timeout(60)->post('http://185.116.236.222:5000/sync-account', [
             'login' => $account->mt5_login,
             'password' => $password,
             'server' => $account->mt5_server,
-            // Opcional: desde última sincronización
-            'date_start' => $account->last_sync
+            'date_start' => $dateStart,
+            'need_first_date' => $needFirstDate // ← Enviamos el flag
         ]);
 
         if ($response->failed()) {
-            $errorMsg = $response->json('error', 'HTTP ' . $response->status());
-
-            // 👇 LANZA para fallar el job automáticamente
-            throw new \RuntimeException("Sync API failed: {$errorMsg}");
+            throw new \RuntimeException("Sync API failed");
         }
 
         $data = $response->json();
-        Log::info('MT5 Sync data received', [
-            'account_id' => $account->id,
-            'data' => $data
-        ]);
 
-        Log::info('Trades', [
-            'trades' => $data['trades']
-        ]);
+        // 👇 PASAMOS el flag forceAll a importTrades
+        $this->importTrades($account, $data['trades'], $forceAll);
 
-        // Importar trades a DB
-        $this->importTrades($account, $data['trades']);
-
-        // Actualizar cuenta
-        // $account->update([
-        //     'current_balance' => $data['balance'],
-        //     'equity' => $data['equity'],
-        //     'margin_free' => $data['margin_free'],
-        //     'last_sync' => now()
-        // ]);
-
-        Log::info('✅ Sync OK', [
-            'account_id' => $account->id,
-            'last_sync' => $account->fresh()->last_sync // ← Verifica
-        ]);
-
-        return true;
+        return $data;
     }
 
-    private function importTrades($account, $trades)
+    private function importTrades($account, $trades, $isFullSync = false)
     {
+        $positions = collect($trades)->groupBy('position_id')->filter(fn($deals) => count($deals) >= 2);
 
-        $positions = collect($trades)
-            ->groupBy('position_id')
-            ->filter(fn($deals) => count($deals) >= 2);  // Min 2 deals
-
-        // $netPNL = 0;
+        // Lista para guardar los tickets que SI existen en MT5
+        $validTickets = [];
 
         foreach ($positions as $pos_id => $deals) {
             $sortedDeals = $deals->sortBy('time');
             $entry = $sortedDeals->first();
             $exit = $sortedDeals->last();
+            $totalPnL = $deals->sum('net_pnl');
 
-            // Suma TOTAL PnL de TODOS los deals (cierres parciales + final)
-            $totalPnL = $deals->sum('net_pnl');  // O 'pnl' si net_pnl no es el correcto
+            $trade = Trade::updateOrCreate(
+                ['ticket' => $entry['ticket'], 'account_id' => $account->id],
+                [
+                    'trade_asset_id' => TradeAsset::firstOrCreate(['symbol' => $entry['symbol']])->id,
+                    'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
+                    'entry_price' => $entry['price'],
+                    'size' => $entry['volume'],
+                    'pnl' => $totalPnL,
+                    'entry_time' => $entry['time'],
+                    'exit_time' => $exit['time'],
+                    'duration_minutes' => (int) round(Carbon::parse($entry['time'])->diffInMinutes(Carbon::parse($exit['time']))),
+                ]
+            );
 
-            $asset = TradeAsset::firstOrCreate([
-                'symbol' => $entry['symbol']
-            ]);
-
-            $data = [
-                'account_id' => $account->id,
-                'trade_asset_id' => $asset->id,
-                'strategy_id' => $entry['magic'] ?: null,
-                'ticket' => $entry['ticket'],
-                'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
-                'entry_price' => $entry['price'],
-                'size' => $entry['volume'],
-                'pnl' => $totalPnL,
-                'duration_minutes' => (int) round(
-                    Carbon::parse($entry['time'])->diffInMinutes(Carbon::parse($exit['time']))
-                ),
-                'entry_time' => $entry['time'],
-                'exit_time' => $exit['time'],
-                'notes' => $exit['comment']
-            ];
-            Log::info('Importando trade', $data);
-
-            Trade::create([
-                'account_id' => $account->id,
-                'trade_asset_id' => $asset->id,
-                'strategy_id' => $entry['magic'] ?: null,
-                'ticket' => $entry['ticket'],
-                'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
-                'entry_price' => $entry['price'],
-                'size' => $entry['volume'],
-                'pnl' => $totalPnL,
-                'duration_minutes' => (int) round(
-                    Carbon::parse($entry['time'])->diffInMinutes(Carbon::parse($exit['time']))
-                ),
-                'entry_time' => $entry['time'],
-                'exit_time' => $exit['time'],
-                'notes' => $exit['comment']
-            ]);
+            $validTickets[] = $trade->ticket;
         }
 
-        Log::info("Importadas " . $positions->count() . " operaciones");
+        // 🔥 LA SOLUCIÓN: Si es Sync Total, borramos los que NO están en la lista de la API
+        if ($isFullSync) {
+            Trade::where('account_id', $account->id)
+                ->whereNotIn('ticket', $validTickets)
+                ->delete();
+
+            Log::info("🧹 Limpieza completada. Borrados trades que no están en MT5.");
+        }
     }
+
+    // private function importTrades($account, $trades)
+    // {
+    //     $positions = collect($trades)->groupBy('position_id')->filter(fn($deals) => count($deals) >= 2);
+
+    //     foreach ($positions as $pos_id => $deals) {
+    //         $sortedDeals = $deals->sortBy('time');
+    //         $entry = $sortedDeals->first();
+    //         $exit = $sortedDeals->last();
+    //         $totalPnL = $deals->sum('net_pnl');
+
+    //         // USAMOS updateOrCreate para evitar duplicados
+    //         Trade::updateOrCreate(
+    //             ['ticket' => $entry['ticket'], 'account_id' => $account->id],
+    //             [
+    //                 'trade_asset_id' => TradeAsset::firstOrCreate(['symbol' => $entry['symbol']])->id,
+    //                 'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
+    //                 'entry_price' => $entry['price'],
+    //                 'size' => $entry['volume'],
+    //                 'pnl' => $totalPnL,
+    //                 'entry_time' => $entry['time'],
+    //                 'exit_time' => $exit['time'],
+    //                 'duration_minutes' => (int) round(Carbon::parse($entry['time'])->diffInMinutes(Carbon::parse($exit['time']))),
+    //                 'notes' => $exit['comment']
+    //             ]
+    //         );
+    //     }
+    // }
 }

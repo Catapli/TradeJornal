@@ -6,18 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Account extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'name',
-        'broker',
-        'last_sync',
-        'initial_balance',
-        'current_balance',
-        'max_balance',
-        'max_daily_loss',
-        'max_total_loss',
-        'status'
-    ];
+
+    protected $guarded = ['id'];
 
     protected $casts = [
         'initial_balance' => 'decimal:2',

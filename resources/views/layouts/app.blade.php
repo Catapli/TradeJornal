@@ -10,7 +10,7 @@
 
         <title>{{ config('app.name', 'TradeForge') }}</title>
         <link rel="icon"
-              href="{{ asset('img/favicon/logo.ico') }}"
+              href="{{ asset('img/favicon/logo_only.ico') }}"
               type="image/x-icon">
         <!-- Fonts -->
         <link rel="preconnect"
@@ -19,7 +19,7 @@
               rel="stylesheet" />
 
         <link rel="icon"
-              href="{{ asset('img/favicon/logo.ico') }}"
+              href="{{ asset('img/favicon/logo_only.ico') }}"
               type="image/x-icon">
 
 

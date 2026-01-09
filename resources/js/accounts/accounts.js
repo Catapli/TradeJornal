@@ -17,7 +17,6 @@ document.addEventListener("alpine:init", () => {
             this.isInitialized = true;
             const self = this;
 
-            console.log(this.$wire.balanceChartData);
             this.initChart();
 
             window.addEventListener("show-alert", (event) => {
@@ -31,6 +30,7 @@ document.addEventListener("alpine:init", () => {
 
             window.addEventListener("timeframe-updated", (event) => {
                 this.timeframe = event.detail.timeframe;
+                console.log("Timeframe updated to:", this.timeframe);
                 this.initChart();
             });
 
@@ -38,6 +38,27 @@ document.addEventListener("alpine:init", () => {
                 this.timeframe = event.detail.timeframe;
                 this.initChart();
             });
+
+            window.addEventListener("show-alert", (event) => {
+                let e = event.detail[0];
+                if (e.type == "success") {
+                    this.showAlertSucces(e.message, e.type);
+                } else {
+                    this.showAlertFunc(this.$e(e.message), "error");
+                }
+            });
+        },
+
+        // ? Mostrar alerta de éxito
+        showAlertSucces(bodyAlert, typeAlert) {
+            this.showAlertFunc(this.$s(bodyAlert), typeAlert);
+        },
+
+        // ? Mostrar alerta
+        showAlertFunc(bodyAlert, typeAlert) {
+            this.bodyAlert = bodyAlert;
+            this.typeAlert = typeAlert;
+            this.showAlert = true;
         },
 
         setTimeframe(value) {
@@ -46,39 +67,43 @@ document.addEventListener("alpine:init", () => {
         },
 
         initChart() {
-            const canvas = document.querySelector('[x-ref="canvas"]');
+            // 1. Usa $refs en lugar de querySelector
+            const canvas = this.$refs.canvas;
             if (!canvas) return;
 
-            const ctx = canvas.getContext("2d");
-
-            // Destroy si existe
-            if (window.balanceChart) {
-                window.balanceChart.destroy();
-            }
-
-            window.balanceChart = new Chart(ctx, {
-                type: "line",
-                data: this.$wire.balanceChartData, // ← Datos de Livewire
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: "index",
-                    },
-                    plugins: {
-                        legend: {
-                            position: "top",
-                            labels: { color: "#000000" },
-                        },
-                    },
-                    scales: {
-                        y: { beginAtZero: true },
-                        x: { ticks: { color: "#000000" } },
-                    },
-                },
-            });
+            // 2. Forzamos que se muestre antes de inicializar Chart.js
+            // Si el canvas está oculto (display:none), Chart.js no puede calcular el tamaño
             this.showLoadingGrafic = false;
+
+            // 3. Pequeño delay para asegurar que Alpine ha quitado el display:none del x-show
+            this.$nextTick(() => {
+                const ctx = canvas.getContext("2d");
+
+                const chartData = {
+                    labels: this.$wire.balanceChartData?.labels || [],
+                    datasets: this.$wire.balanceChartData?.datasets || [],
+                };
+
+                if (!chartData.labels.length) return;
+
+                if (window.balanceChart) {
+                    window.balanceChart.destroy();
+                }
+
+                window.balanceChart = new Chart(ctx, {
+                    type: "line",
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: "index",
+                        },
+                        // ... resto de tus opciones
+                    },
+                });
+            });
         },
     }));
 });

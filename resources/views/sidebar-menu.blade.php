@@ -5,9 +5,11 @@
     <div class="h-full overflow-y-auto bg-secondary">
         <a class="flex h-14 w-12 items-center p-2"
            href="{{ route('dashboard') }}">
-            {{-- <img class="flex w-full flex-col items-center"
-                 src="{{ asset('img/detrafic_logo.png') }}"
-                 alt=""> --}}
+            <div class="flex shrink-0 items-center space-x-3">
+                {{-- <img class="flex w-full max-w-64 flex-col items-center p-2"
+                     src="{{ asset('img/logo_trader_h.png') }}"
+                     alt=""> --}}
+            </div>
         </a>
         <ul class="cursor-pointer font-medium">
             {{-- ? Dashboard --}}

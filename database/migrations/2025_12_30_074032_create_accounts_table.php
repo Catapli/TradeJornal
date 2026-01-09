@@ -32,6 +32,7 @@ return new class extends Migration
             $table->timestamp('funded_date')->nullable(); // Fecha de fondeo
             $table->boolean('sync_error')->default(false); // Error en la última sincronización
             $table->string('sync_error_message')->nullable(); // Mensaje de error de la última sincronización
+            $table->enum('account_type', ['personal', 'phase_1', 'phase_2', 'demo', 'verified'])->default('phase_1'); // Tipo de cuenta: demo o real
 
 
             $table->timestamps();

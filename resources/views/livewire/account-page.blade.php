@@ -7,50 +7,10 @@
     </div>
 
     {{-- Top-Right Snackbar --}}
-    @if (session()->has('message'))
-        <div class="{{ session('message') ? 'scale-100 opacity-100' : 'scale-95 opacity-0' }} fixed right-6 top-20 z-50 translate-y-0 transform rounded-3xl border-4 p-6 shadow-2xl transition-all duration-300"
-             x-data
-             x-init="$nextTick(() => setTimeout(() => $el.remove(), 5000))"
-             style="min-width: 320px;">
-            <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20">
-                    <svg class="h-7 w-7 text-emerald-500"
-                         fill="currentColor"
-                         viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold text-slate-900">{{ session('message') }}</h3>
-                </div>
-            </div>
-        </div>
-    @endif
 
-    @if (session()->has('error'))
-        <div class="{{ session('error') ? 'scale-100 opacity-100' : 'scale-95 opacity-0' }} fixed right-6 top-20 z-50 translate-y-0 transform rounded-3xl border-4 border-red-400/50 bg-gradient-to-br from-red-50 to-red-100 p-6 shadow-2xl transition-all duration-300"
-             x-data
-             x-init="$nextTick(() => setTimeout(() => $el.remove(), 7000))"
-             style="min-width: 340px;">
-            <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl bg-red-500/20">
-                    <svg class="h-7 w-7 text-red-500"
-                         fill="currentColor"
-                         viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                              clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="mb-1 text-xl font-bold text-slate-900">Sync Falló</h3>
-                    <p class="leading-relaxed text-slate-600">{{ session('error') }}</p>
-                </div>
-            </div>
-        </div>
-    @endif
+    {{-- ? Show Alerta --}}
+    <x-modal-template show="showAlert">
+    </x-modal-template>
 
 
     <div class="grid grid-cols-12 p-2">
@@ -62,38 +22,39 @@
                     <span class="bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-xl font-black text-gray-900 text-transparent">Cuenta</span>
 
                     {{-- BADGE --}}
-                    <div class="flex">
-                        {{-- En header cuenta seleccionada --}}
-                        @if ($selectedAccount?->mt5_login)
 
-                            {{-- 👇 VIGILANTE INVISIBLE: Solo aparece cuando estás sincronizando --}}
-                            {{-- Ejecuta 'checkSyncStatus' cada 2 segundos para ver si el Job terminó --}}
-                            @if ($isSyncing)
-                                <div wire:poll.2s="checkSyncStatus"></div>
+
+                    <!-- Añadimos flex-col e items-end para que todo se alinee a la derecha -->
+                    <div class="flex flex-col items-end">
+
+                        <!-- Forzamos que el span no se rompa y esté alineado a la derecha -->
+                        <span class="mb-1 whitespace-nowrap text-xs">
+                            Ultima Sincronizacion @if ($selectedAccount->last_sync)
+                                {{ Carbon\Carbon::parse($selectedAccount->last_sync)->format('H:i d/m/Y') }}
+                            @else
+                                Nunca
                             @endif
+                        </span>
 
-                            <button class="@if ($isSyncing) from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 cursor-not-allowed @else from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 @endif mx-2 flex items-center gap-2 rounded-3xl bg-gradient-to-r px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all"
-                                    wire:click="syncSelectedAccount"
-                                    wire:loading.attr="disabled"
-                                    {{-- Deshabilitamos si está cargando por red O si está esperando el Job --}}
-                                    {{ $isSyncing ? 'disabled' : '' }}>
+                        <div class="flex items-center"> <!-- Quitamos clases que puedan estorbar y aseguramos flex -->
 
-                                {{-- Spinner: Se muestra durante la petición de red --}}
-                                <svg class="h-4 w-4 animate-spin"
-                                     wire:loading
-                                     fill="none"
-                                     stroke="currentColor"
-                                     viewBox="0 0 24 24">
-                                    <path stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          stroke-width="2"
-                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
+                            {{-- En header cuenta seleccionada --}}
+                            @if ($selectedAccount?->mt5_login)
 
-                                {{-- Spinner B: Se muestra cuando ya se envió el Job pero seguimos esperando ($isSyncing true) y ya no hay petición de red --}}
                                 @if ($isSyncing)
+                                    <div wire:poll.2s="checkSyncStatus"></div>
+                                @endif
+
+                                <button class="@if ($isSyncing) from-amber-500 to-amber-600 cursor-not-allowed @else from-emerald-500 to-emerald-600 @endif mx-2 flex items-center gap-2 rounded-3xl bg-gradient-to-r px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all"
+                                        wire:click="syncSelectedAccount"
+                                        wire:loading.attr="disabled"
+                                        {{ $isSyncing ? 'disabled' : '' }}>
+
+                                    {{-- Spinner (mientras carga red o Job) --}}
                                     <svg class="h-4 w-4 animate-spin"
-                                         wire:loading.remove
+                                         wire:loading
+                                         {{-- También mostramos si isSyncing es true aunque no haya carga de red activa --}}
+                                         @if ($isSyncing) style="display: block" @endif
                                          fill="none"
                                          stroke="currentColor"
                                          viewBox="0 0 24 24">
@@ -102,39 +63,36 @@
                                               stroke-width="2"
                                               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
-                                @endif
 
-                                {{-- Texto --}}
-                                <span>
-                                    {{-- Caso 1: Enviando la petición inicial --}}
-                                    <span wire:loading>Enviando...</span>
-
-                                    {{-- Caso 2: Petición enviada, esperando al Job --}}
-                                    <span wire:loading.remove>
-                                        @if ($isSyncing)
-                                            ⏳ Sincronizando...
-                                        @else
-                                            🔄 Sync MT5
-                                        @endif
+                                    <span>
+                                        <span wire:loading>Enviando...</span>
+                                        <span wire:loading.remove>
+                                            @if ($isSyncing)
+                                                ⏳ Sincronizando...
+                                            @else
+                                                🔄 Sync MT5
+                                            @endif
+                                        </span>
                                     </span>
+                                </button>
+                            @else
+                                <button class="ml-2 rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
+                                        disabled>
+                                    ⚙️ Configurar MT5
+                                </button>
+                            @endif
+
+                            {{-- Badge de Estado --}}
+                            <div class="flex items-center space-x-2 rounded-xl border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                                <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
+                                <span class="whitespace-nowrap">
+                                    {{ $selectedAccount?->status_formatted ?? '---' }} •
+                                    {{ $selectedAccount?->initial_balance ? '€' . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0€' }}
                                 </span>
-                            </button>
-                        @else
-                            <button class="ml-2 rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
-                                    disabled>
-                                ⚙️ Configurar MT5
-                            </button>
-                        @endif
-
-
-                        <div class="flex items-center space-x-2 rounded-xl border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-xs font-bold text-emerald-800">
-
-                            <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
-                            <span>{{ $selectedAccount?->status_formatted ?? '---' }} •
-                                {{ $selectedAccount?->initial_balance ? '€' . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0€' }}
-                            </span>
+                            </div>
                         </div>
                     </div>
+
 
                 </div>
 
@@ -164,12 +122,40 @@
                         </svg>
                     </div>
                 </div>
+                <div class="flex items-center justify-between text-center">
+                    {{-- SUBINFO --}}
+                    <p class="mt-3 flex items-center text-sm font-medium text-gray-600">
+                        <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                        {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker ?? __('labels.not_selected_account') }} • {{ __('labels.' . $selectedAccount?->account_type) ?? '---' }}
+                    </p>
 
-                {{-- SUBINFO --}}
-                <p class="mt-3 flex items-center text-sm font-medium text-gray-600">
-                    <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                    {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker ?? __('labels.not_selected_account') }}
-                </p>
+                    <div>
+                        <div class="flex items-center gap-2 rounded-lg p-1">
+
+                            <button
+                                    class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                                <i class="fa-solid fa-plus text-green-500"></i>
+                                {{ __('labels.create_account') }}
+                            </button>
+                            <button
+                                    class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                                <i class="fa-solid fa-pen-to-square text-yellow-500"></i>
+                                {{ __('labels.edit_account') }}
+                            </button>
+                            @if (count($accounts) > 0)
+                                <button
+                                        class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                                    <i class="fa-solid fa-xmark text-red-500"></i>
+                                    {{ __('labels.delete_account') }}
+                                </button>
+                            @endif
+                        </div>
+
+                    </div>
+                </div>
+
+
+
             </div>
         </div>
 
@@ -211,16 +197,37 @@
                 </div>
             </div>
 
-            <canvas class="h-max-20 col-span-12 h-full max-h-96 w-full bg-white p-5 sm:rounded-lg"
-                    wire:ignore
-                    x-show="!showLoadingGrafic"
-                    x-ref="canvas"></canvas>
+            <div class="col-span-12 flex justify-around">
+
+                <div class="flex flex-col text-center">
+                    <span> {{ __('labels.profit_account') }}</span>
+                    @if ($totalProfitLoss > 0)
+                        <span>{{ number_format($totalProfitLoss, 2) }} € </span>
+                    @else
+                        <span>0€</span>
+                    @endif
+                </div>
+                <div class="flex flex-col text-center">
+                    <span> {{ __('labels.profit_percentage') }}</span>
+                    @if ($profitPercentage > 0)
+                        <span>{{ number_format($profitPercentage, 2) }} % </span>
+                    @else
+                        <span>0%</span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="col-span-12 h-auto max-h-96 min-h-96 w-full bg-white p-5 sm:rounded-lg"
+                 wire:ignore>
+                <canvas x-show="!showLoadingGrafic"
+                        x-ref="canvas"></canvas>
+            </div>
+
 
             <div class="col-span-12 h-96 w-full content-center justify-items-center bg-white p-5 sm:rounded-lg"
                  x-show="showLoadingGrafic">
                 <div class="loader flex aspect-square w-8 animate-spin items-center justify-center rounded-full border-t-2 border-gray-500 bg-gray-300 text-yellow-700"></div>
             </div>
-
         </div>
 
         {{-- ? Resumen de la cuenta --}}
@@ -253,9 +260,22 @@
                             <span class="text-sm text-gray-400">{{ __('labels.current_balance_desc') }}</span>
                         </div>
                     </div>
-
                     <div>
-                        {{ $selectedAccount?->current_balance ? '€' . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0€' }}
+                        @if ($profitPercentage == 0)
+                            <span class="m-1 rounded-3xl bg-gray-300 p-1 pl-2 text-sm font-bold">
+                                {{ number_format($profitPercentage, 2) }}%
+                            </span>
+                        @else
+                            <span class="@if ($profitPercentage > 0) bg-[#4cd34079] text-green-700   @else bg-[#ff00003d] text-red-700 @endif mr-1 rounded-3xl p-1 text-sm font-bold">
+                                @if ($profitPercentage >= 0)
+                                    <i class="fa-solid fa-arrow-up text-green-500"></i>
+                                @else
+                                    <i class="fa-solid fa-arrow-down text-red-500"></i>
+                                @endif
+                                {{ number_format($profitPercentage, 2) }}%
+                            </span>
+                        @endif
+                        <span>{{ $selectedAccount?->current_balance ? '€' . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0€' }}</span>
                     </div>
 
                 </div>
@@ -306,66 +326,81 @@
                 {{ __('labels.statsitics_account') }}
             </div>
 
-            <x-card-statistics class="col-span-3"
-                               label="Tasa de Ganancia %"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.profit_rate') }}"
                                icono="<i class='fa-solid fa-trophy'></i>"
-                               key="{{ $winRate }}%" />
+                               key="{{ $winRate }}%"
+                               tooltip="{{ __('labels.tlp_winrate') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Tiempo Medio de Retención"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.avg_retention_time') }}"
                                icono="<i class='fa-solid fa-stopwatch'></i>"
-                               key="{{ $avgDurationFormatted }}" />
+                               key="{{ $avgDurationFormatted }}"
+                               tooltip="{{ __('labels.tlp_avg_retention_time') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Número de Operaciones"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.number_trades') }}"
                                icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $totalTrades }}" />
+                               key="{{ $totalTrades }}"
+                               tooltip="{{ __('labels.tlp_number_trades') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Factor de Beneficio"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.profit_factor') }}"
                                icono="<i class='fa-solid fa-wallet'></i>"
-                               key="{{ $profitFactor }} " />
+                               key="{{ $profitFactor }} "
+                               align="right"
+                               tooltip="{{ __('labels.tlp_profit_factor') }}" />
 
 
-            <x-card-statistics class="col-span-3"
-                               label="Ganancia más grande"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.bigger_profit_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $maxWin }} €" />
+                               key="{{ $maxWin }} €"
+                               tooltip="{{ __('labels.tlp_bigger_profit_trade') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Ganancia media"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.avg_profit_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $avgWinTrade }} €" />
+                               key="{{ $avgWinTrade }} €"
+                               tooltip="{{ __('labels.tlp_avg_profit_trade') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Pérdida más grande"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.losser_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $maxLoss }} €" />
+                               key="{{ $maxLoss }} €"
+                               tooltip="{{ __('labels.tlp_losser_trade') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Pérdida media"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               align="right"
+                               label="{{ __('labels.avg_losser_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $avgLossTrade }} €" />
+                               key="{{ $avgLossTrade }} €"
+                               tooltip="{{ __('labels.tlp_avg_losser_trade') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="ARRR"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.arr') }}"
                                icono="<i class='fa-solid fa-chart-bar'></i>"
-                               key="{{ $arr }} " />
+                               key="{{ $arr }}"
+                               tooltip="{{ __('labels.tlp_arr') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Símbolo más operado"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.asset_most_traded') }}"
                                icono="<i class='fa-brands fa-bitcoin'></i>"
-                               key="{{ $topAsset }}" />
+                               key="{{ $topAsset }}"
+                               tooltip="{{ __('labels.tlp_asset_most_traded') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Días de Trading"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               label="{{ __('labels.days_trading') }}"
                                icono="<i class='fa-solid fa-calendar'></i>"
-                               key="{{ $tradingDays }} días" />
+                               key="{{ $tradingDays }} {{ __('labels.days') }}"
+                               tooltip="{{ __('labels.tlp_days_trading') }}" />
 
-            <x-card-statistics class="col-span-3"
-                               label="Antiguedad de la cuenta"
+            <x-card-statistics class="col-span-6 xl:col-span-3"
+                               align="right"
+                               label="{{ __('labels.age_account') }}"
                                icono="<i class='fa-solid fa-calendar'></i>"
-                               key="{{ $accountAgeFormatted }} " />
+                               key="{{ $accountAgeFormatted }} "
+                               tooltip="{{ __('labels.tlp_age_account') }}" />
 
 
 

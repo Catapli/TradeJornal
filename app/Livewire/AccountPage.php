@@ -42,6 +42,9 @@ class AccountPage extends Component
     public $arr = 0;
     public $accountAgeDays = 0;
     public $accountAgeFormatted = '0 días';
+    public $initialBalance = 0;
+    public $totalProfitLoss = 0;
+    public $profitPercentage = 0;
 
     public $profitFactor = 0;    // 2.15
     public $grossProfit = 0;     // €12,450
@@ -54,18 +57,19 @@ class AccountPage extends Component
 
 
 
-    public $timeframes = [
-        '1h' => ['minutes' => 60, 'format' => 'H:i'],
-        '24h' => ['hours' => 24, 'format' => 'd H:i'],
-        '7d' => ['days' => 7, 'format' => 'd MMM'],
-        'all' => ['all' => true, 'format' => 'd/m H:i']
+    public $timeframes = [  // ← ASEGÚRATE de tener esto
+        '1h' => ['minutes' => 60, 'format' => 'H:i'],     // "14:30"
+        '24h' => ['hours' => 24, 'format' => 'd H:i'],    // "08 14:30" 
+        '7d' => ['days' => 7, 'format' => 'd M (D)'],   // "08 Jan (Dom)" ← ÚNICO
+        'all' => ['all' => true, 'format' => 'd MMM yy']  // "08 Jan 26"
     ];
 
     public function mount()
     {
         $user = Auth::user();
-        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->get();
+        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
         $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+        Log::info("Cuenta seleccionada en mount: " . $this->selectedAccount);
         $this->updateData();
     }
 
@@ -75,16 +79,25 @@ class AccountPage extends Component
      */
     public function onSyncCompleted()
     {
-        // Ejemplo de lógica:
-        $balance = $this->selectedAccount->balance;
-
-        // Notificar usuario
+        // NO actualices last_sync aquí, el Job ya lo hizo.
         $this->updateData();
-        $this->dispatch('timeframe-updated', timeframe: 'all');
+        // Verificamos si la cuenta se ha quemado tras la sincronización
+        if ($this->selectedAccount->status === 'burned') {
+            $this->showAlert('error', '🚨 CUENTA QUEMADA: El balance ha llegado a 0. La cuenta se ha marcado como perdida.');
+            $this->isSyncing = false;
 
-        session()->flash('message', "✅ Sync finalizado. Nuevo balance: $balance");
+            // Opcional: Refrescar la lista de cuentas para que desaparezca o se vea el status
+            $user = Auth::user();
+            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->get();
+            $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+            $this->updateData();
+            return;
+        }
 
-        Log::info("Livewire: Lógica post-sync ejecutada correctamente.");
+        $this->dispatch('timeframe-updated', timeframe: $this->selectedTimeframe);
+        $this->showAlert('success', '✅ Sincronización finalizada correctamente.');
+        // session()->flash('message', "✅ Sincronización finalizada correctamente.");
+        Log::info("Livewire: Lógica post-sync ejecutada.");
     }
 
 
@@ -96,12 +109,12 @@ class AccountPage extends Component
         $this->dispatch('timeframe-updated', timeframe: $timeframe);
     }
 
-    public function refreshData()
-    {
-        $this->updateData();  // Tu método existente
-        $this->isSyncing = false;
-        session()->flash('message', '✅ Sync completado');
-    }
+    // public function refreshData()
+    // {
+    //     $this->updateData();  // Tu método existente
+    //     $this->isSyncing = false;
+    //     session()->flash('message', '✅ Sync completado');
+    // }
 
     /**
      * Esta función es llamada automáticamente por wire:poll cada X segundos
@@ -109,34 +122,31 @@ class AccountPage extends Component
      */
     public function checkSyncStatus()
     {
-        // Forzamos fresh() para traer los datos reales de la DB, no de la caché
         $this->selectedAccount = $this->selectedAccount->fresh();
 
-        $updatedAt = $this->selectedAccount->updated_at;
+        // Si el mensaje sigue siendo nuestra bandera, el Job aún no ha escrito su resultado
+        if ($this->selectedAccount->sync_error_message === 'WAITING_JOB') {
+            Log::info("El Job sigue trabajando o en cola...");
+            return;
+        }
 
-        Log::info('Verificando...', [
-            'db_updated' => $updatedAt->toDateTimeString(),
-            'start_time' => $this->syncStartTime->toDateTimeString(),
-            'error_en_db' => $this->selectedAccount->sync_error
-        ]);
+        // Si llegamos aquí, es porque el Job terminó y cambió el mensaje (a null o al error de cURL)
+        $updatedAt = Carbon::parse($this->selectedAccount->updated_at);
+        $startTime = Carbon::parse($this->syncStartTime);
 
-        // Usamos greaterThanOrEqualTo para evitar el bloqueo del mismo segundo
-        if ($updatedAt->greaterThanOrEqualTo($this->syncStartTime)) {
+        // Solo actuamos si el cambio es posterior al inicio
+        if ($updatedAt->greaterThan($startTime)) {
 
-            // IMPORTANTE: Si es el mismo segundo exacto, necesitamos verificar 
-            // si el Job realmente hizo algo (o hubo error o se actualizó last_sync)
+            $this->isSyncing = false;
+
             if ($this->selectedAccount->sync_error) {
-                $this->isSyncing = false;
-                session()->flash('error', '🚫 Sync falló: ' . $this->selectedAccount->sync_error_message);
+                $this->showAlert('error', '🚫 Sync falló: ' . 'No se ha podido establecer conexión con el Servidor');
+                $this->updateData();
                 return;
             }
 
-            // Si el last_sync es reciente, es que terminó bien
-            if ($this->selectedAccount->last_sync && $this->selectedAccount->last_sync->greaterThanOrEqualTo($this->syncStartTime)) {
-                $this->isSyncing = false;
-                $this->onSyncCompleted();
-                return;
-            }
+            // Si no hay error y el mensaje ya no es WAITING_JOB, es éxito
+            $this->onSyncCompleted();
         }
     }
 
@@ -152,20 +162,23 @@ class AccountPage extends Component
 
     public function syncSelectedAccount(): void
     {
-
-        // 1. Limpiamos el estado en la base de datos ANTES de disparar el Job
+        // 1. Marcamos un estado interno en la base de datos
         $this->selectedAccount->update([
             'sync_error' => false,
-            'sync_error_message' => null,
+            'sync_error_message' => 'WAITING_JOB', // <- Nuestra bandera
         ]);
 
-        // 1. Inicia el proceso
         $this->isSyncing = true;
-        $this->syncStartTime = Carbon::now();
 
-        // 2. Manda el Job a la cola
+        // Guardamos el momento exacto DESPUÉS del update inicial
+        $this->selectedAccount = $this->selectedAccount->fresh();
+        $this->syncStartTime = $this->selectedAccount->updated_at;
+
+        Log::info("Iniciando sync para cuenta ID: " . $this->selectedAccount->id);
+
         SyncMt5Account::dispatch($this->selectedAccount);
     }
+
     public function changeAccount($accountId)
     {
         $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
@@ -179,23 +192,28 @@ class AccountPage extends Component
     private function updateData()
     {
         if ($this->selectedAccount) {
-            // ← CALCULA P&L real de trades
-            $this->totalPnl = $this->selectedAccount->trades()
-                ->sum('pnl');
-            Log::info("Total PnL calculado: " . $this->totalPnl);
+            $this->totalPnl = $this->selectedAccount->trades()->sum('pnl');
+            $this->initialBalance = $this->selectedAccount->initial_balance;
 
-            // ← Actualiza balance con trades REALES
-            $this->selectedAccount->current_balance = $this->selectedAccount->initial_balance + $this->totalPnl;
-            $this->selectedAccount->save();
+            // 2. Calculamos el balance teórico
+            $theoreticalBalance = $this->initialBalance + $this->totalPnl;
 
-            $this->firstTradeDate = $this->selectedAccount->trades()
-                ->orderBy('exit_time', 'asc')
-                ->value('exit_time');
+            if (is_null($this->selectedAccount->last_sync)) {
+                if ($this->selectedAccount->current_balance != $theoreticalBalance) {
+                    $this->selectedAccount->update([
+                        'current_balance' => $theoreticalBalance
+                    ]);
+                }
+            }
+            // $newBalance = $this->selectedAccount->initial_balance + $this->totalPnl;
+
+            // SOLO guarda si realmente hay un cambio de balance
+            // if ($this->selectedAccount->current_balance != $newBalance) {
+            //     $this->selectedAccount->current_balance = $newBalance;
+            //     $this->selectedAccount->save();
+            // }
 
             $this->calculateStatistics();
-
-            // ← Carga gráfico de balance
-
             $this->loadBalanceChart();
         }
     }
@@ -283,6 +301,30 @@ class AccountPage extends Component
         $this->profitFactor = $this->grossLoss > 0 ?
             round($this->grossProfit / $this->grossLoss, 4) : 0;  // 4 decimales como 0.7892
 
+        //  Primer trade
+        $firstTrade = $this->selectedAccount->trades()
+            ->whereNotNull('entry_time')
+            ->orderBy('entry_time', 'asc')
+            ->select('entry_time')->first();
+
+        $this->firstTradeDate = $firstTrade ? Carbon::parse($firstTrade->entry_time) : null;
+
+
+        // PNL Total y % de beneficio
+        // 1. Cálculo de Beneficio/Pérdida Absoluto
+        $initial = (float) $this->selectedAccount->initial_balance;
+        $current = (float) $this->selectedAccount->current_balance;
+
+        // 1. Cálculo de Beneficio/Pérdida Absoluto
+        $this->totalProfitLoss = $current - $initial;
+
+        // 2. Cálculo de Porcentaje
+        // Fórmula: ((Actual - Inicial) / Inicial) * 100
+        if ($initial > 0) {
+            $this->profitPercentage = ($this->totalProfitLoss / $initial) * 100;
+        } else {
+            $this->profitPercentage = 0;
+        }
     }
 
     private function formatAge($days)
@@ -298,7 +340,7 @@ class AccountPage extends Component
         return $days . ' días';
     }
 
-    private function loadBalanceChart() // ← MODIFICAR existente
+    private function loadBalanceChart()
     {
         $trades = $this->selectedAccount->trades()
             ->when($this->selectedTimeframe !== 'all', function ($query) {
@@ -314,31 +356,82 @@ class AccountPage extends Component
             ->orderBy('exit_time')
             ->get();
 
-
         $labels = ['Inicio'];
         $balanceData = [$this->selectedAccount->initial_balance];
         $currentBalance = $this->selectedAccount->initial_balance;
-        $format = $this->timeframes[$this->selectedTimeframe]['format'] ?? 'd/m H:i';
 
-        foreach ($trades as $trade) {
-            $currentBalance += $trade->pnl;
-            $labels[] = $trade->exit_time->format($format);
-            $balanceData[] = $currentBalance;
+        // ← PUNTOS FANTASMA si no hay trades
+        if ($trades->isEmpty()) {
+            $format = $this->timeframes[$this->selectedTimeframe]['format'] ?? 'H:i';
+            $finalBalance = $this->selectedAccount->initial_balance; // Mismo balance
+
+            if ($this->selectedTimeframe === '1h') {
+                $labels = array_merge($labels, [
+                    now()->subMinutes(40)->format($format),
+                    now()->subMinutes(20)->format($format),
+                    now()->format($format)
+                ]);
+                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+            } elseif ($this->selectedTimeframe === '24h') {
+                $labels = array_merge($labels, [
+                    now()->subHours(16)->format($format),
+                    now()->subHours(8)->format($format),
+                    now()->format($format)
+                ]);
+                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+            } elseif ($this->selectedTimeframe === '7d') {
+                $labels = array_merge($labels, [
+                    now()->subDays(4)->format($format),
+                    now()->subDays(2)->format($format),
+                    now()->format($format)
+                ]);
+                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+            } else { // 'all'
+                $labels[] = 'Sin trades';
+                $balanceData[] = $finalBalance;
+            }
+        } else {
+            // ← TU LÓGICA ORIGINAL (funciona perfecto)
+            $dailyBalances = [];
+            foreach ($trades as $trade) {
+                $dateKey = $this->selectedTimeframe === 'all'
+                    ? $trade->exit_time->format('d M Y')
+                    : $trade->exit_time->format($this->timeframes[$this->selectedTimeframe]['format'] ?? 'd/m H:i');
+                $dailyBalances[$dateKey] = ($dailyBalances[$dateKey] ?? 0) + $trade->pnl;
+            }
+
+            foreach ($dailyBalances as $date => $pnlDay) {
+                $currentBalance += $pnlDay;
+                $labels[] = $date;
+                $balanceData[] = $currentBalance;
+            }
         }
 
         $this->balanceChartData = [
             'labels' => $labels,
-            'datasets' => [[
-                'label' => 'Balance',
-                'data' => $balanceData,
-                'borderColor' => 'rgb(16, 185, 129)',
-                'backgroundColor' => 'rgba(16, 185, 129, 0.3)',
-                'fill' => 'origin',
-                'tension' => 0.4,
-                'pointBackgroundColor' => 'rgb(16, 185, 129)'
-            ]]
+            'datasets' => [
+                [
+                    'label' => $trades->isEmpty() ? 'Sin trades' : 'Balance',
+                    'data' => $balanceData,
+                    'borderColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)',
+                    'backgroundColor' => $trades->isEmpty() ? 'rgba(156, 163, 175, 0.1)' : 'rgba(16, 185, 129, 0.3)',
+                    'fill' => 'origin',
+                    'tension' => 0.4,
+                    'pointBackgroundColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)'
+                ],
+            ]
         ];
     }
+
+    public function showAlert($type, $message)
+    {
+        $this->dispatch('show-alert', [
+            'type' => $type,
+            'message' => $message
+        ]);
+    }
+
+
 
 
 
