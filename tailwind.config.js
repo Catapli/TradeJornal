@@ -20,7 +20,7 @@ export default {
                 google: ["Google Sans", ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                primary: "#0033a1",
+                primary: "#0F172A",
                 secondary: "#374361",
                 secondaryhover: "#535a6b",
                 backbuttons: "#0000ff29",

@@ -10,6 +10,8 @@ use App\Models\File;
 use App\Models\InterestList;
 use App\Models\Lists;
 use App\Models\Log;
+use App\Models\ProgramLevel;
+use App\Models\ProgramObjective;
 use App\Models\Reason;
 use App\Models\Strategy;
 use App\Models\Town;
@@ -29,6 +31,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
+        $this->call(PropFirmsSeeder::class);
+
 
         //! DATOS PRODUCCION
         //* USUARIO ADMIN
@@ -46,65 +50,41 @@ class DatabaseSeeder extends Seeder
 
         // * Cuentas
 
-        Account::create([
-            'user_id' => 1,
-            'name' => 'Prueba Neomma',
-            'broker' => 'Neommaa',
-            'initial_balance' => 5000,
-            'current_balance' => 5000,
-            'max_balance' => 800,
-            'status' => 'phase_1',
-            'max_daily_loss' => 8,
-            'max_total_loss' => 6,
-            'mt5_login' => '7727667',
-            'mt5_password' => encrypt('9Z35szttsH7@'),
-            'mt5_server' => 'Neomaaa-Live',
-            'funded_date' => fake()->dateTimeBetween('-90 days', 'now')
+        $fivekaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 5000)->first();
+        $fiveAccountObjective = ProgramObjective::where('program_level_id', $fivekaccountPrime->id)->where('phase_number', "1")->first();
 
-        ]);
+        $tenkaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 10000)->first();
+        $tenAccountObjective = ProgramObjective::where('program_level_id', $tenkaccountPrime->id)->where('phase_number', "1")->first();
 
         Account::create([
             'user_id' => 1,
             'name' => 'Prueba Neomma 2',
-            'broker' => 'Neommaa',
+            'broker_name' => 'Neommaa',
             'initial_balance' => 5000,
             'current_balance' => 5000,
-            'max_balance' => 800,
-            'status' => 'phase_2',
-            'max_daily_loss' => 8,
-            'max_total_loss' => 6,
+            'status' => 'active',
             'mt5_login' => '7730373',
             'mt5_password' => encrypt('x83Vgb#mUEsF'),
             'mt5_server' => 'Neomaaa-Live',
+            'program_level_id' => $fivekaccountPrime->id,
+            'program_objective_id' => $fiveAccountObjective->id,
         ]);
 
 
         Account::create([
             'user_id' => 1,
             'name' => 'Prueba Neomma 3',
-            'broker' => 'Neommaa',
+            'broker_name' => 'Neommaa',
             'initial_balance' => 10000,
             'current_balance' => 10000,
-            'max_balance' => 800,
             'status' => 'active',
-            'max_daily_loss' => 8,
-            'max_total_loss' => 6,
             'mt5_login' => '7733662',
             'mt5_password' => encrypt('j0CMHxCmj#@H'),
             'mt5_server' => 'Neomaaa-Live',
+            'program_level_id' => $tenkaccountPrime->id,
+            'program_objective_id' => $tenAccountObjective->id,
         ]);
 
-        Account::create([
-            'user_id' => 1,
-            'name' => 'Prueba Neomma 4',
-            'broker' => 'Neommaa',
-            'initial_balance' => 10000,
-            'current_balance' => 12000,
-            'max_balance' => 800,
-            'status' => 'burned',
-            'max_daily_loss' => 8,
-            'max_total_loss' => 6,
-        ]);
 
         TradeAsset::create([
             'symbol' => 'EURUSD',
@@ -125,6 +105,6 @@ class DatabaseSeeder extends Seeder
             'timeframe' => 'M5',
         ]);
 
-        Trade::factory()->count(50)->create(); // 150 por cuenta x4
+        // Trade::factory()->count(50)->create(); // 150 por cuenta x4
     }
 }

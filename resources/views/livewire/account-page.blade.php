@@ -1,4 +1,5 @@
-<div x-data="accounts()">
+{{-- CONTENEDOR PRINCIPAL: Solo lógica de dashboard --}}
+<div x-data="dashboardLogic()">
 
     {{-- ? Loading --}}
     <div wire:loading
@@ -11,6 +12,100 @@
     {{-- ? Show Alerta --}}
     <x-modal-template show="showAlert">
     </x-modal-template>
+
+    <x-modals.modal-account show="showModal"
+                            labelTitle="labelTitleModal">
+
+        <div class="grid w-full grid-cols-12 gap-3 p-4">
+            {{-- ? Nombre Cuenta --}}
+            <x-input-group id="name"
+                           class="col-span-12"
+                           placeholder="{{ __('labels.account_name') }}"
+                           icono=" <i class='fa-solid fa-signature'></i>"
+                           tooltip="{{ __('labels.account_name') }}" />
+
+            {{-- Apartado Cuenta --}}
+            {{-- Pasamos los datos SOLO aquí. Así no pesan en el resto de la app --}}
+            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300"
+                      x-data="accountSelector(@js($propFirmsData))">
+
+                <legend class="font-google font-bold">{{ __('labels.prop_firm_data') }}</legend>
+
+                {{-- 1. PROP FIRM --}}
+                <x-select-group id="propFirm"
+                                class="col-span-12"
+                                x-model="selectedFirmId"
+                                tooltip="{{ __('labels.prop_firm') }}"
+                                icono="<i class='fa-brands fa-sketch'></i>">
+                    <x-slot name="options">
+                        <option value="">{{ __('labels.select_prop_firm') }}</option>
+                        <template x-for="firm in allFirms"
+                                  :key="firm.id">
+                            <option :value="firm.id"
+                                    x-text="firm.name"></option>
+                        </template>
+                    </x-slot>
+                </x-select-group>
+
+                {{-- 2. PROGRAMA --}}
+                <x-select-group id="program"
+                                class="col-span-12"
+                                x-model="selectedProgramId"
+                                x-bind:disabled="!selectedFirmId"
+                                tooltip="{{ __('labels.account_type') }}"
+                                icono="<i class='fa-solid fa-list'></i>">
+                    <x-slot name="options">
+                        <option value="">{{ __('labels.select_program') }}</option>
+                        <template x-for="program in programs"
+                                  :key="program.id">
+                            <option :value="program.id"
+                                    x-text="program.name"></option>
+                        </template>
+                    </x-slot>
+                </x-select-group>
+
+                {{-- 3. BALANCE --}}
+                <x-select-group id="size"
+                                class="col-span-12"
+                                x-model="selectedSize"
+                                x-bind:disabled="!selectedProgramId"
+                                tooltip="{{ __('labels.balance_account') }}"
+                                icono="<i class='fa-solid fa-coins'></i>">
+                    <x-slot name="options">
+                        <option value="">{{ __('labels.select_balance') }}</option>
+                        <template x-for="size in sizes"
+                                  :key="size">
+                            <option :value="size"
+                                    x-text="new Intl.NumberFormat().format(size)"></option>
+                        </template>
+                    </x-slot>
+                </x-select-group>
+
+                {{-- 4. DIVISA --}}
+                <x-select-group id="level"
+                                class="col-span-12"
+                                x-model="selectedLevelId"
+                                x-bind:disabled="!selectedSize"
+                                tooltip="{{ __('labels.currency_account') }}"
+                                icono="<i class='fa-solid fa-euro-sign'></i>">
+                    <x-slot name="options">
+                        <option value="">{{ __('labels.select_currency') }}</option>
+                        <template x-for="level in currencies"
+                                  :key="level.id">
+                            <option :value="level.id"
+                                    x-text="level.currency"></option>
+                        </template>
+                    </x-slot>
+                </x-select-group>
+
+            </fieldset>
+            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
+                <legend class="font-google font-bold">{{ __('labels.sync_options') }}</legend>
+            </fieldset>
+
+        </div>
+
+    </x-modals.modal-account>
 
 
     <div class="grid grid-cols-12 p-2">
@@ -126,14 +221,14 @@
                     {{-- SUBINFO --}}
                     <p class="mt-3 flex items-center text-sm font-medium text-gray-600">
                         <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                        {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker ?? __('labels.not_selected_account') }} • {{ __('labels.' . $selectedAccount?->account_type) ?? '---' }}
+                        {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker_name ?? __('labels.not_selected_account') }} • {{ $selectedAccount?->phase_label ?? '---' }}
                     </p>
 
                     <div>
                         <div class="flex items-center gap-2 rounded-lg p-1">
 
-                            <button
-                                    class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                            <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                                    @click="showOpenModalCreate()">
                                 <i class="fa-solid fa-plus text-green-500"></i>
                                 {{ __('labels.create_account') }}
                             </button>

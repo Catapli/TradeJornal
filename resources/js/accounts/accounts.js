@@ -1,64 +1,37 @@
 document.addEventListener("alpine:init", () => {
-    Alpine.data("accounts", () => ({
-        showLoading: false,
+    // COMPONENTE 1: Lógica del Dashboard (Gráficos, Alertas, UI General)
+    Alpine.data("dashboardLogic", () => ({
         showLoadingGrafic: false,
+        timeframe: "all",
+        showAlert: false,
+        bodyAlert: "",
+        typeAlert: "error",
+        showModal: false, // Control del modal
+        labelTitleModal: "Crear Cuenta",
         typeButton: "", // Tipo de Boton para los modals
-        alertTitle: "", // Titulo para la alerta
-        showAlert: false, // Mostrar alerta
-        typeAlert: "error", // Tipo de Alerta
-        bodyAlert: "", // Mensaje para la alerta
-        height: "auto",
-        isInitialized: false,
-        registerSelected: false,
-        timeframe: "all", // ← NUEVO: Estado timeframe
-        grafico: "",
-        init() {
-            if (this.isInitialized) return; // Coomprobar que esta inicializado
-            this.isInitialized = true;
-            const self = this;
 
+        init() {
+            // Inicializamos gráfico
             this.initChart();
 
-            window.addEventListener("show-alert", (event) => {
-                let e = event.detail[0];
-                if (e.type == "success") {
-                    this.showAlertSucces(e.title, e.message, e.type, e.event);
-                } else {
-                    this.showAlertFunc(e.title, this.$e(e.message), "error");
-                }
-            });
-
-            window.addEventListener("timeframe-updated", (event) => {
-                this.timeframe = event.detail.timeframe;
-                console.log("Timeframe updated to:", this.timeframe);
+            // Listeners de eventos globales
+            window.addEventListener("timeframe-updated", (e) => {
+                this.timeframe = e.detail.timeframe;
                 this.initChart();
             });
 
-            window.addEventListener("account-updated", (event) => {
-                this.timeframe = event.detail.timeframe;
-                this.initChart();
-            });
-
-            window.addEventListener("show-alert", (event) => {
-                let e = event.detail[0];
-                if (e.type == "success") {
-                    this.showAlertSucces(e.message, e.type);
-                } else {
-                    this.showAlertFunc(this.$e(e.message), "error");
-                }
+            window.addEventListener("show-alert", (e) => {
+                const data = e.detail[0] || e.detail; // Ajuste por si viene en array o no
+                this.triggerAlert(data.message, data.type);
             });
         },
 
-        // ? Mostrar alerta de éxito
-        showAlertSucces(bodyAlert, typeAlert) {
-            this.showAlertFunc(this.$s(bodyAlert), typeAlert);
-        },
-
-        // ? Mostrar alerta
-        showAlertFunc(bodyAlert, typeAlert) {
-            this.bodyAlert = bodyAlert;
-            this.typeAlert = typeAlert;
+        triggerAlert(message, type = "error") {
+            this.bodyAlert = message;
+            this.typeAlert = type;
             this.showAlert = true;
+            // Opcional: auto-ocultar a los 3 seg
+            setTimeout(() => (this.showAlert = false), 4000);
         },
 
         setTimeframe(value) {
@@ -66,44 +39,105 @@ document.addEventListener("alpine:init", () => {
             this.$wire.setTimeframe(value);
         },
 
+        showOpenModalCreate() {
+            this.showModal = true;
+        },
+
         initChart() {
-            // 1. Usa $refs en lugar de querySelector
             const canvas = this.$refs.canvas;
             if (!canvas) return;
 
-            // 2. Forzamos que se muestre antes de inicializar Chart.js
-            // Si el canvas está oculto (display:none), Chart.js no puede calcular el tamaño
             this.showLoadingGrafic = false;
 
-            // 3. Pequeño delay para asegurar que Alpine ha quitado el display:none del x-show
+            // Usamos nextTick para asegurar que el DOM está listo
             this.$nextTick(() => {
+                if (window.balanceChart) window.balanceChart.destroy();
+
                 const ctx = canvas.getContext("2d");
+                // Accedemos a los datos de Livewire de forma segura
+                const labels = this.$wire.balanceChartData?.labels || [];
+                const datasets = this.$wire.balanceChartData?.datasets || [];
 
-                const chartData = {
-                    labels: this.$wire.balanceChartData?.labels || [],
-                    datasets: this.$wire.balanceChartData?.datasets || [],
-                };
-
-                if (!chartData.labels.length) return;
-
-                if (window.balanceChart) {
-                    window.balanceChart.destroy();
-                }
+                if (!labels.length) return;
 
                 window.balanceChart = new Chart(ctx, {
                     type: "line",
-                    data: chartData,
+                    data: { labels, datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            intersect: false,
-                            mode: "index",
-                        },
-                        // ... resto de tus opciones
+                        interaction: { intersect: false, mode: "index" },
+                        // Tus opciones de chart...
                     },
                 });
             });
+        },
+    }));
+
+    // COMPONENTE 2: Lógica del Selector (Formulario Prop Firms)
+    Alpine.data("accountSelector", (data) => ({
+        allFirms: data || [], // Protección contra undefined
+
+        // Variables locales de Alpine (NO usas $wire.form aquí directamente en el modelo)
+        selectedFirmId: "",
+        selectedProgramId: "",
+        selectedSize: "",
+        selectedLevelId: "",
+
+        get programs() {
+            if (!this.selectedFirmId) return [];
+            const firm = this.allFirms.find((f) => f.id == this.selectedFirmId);
+            return firm ? firm.programs : [];
+        },
+
+        get sizes() {
+            if (!this.selectedProgramId) return [];
+            const program = this.programs.find(
+                (p) => p.id == this.selectedProgramId,
+            );
+            if (!program || !program.levels) return [];
+            const sizes = program.levels.map((l) => parseFloat(l.size));
+            return [...new Set(sizes)].sort((a, b) => a - b);
+        },
+
+        get currencies() {
+            if (!this.selectedSize || !this.selectedProgramId) return [];
+            const program = this.programs.find(
+                (p) => p.id == this.selectedProgramId,
+            );
+            return program.levels.filter(
+                (l) => parseFloat(l.size) == this.selectedSize,
+            );
+        },
+
+        init() {
+            // Watchers para limpiar cascada y sincronizar con Livewire
+            this.$watch("selectedFirmId", () => {
+                this.selectedProgramId = "";
+                this.selectedSize = "";
+                this.selectedLevelId = "";
+                this.syncToLivewire();
+            });
+            this.$watch("selectedProgramId", () => {
+                this.selectedSize = "";
+                this.selectedLevelId = "";
+                this.syncToLivewire();
+            });
+            this.$watch("selectedSize", () => {
+                this.selectedLevelId = "";
+                this.syncToLivewire();
+            });
+            this.$watch("selectedLevelId", () => {
+                this.syncToLivewire();
+            });
+        },
+
+        syncToLivewire() {
+            // Inyectamos los datos en Livewire silenciosamente
+            this.$wire.form.selectedPropFirmID = this.selectedFirmId;
+            this.$wire.form.selectedProgramID = this.selectedProgramId;
+            this.$wire.form.size = this.selectedSize;
+            this.$wire.form.programLevelID = this.selectedLevelId;
         },
     }));
 });

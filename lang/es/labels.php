@@ -60,6 +60,18 @@ return [
     'create_account' => 'Crear nueva cuenta',
     'edit_account' => 'Editar cuenta',
     'delete_account' => 'Eliminar cuenta',
+    'account_name' => 'Nombre de la cuenta',
+    'prop_firm_data' => 'Datos de la Prop Firm',
+    'sync_options' => 'Opciones de sincronización',
+    'prop_firm' => 'Prop Firm',
+    'select_prop_firm' => 'Selecciona una Prop Firm',
+    'select_program' => 'Selecciona un Tipo de Cuenta',
+    'account_type' => 'Tipo de cuenta',
+    'balance_account' => 'Balance de la cuenta',
+    'select_balance' => 'Selecciona un Balance',
+    'select_currency' => 'Selecciona una Divisa',
+    'currency_account' => 'Divisa de la cuenta',
+
 
 
 

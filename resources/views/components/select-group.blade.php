@@ -2,8 +2,8 @@
 
 <div {!! $attributes->merge(['class' => 'px-2 py-1 relative justify-items-center']) !!}>
     <div class="peer flex w-full rounded-lg shadow-sm">
-        <div class="inline-flex min-w-[55px] items-center justify-center rounded-s-md border border-e-0 border-gray-200 bg-gray-50 px-4 dark:border-neutral-600 dark:bg-neutral-700">
-            <span class="text-lg text-gray-500 dark:text-neutral-400">{!! $icono !!}</span>
+        <div class="inline-flex min-w-[55px] items-center justify-center rounded-s-md border border-e-0 border-gray-700 bg-primary px-4 dark:border-neutral-600 dark:bg-neutral-700">
+            <span class="text-lg text-white dark:text-neutral-400">{!! $icono !!}</span>
         </div>
         <select id="{{ $id }}"
                 {!! $attributes->merge([

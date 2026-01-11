@@ -81,33 +81,6 @@
     },
 
     "titles": {
-        "insert_mun": "Insertar Municipio",
-        "delete_mun": "Eliminar Municipio",
-        "update_mun": "Actualizar Municipio",
-        "insert_user": "Insertar Usuario",
-        "update_user": "Actualizar Usuario",
-        "delete_user": "Eliminar Usuario",
-        "find_list": "Buscar Lista Colaborativa",
-        "find_town": "Buscar Entidad",
-        "insert_list": "Insertar Lista Colaborativa",
-        "delete_list": "Eliminar Lista Colaborativa",
-        "update_list": "Actualizar Lista Colaborativa",
-        "find_camera": "Buscar Cámara",
-        "insert_camera": "Insertar Cámara",
-        "update_camera": "Actualizar Cámara",
-        "delete_camera": "Eliminar Cámara",
-        "find_zone": "Buscar Zona",
-        "insert_zone": "Insertar Zona",
-        "update_zone": "Actualizar Zona",
-        "delete_zone": "Eliminar Zona",
-        "find_colab_list": "Buscar Lista Colaborativa",
-        "insert_colab_list": "Insertar Lista Colaborativa",
-        "delete_collabs": "Eliminar Lista Colaborativa",
-        "update_collab_list": "Actualizar Lista Colaborativa",
-        "find_role": "Buscar Rol",
-        "insert_role": "Insertar Rol",
-        "update_role": "Actualizar Rol",
-        "delete_role": "Eliminar Rol",
-        "search": "Buscador"
+        "create_account": "Crear Cuenta"
     }
 }

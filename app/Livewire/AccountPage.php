@@ -4,7 +4,11 @@ namespace App\Livewire;
 
 use App\Jobs\SyncAccountTrades;
 use App\Jobs\SyncMt5Account;
+use App\Livewire\Forms\AccountForm;
 use App\Models\Account;
+use App\Models\Program;
+use App\Models\ProgramLevel;
+use App\Models\PropFirm;
 use App\Models\Trade;
 use App\Services\Mt5Gateway;
 use Carbon\Carbon;
@@ -54,6 +58,14 @@ class AccountPage extends Component
     public $isSyncing = false;  // idle, syncing, done
     public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
     public $selectedTimeframe = 'all'; // ← NUEVO
+    public AccountForm $form;
+    // public $propFirms = []; // Lista de Prop Firms para el select
+    // public $programsFirms = []; // Lista de Programas para el select
+    // public $sizes = []; // Lista de tamaños para el select
+    // public $currencies = []; // Lista de monedas para el select
+    // Variable pública para pasar al frontend
+    public $propFirmsData = [];
+
 
 
 
@@ -69,7 +81,15 @@ class AccountPage extends Component
         $user = Auth::user();
         $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
         $this->selectedAccount = $this->accounts->first(); // ← Array[0]
-        Log::info("Cuenta seleccionada en mount: " . $this->selectedAccount);
+        // $this->propFirms = PropFirm::select('id', 'name')->orderBy('name')->get();
+        // Cargamos toda la jerarquía necesaria y la convertimos a Array
+        // Esto es muy rápido si tienes < 5000 filas en total (que seguro que sí)
+        $this->propFirmsData = PropFirm::with(['programs.levels' => function ($query) {
+            $query->select('id', 'program_id', 'size', 'currency');
+        }])
+            ->orderBy('name')
+            ->get() // Obtenemos colección
+            ->toArray(); // Convertimos a Array para pasarlo al JS
         $this->updateData();
     }
 
@@ -126,7 +146,7 @@ class AccountPage extends Component
 
         // Si el mensaje sigue siendo nuestra bandera, el Job aún no ha escrito su resultado
         if ($this->selectedAccount->sync_error_message === 'WAITING_JOB') {
-            Log::info("El Job sigue trabajando o en cola...");
+            // Log::info("El Job sigue trabajando o en cola...");
             return;
         }
 
@@ -278,11 +298,17 @@ class AccountPage extends Component
             round($this->avgWinTrade / $this->avgLossTrade, 2) : 0;
 
         // 🆕 ANTIGÜEDAD DE LA CUENTA (días desde funded_date)
-        $accountAgeDays = Carbon::parse($this->selectedAccount->funded_date)
-            ->diffInDays(now());
+        if ($this->selectedAccount->funded_date) {
+            $accountAgeDays = Carbon::parse($this->selectedAccount->funded_date)
+                ->diffInDays(now());
 
-        $this->accountAgeDays = $accountAgeDays;
-        $this->accountAgeFormatted = $this->formatAge($accountAgeDays);
+            $this->accountAgeDays = $accountAgeDays;
+            $this->accountAgeFormatted = $this->formatAge($accountAgeDays);
+        } else {
+            $this->accountAgeDays = 0;
+            $this->accountAgeFormatted = 'N/A';
+        }
+
 
         // 🆕 FACTOR DE BENEFICIO (Profit Factor)
         $profitFactorStats = $this->selectedAccount->trades()
@@ -430,6 +456,35 @@ class AccountPage extends Component
             'message' => $message
         ]);
     }
+
+
+    // public function onChangeSelectPropFirm()
+    // {
+    //     if ($this->form->selectedPropFirmID == null) {
+    //         $this->programsFirms = [];
+    //     } else {
+    //         $propFirm = PropFirm::find($this->form->selectedPropFirmID);
+    //         $this->programsFirms = $propFirm->programs;
+    //     }
+    // }
+
+    // public function onChangeSelectProgram()
+    // {
+    //     // 1. Obtenemos los tamaños ÚNICOS y ordenados
+    //     // Usamos DB query directa para ser más eficientes que cargar todos los modelos
+    //     $this->sizes = ProgramLevel::where('program_id', $this->form->selectedProgramID)
+    //         ->select('size')
+    //         ->distinct() // <--- MAGIA: Evita duplicados (100k USD y 100k EUR cuentan como uno)
+    //         ->orderBy('size', 'asc')
+    //         ->pluck('size')
+    //         ->toArray();
+    // }
+
+    // public function onChangeSelectBalance()
+    // {
+    //     $this->currencies = ProgramLevel::where('program_id', $this->form->selectedProgramID)
+    //         ->where('size', $this->form->size)->pluck('currency', 'id');  // El tamaño que acaba de elegir
+    // }
 
 
 
