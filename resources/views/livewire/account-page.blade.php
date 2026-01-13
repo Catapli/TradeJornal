@@ -3,7 +3,7 @@
 
     {{-- ? Loading --}}
     <div wire:loading
-         wire:target='updatedSelectedAccountId'>
+         wire:target='updatedSelectedAccountId, insertAccount'>
         <x-loader></x-loader>
     </div>
 
@@ -14,26 +14,31 @@
     </x-modal-template>
 
     <x-modals.modal-account show="showModal"
-                            labelTitle="labelTitleModal">
+                            labelTitle="labelTitleModal"
+                            event="trigger-save-account">
 
-        <div class="grid w-full grid-cols-12 gap-3 p-4">
+        <div class="grid w-full grid-cols-12 gap-3 p-4"
+             x-data="accountSelector(@js($propFirmsData))"
+             @trigger-save-account.window="checkForm()">
             {{-- ? Nombre Cuenta --}}
             <x-input-group id="name"
                            class="col-span-12"
+                           x-ref="nameAccount"
+                           x-model="nameAccount"
                            placeholder="{{ __('labels.account_name') }}"
                            icono=" <i class='fa-solid fa-signature'></i>"
                            tooltip="{{ __('labels.account_name') }}" />
 
             {{-- Apartado Cuenta --}}
             {{-- Pasamos los datos SOLO aquí. Así no pesan en el resto de la app --}}
-            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300"
-                      x-data="accountSelector(@js($propFirmsData))">
+            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
 
                 <legend class="font-google font-bold">{{ __('labels.prop_firm_data') }}</legend>
 
                 {{-- 1. PROP FIRM --}}
                 <x-select-group id="propFirm"
                                 class="col-span-12"
+                                x-ref="propFirm"
                                 x-model="selectedFirmId"
                                 tooltip="{{ __('labels.prop_firm') }}"
                                 icono="<i class='fa-brands fa-sketch'></i>">
@@ -50,13 +55,14 @@
                 {{-- 2. PROGRAMA --}}
                 <x-select-group id="program"
                                 class="col-span-12"
+                                x-ref="program"
                                 x-model="selectedProgramId"
                                 x-bind:disabled="!selectedFirmId"
                                 tooltip="{{ __('labels.account_type') }}"
                                 icono="<i class='fa-solid fa-list'></i>">
                     <x-slot name="options">
                         <option value="">{{ __('labels.select_program') }}</option>
-                        <template x-for="program in programs"
+                        <template x-for="program in getPrograms()"
                                   :key="program.id">
                             <option :value="program.id"
                                     x-text="program.name"></option>
@@ -67,13 +73,14 @@
                 {{-- 3. BALANCE --}}
                 <x-select-group id="size"
                                 class="col-span-12"
+                                x-ref="size"
                                 x-model="selectedSize"
                                 x-bind:disabled="!selectedProgramId"
                                 tooltip="{{ __('labels.balance_account') }}"
                                 icono="<i class='fa-solid fa-coins'></i>">
                     <x-slot name="options">
                         <option value="">{{ __('labels.select_balance') }}</option>
-                        <template x-for="size in sizes"
+                        <template x-for="size in getSizes()"
                                   :key="size">
                             <option :value="size"
                                     x-text="new Intl.NumberFormat().format(size)"></option>
@@ -82,28 +89,86 @@
                 </x-select-group>
 
                 {{-- 4. DIVISA --}}
-                <x-select-group id="level"
+                <x-select-group id="currency"
                                 class="col-span-12"
+                                x-ref="currency"
                                 x-model="selectedLevelId"
                                 x-bind:disabled="!selectedSize"
                                 tooltip="{{ __('labels.currency_account') }}"
                                 icono="<i class='fa-solid fa-euro-sign'></i>">
                     <x-slot name="options">
                         <option value="">{{ __('labels.select_currency') }}</option>
-                        <template x-for="level in currencies"
+                        <template x-for="level in getCurrencies()"
                                   :key="level.id">
                             <option :value="level.id"
                                     x-text="level.currency"></option>
                         </template>
                     </x-slot>
                 </x-select-group>
-
             </fieldset>
             <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
                 <legend class="font-google font-bold">{{ __('labels.sync_options') }}</legend>
+                <div class="col-span-12 grid grid-cols-12">
+                    <div class="col-span-6">
+                        <span>Habilitar Sincronización</span>
+                    </div>
+                    <div class="col-span-6">
+
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input class="peer sr-only"
+                                   type="checkbox"
+                                   x-model="syncronize"
+                                   value="" />
+                            <div
+                                 class="group peer h-8 w-16 rounded-full bg-white ring-2 ring-red-500 duration-300 after:absolute after:left-1 after:top-1 after:flex after:h-6 after:w-6 after:items-center after:justify-center after:rounded-full after:bg-red-500 after:duration-300 peer-checked:ring-green-500 peer-checked:after:translate-x-8 peer-checked:after:bg-green-500 peer-hover:after:scale-95">
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                {{-- 5. Plataforma Broker --}}
+                <x-select-group id="level"
+                                class="col-span-12"
+                                x-ref="platformBroker"
+                                x-model="platformBroker"
+                                tooltip="{{ __('labels.platform_trading') }}"
+                                icono="<i class='fa-solid fa-terminal'></i>">
+                    <x-slot name="options">
+                        <option value="">{{ __('labels.select_platform') }}</option>
+                        <option value="mt4">MetaTrader 4</option>
+                        <option value="mt5">MetaTrader 5</option>
+                        <option value="cTrader">cTrader</option>
+                    </x-slot>
+                </x-select-group>
+
+                <x-input-group id="login_platform"
+                               class="col-span-12"
+                               x-ref="loginPlatform"
+                               x-model="loginPlatform"
+                               placeholder="{{ __('labels.login_platform') }}"
+                               icono=" <i class='fa-solid fa-user-astronaut'></i>"
+                               tooltip="{{ __('labels.login_platform') }}" />
+
+                <x-input-group id="password_platform"
+                               class="col-span-12"
+                               type="password"
+                               x-ref="passwordPlatform"
+                               x-model="passwordPlatform"
+                               placeholder="{{ __('labels.password_platform') }}"
+                               icono=" <i class='fa-solid fa-key'></i>"
+                               tooltip="{{ __('labels.password_platform') }}" />
+
+                {{-- 5. Servidor Broker --}}
+                <x-input-group id="server"
+                               class="col-span-12"
+                               x-model="selectedServer"
+                               placeholder="{{ __('labels.server_platform') }}"
+                               icono=" <i class='fa-solid fa-server'></i>"
+                               disabled="true"
+                               tooltip="{{ __('labels.server_platform') }}" />
             </fieldset>
 
         </div>
+
 
     </x-modals.modal-account>
 
@@ -124,8 +189,8 @@
 
                         <!-- Forzamos que el span no se rompa y esté alineado a la derecha -->
                         <span class="mb-1 whitespace-nowrap text-xs">
-                            Ultima Sincronizacion @if ($selectedAccount->last_sync)
-                                {{ Carbon\Carbon::parse($selectedAccount->last_sync)->format('H:i d/m/Y') }}
+                            Ultima Sincronizacion @if ($selectedAccount?->last_sync)
+                                {{ Carbon\Carbon::parse($selectedAccount?->last_sync)->format('H:i d/m/Y') }}
                             @else
                                 Nunca
                             @endif
@@ -391,7 +456,7 @@
                     </div>
 
                     <div>
-                        {{ $selectedAccount?->broker ?? '---' }}
+                        {{ $selectedAccount?->broker_name ?? '---' }}
                     </div>
                 </div>
                 <div class="col-span-12 flex items-center justify-between">
@@ -417,7 +482,7 @@
         </div>
 
         <div class="hover:shadow-3xl col-span-12 m-1 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-            <div class="col-span-12 font-google">
+            <div class="col-span-12 font-google text-lg font-bold text-gray-800">
                 {{ __('labels.statsitics_account') }}
             </div>
 
@@ -496,17 +561,67 @@
                                icono="<i class='fa-solid fa-calendar'></i>"
                                key="{{ $accountAgeFormatted }} "
                                tooltip="{{ __('labels.tlp_age_account') }}" />
+        </div>
 
+        <div class="col-span-12 m-1 mt-4 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-6 shadow-2xl transition-all duration-300">
 
+            <div class="mb-5 flex items-center justify-between">
+                <div class="flex items-center">
+                    <h3 class="font-google text-lg font-bold text-gray-800">Objetivos de la Fase</h3>
+                    <p class="text-sm text-gray-500">
+                        {{ $selectedAccount->program_level->program->name ?? '' }}
+                        <span class="mx-1 text-gray-300">|</span>
+                        <span class="font-semibold text-blue-600">{{ $selectedAccount->currentObjective->name }}</span>
+                    </p>
+                </div>
 
+                {{-- Botón opcional para ver reglas --}}
+                {{-- <button class="...">Ver Reglas</button> --}}
+            </div>
 
+            {{-- GRID DE TARJETAS --}}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {{-- Llamamos al Accessor del Modelo Account --}}
+                @foreach ($selectedAccount->objectives_progress as $obj)
+                    <x-card-objectives :objective="$obj" />
+                @endforeach
+            </div>
+
+        </div>
+
+        <div class="col-span-12 m-1 mt-4 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-6 shadow-2xl transition-all duration-300">
+
+            <div class="mb-5 flex items-center justify-between">
+                <div class="flex items-center">
+                    <h3 class="font-google text-lg font-bold text-gray-800">Histórico de la Cuenta</h3>
+                </div>
+            </div>
+
+            <div id="container_table"
+                 class="items-center rounded-b-md rounded-r-md border border-solid border-gray-300 bg-white shadow-lg transition-all duration-300"
+                 wire:ignore>
+                <div class="p-3">
+                    <table id="table_history"
+                           class="datatable">
+                        <thead>
+                            <tr>
+                                <th>{{ __('labels.id') }}</th>
+                                <th>{{ __('labels.user') }}</th>
+                                <th>{{ __('labels.entity') }}</th>
+                                <th>{{ __('labels.active') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
 
 
         </div>
 
 
+
     </div>
-
-
-
-</div>

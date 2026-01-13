@@ -61,6 +61,8 @@ return new class extends Migration
             $table->decimal('initial_balance', 15, 2);
             $table->decimal('current_balance', 15, 2);
             $table->decimal('current_equity', 15, 2)->nullable(); // Importante para reglas de DD basado en Equity
+            $table->decimal('today_starting_equity', 15, 2)->nullable(); // Comprobacion de Equity diaria
+            $table->decimal('today_starting_balance', 15, 2)->nullable(); // Comprobacion de Balance diaria
 
             // Fechas clave
             $table->timestamp('funded_date')->nullable(); // Cuándo empezó esta fase

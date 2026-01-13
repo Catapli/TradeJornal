@@ -1,4 +1,5 @@
-@props(['show', 'labelTitle'])
+@props(['show', 'labelTitle', 'event' => 'checkForm'])
+
 <div class="fixed inset-0 z-50 flex justify-center overflow-auto rounded-br-xl rounded-tl-xl rounded-tr-xl bg-opacity-100 backdrop-blur-md transition-opacity duration-300 ease-out"
      data-modal-backdrop="static"
      x-show="{{ $show }}"
@@ -24,8 +25,7 @@
     <div class="relative mt-9 w-full max-w-7xl overflow-y-visible p-8">
 
         <!-- Modal content -->
-        <div class="relative rounded-lg border border-solid border-secondary bg-secondary shadow-2xl dark:bg-gray-700"
-             @click.away="{{ $show }} = false">
+        <div class="relative rounded-lg border border-solid border-secondary bg-secondary shadow-2xl dark:bg-gray-700">
 
             {{-- ? Loading --}}
             <div wire:loading
@@ -57,7 +57,7 @@
             {{-- Modal Footer --}}
             <div class="flex h-auto w-full justify-end rounded-b-lg border-t border-gray-200 bg-white px-4 py-2">
                 <i class="fa-solid fa-circle-check cursor-pointer text-3xl transition-all duration-200 ease-in-out hover:scale-125 hover:text-green-500"
-                   @click="{{ $show }} = false"></i>
+                   @click="$dispatch('{{ $event }}')"></i>
             </div>
         </div>
     </div>

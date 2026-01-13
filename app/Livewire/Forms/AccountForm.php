@@ -9,6 +9,8 @@ class AccountForm extends Form
 {
     //
 
+    // Nombre de la cuenta
+    public $name;
     // Vinculación con Prop Firm
     public $selectedPropFirmID;
 
@@ -20,4 +22,19 @@ class AccountForm extends Form
 
     // Vinculacion con el Tipo de Cuenta (ProgramLevel)
     public $programLevelID;
+
+    // Vinculación con el Servidor de la Prop Firm
+    public $server;
+
+    // Vinculación con la Sincronización Automática
+    public $sync;
+
+    // Vinculación con el Broker/Plataforma de Trading
+    public $platformBroker;
+
+    // Vinculación con el Login de la Plataforma
+    public $loginPlatform;
+
+    // Vinculación con la Contraseña de la Plataforma
+    public $passwordPlatform;
 }

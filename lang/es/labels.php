@@ -71,6 +71,13 @@ return [
     'select_balance' => 'Selecciona un Balance',
     'select_currency' => 'Selecciona una Divisa',
     'currency_account' => 'Divisa de la cuenta',
+    'select_platform' => 'Selecciona una Plataforma',
+    'platform_trading' => 'Plataforma de trading',
+    'login_platform' => 'Credenciales de la cuenta',
+    'server_platform' => 'Servidor de la cuenta',
+    'password_platform' => 'Contraseña de la cuenta',
+    'account_objectives' => 'Objetivos de la cuenta',
+
 
 
 

@@ -59,12 +59,8 @@ class AccountPage extends Component
     public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
     public $selectedTimeframe = 'all'; // ← NUEVO
     public AccountForm $form;
-    // public $propFirms = []; // Lista de Prop Firms para el select
-    // public $programsFirms = []; // Lista de Programas para el select
-    // public $sizes = []; // Lista de tamaños para el select
-    // public $currencies = []; // Lista de monedas para el select
-    // Variable pública para pasar al frontend
     public $propFirmsData = [];
+
 
 
 
@@ -81,6 +77,7 @@ class AccountPage extends Component
         $user = Auth::user();
         $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
         $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
         // $this->propFirms = PropFirm::select('id', 'name')->orderBy('name')->get();
         // Cargamos toda la jerarquía necesaria y la convertimos a Array
         // Esto es muy rápido si tienes < 5000 filas en total (que seguro que sí)
@@ -90,6 +87,7 @@ class AccountPage extends Component
             ->orderBy('name')
             ->get() // Obtenemos colección
             ->toArray(); // Convertimos a Array para pasarlo al JS
+
         $this->updateData();
     }
 
@@ -215,6 +213,7 @@ class AccountPage extends Component
             $this->totalPnl = $this->selectedAccount->trades()->sum('pnl');
             $this->initialBalance = $this->selectedAccount->initial_balance;
 
+
             // 2. Calculamos el balance teórico
             $theoreticalBalance = $this->initialBalance + $this->totalPnl;
 
@@ -236,6 +235,8 @@ class AccountPage extends Component
             $this->calculateStatistics();
             $this->loadBalanceChart();
         }
+        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
+        $this->dispatch('account-updated', timeframe: 'all');
     }
 
     private function calculateStatistics()
@@ -455,6 +456,66 @@ class AccountPage extends Component
             'type' => $type,
             'message' => $message
         ]);
+    }
+
+    public function insertAccount()
+    {
+
+        $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
+
+        // 3. Determinar el Objetivo Inicial (Fase 1 o Directo a Live)
+        // Esto depende de si el programa tiene fases o es "Instant Funded"
+        $initialPhase = 1; // Por defecto empezamos en Fase 1
+
+
+        if ($level->program->step_count === 0) {
+            // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
+            $initialPhase = 0;
+        }
+
+        // Buscamos el objetivo correspondiente en la BD
+        $objective = $level->objectives()
+            ->where('phase_number', $initialPhase)
+            ->first();
+
+        if (!$objective) {
+            // Seguridad por si el Seeder falló o faltan datos
+            throw new \Exception("No se encontraron las reglas (Objetivos) para la Fase $initialPhase de este nivel.");
+        }
+
+        // 4. Crear la cuenta
+        $account = Account::create([
+            'user_id' => Auth::user()->id,
+            'name' => $this->form->name, // El nombre que puso el usuario
+            'type' => 'prop_firm',
+            'status' => 'active',
+
+            // Vinculaciones Clave
+            'program_level_id' => $level->id,
+            'program_objective_id' => $objective->id, // <--- Aquí guardamos las reglas actuales
+
+            // Datos Técnicos (MT5)
+            'platform' => $this->form->platformBroker ?? 'mt5',
+            'mt5_login' => $this->form->loginPlatform,
+            'mt5_password' => encrypt($this->form->passwordPlatform),
+            'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
+            'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
+
+            // Datos Financieros (Vienen del Nivel, no del usuario)
+            'currency' => $level->currency,
+            'initial_balance' => $level->size,
+            'current_balance' => $level->size, // Al principio son iguales
+
+            // Fechas
+        ]);
+
+        $this->form->reset();
+
+        $user = Auth::user();
+        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
+        $this->selectedAccount = $account; // ← Array[0]
+        $this->dispatch('account-created');
+        $this->updateData();
     }
 
 

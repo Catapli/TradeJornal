@@ -23,6 +23,7 @@ class PropFirmsSeeder extends Seeder
         $neomaaa = PropFirm::create([
             'name'    => 'Neomaaa',
             'slug'    => 'neomaaa',
+            'server' => 'Neomaaa-Live',
             'website' => 'https://neomaaa.com/es/',
             // 'logo' => 'path/to/logo.png'
         ]);
@@ -239,6 +240,58 @@ class PropFirmsSeeder extends Seeder
             'slug'       => 'neomaaa-prime-2-step',
             'step_count' => 2,
         ]);
+
+        foreach ($balances as $size) {
+            // Crear el Nivel (Producto)
+            $level = $prime2Step->levels()->create([
+                'name'     => number_format($size / 1000) . 'k USD',
+                'currency' => '€',
+                'size'     => $size,
+                'fee'      => 0, // Aquí pondrías el precio real si lo quieres trackear
+            ]);
+
+            // Definir las reglas (Datos aproximados estándar, ajusta con las reglas reales de Neoma)
+
+            // FASE 1
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 1,
+                'name'                   => 'Phase 1',
+                'profit_target_percent'  => 8.00, // Generalmente 8%
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 8.00, // O 8%, depende de "Origin"
+                'min_trading_days'       => 4,
+                'loss_type'              => 'balance_based', // Importante verificar si es Balance o Equity
+            ]);
+
+            // FASE 2
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 2,
+                'name'                   => 'Phase 2',
+                'profit_target_percent'  => 5.00, // Generalmente 8%
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 8.00, // O 8%, depende de "Origin"
+                'min_trading_days'       => 4,
+                'loss_type'              => 'balance_based', // Importante verificar si es Balance o Equity
+            ]);
+
+
+            // LIVE (Funded)
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 0, // 0 = Live
+                'name'                   => 'Live Account',
+                'profit_target_percent'  => null,
+                'max_daily_loss_percent' => 3.00,
+                'max_total_loss_percent' => 5.00,
+                'min_trading_days'       => 5,
+                'rules_metadata'         => json_encode([
+                    'profit_split' => 80, // El default es 80%
+                    'platforms' => ['mt5', 'ctrader', 'tradelocker'] // Guardamos info útil
+                ]),
+            ]);
+        }
 
         foreach ($balances as $size) {
             // Crear el Nivel (Producto)

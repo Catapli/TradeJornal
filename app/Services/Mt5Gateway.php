@@ -81,31 +81,26 @@ class Mt5Gateway
         }
     }
 
-    // private function importTrades($account, $trades)
-    // {
-    //     $positions = collect($trades)->groupBy('position_id')->filter(fn($deals) => count($deals) >= 2);
 
-    //     foreach ($positions as $pos_id => $deals) {
-    //         $sortedDeals = $deals->sortBy('time');
-    //         $entry = $sortedDeals->first();
-    //         $exit = $sortedDeals->last();
-    //         $totalPnL = $deals->sum('net_pnl');
+    public function getSnapshot(Account $account)
+    {
+        $password = decrypt($account->mt5_password);
 
-    //         // USAMOS updateOrCreate para evitar duplicados
-    //         Trade::updateOrCreate(
-    //             ['ticket' => $entry['ticket'], 'account_id' => $account->id],
-    //             [
-    //                 'trade_asset_id' => TradeAsset::firstOrCreate(['symbol' => $entry['symbol']])->id,
-    //                 'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
-    //                 'entry_price' => $entry['price'],
-    //                 'size' => $entry['volume'],
-    //                 'pnl' => $totalPnL,
-    //                 'entry_time' => $entry['time'],
-    //                 'exit_time' => $exit['time'],
-    //                 'duration_minutes' => (int) round(Carbon::parse($entry['time'])->diffInMinutes(Carbon::parse($exit['time']))),
-    //                 'notes' => $exit['comment']
-    //             ]
-    //         );
-    //     }
-    // }
+        // Llamamos al mismo endpoint de Python pero con el flag de velocidad
+        $response = Http::timeout(10)->post('http://185.116.236.222:5000/sync-account', [
+            'login' => $account->mt5_login,
+            'password' => $password,
+            'server' => $account->mt5_server,
+            'snapshot_only' => true // <--- ESTO ES IMPORTANTE (Requiere el cambio en Python previo)
+        ]);
+
+        Log::info("Snapshot API Response for account {$account->id}: " . $response->body());
+
+        if ($response->failed()) {
+            Log::error("Fallo Snapshot API para cuenta {$account->id}");
+            throw new \RuntimeException("Snapshot API failed for account {$account->id}");
+        }
+
+        return $response->json();
+    }
 }

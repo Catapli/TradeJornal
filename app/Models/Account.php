@@ -70,6 +70,107 @@ class Account extends Model
         ];
     }
 
+    public function getObjectivesProgressAttribute()
+    {
+        $objective = $this->currentObjective;
+        if (!$objective) return [];
+
+        $results = [];
+        $initial = (float) $this->initial_balance;
+        $currentEquity = (float) ($this->current_equity ?? $this->current_balance);
+        $currentBalance = (float) $this->current_balance;
+
+        // 1. PROFIT TARGET
+        if ($objective->profit_target_percent > 0) {
+            $target = $initial * ($objective->profit_target_percent / 100);
+            $currentProfit = $currentBalance - $initial;
+
+            $results[] = [
+                'type' => 'profit_target',
+                'label' => 'Profit Target (' . $objective->profit_target_percent . '%)',
+                'target_value' => $target,
+                'current_value' => max(0, $currentProfit), // Si pierdes, llevas 0 de target
+                'status' => $currentProfit >= $target ? 'passed' : 'ongoing',
+                'unit' => 'money',
+                'currency' => $this->currency,
+                'is_hard_rule' => false
+            ];
+        }
+
+        // 2. MAX DAILY LOSS (Pérdida Diaria)
+        // Regla: Equity Actual vs Equity Inicio del Día
+        if ($objective->max_daily_loss_percent > 0) {
+            $limit = $initial * ($objective->max_daily_loss_percent / 100);
+
+            // Obtenemos el punto de referencia de las 00:00 (o inicial si es cuenta nueva)
+            $startDayEquity = (float) ($this->today_starting_equity ?? $initial);
+
+            // CÁLCULO DRAWDOWN: ¿Cuánto ha bajado desde el inicio del día?
+            // Si empecé con 10,000 y tengo 10,020 -> (10000 - 10020) = -20. Max(0, -20) = 0. (Correcto, no hay pérdida)
+            // Si empecé con 10,000 y tengo 9,500  -> (10000 - 9500)  = 500.  (Pérdida positiva)
+            $currentDailyDrawdown = max(0, $startDayEquity - $currentEquity);
+
+            $results[] = [
+                'type' => 'max_daily_loss',
+                'label' => 'Pérdida Diaria (' . $objective->max_daily_loss_percent . '%)',
+                'target_value' => $limit,
+                'current_value' => $currentDailyDrawdown, // Aquí enviamos lo PERDIDO, no el balance
+                'status' => $currentDailyDrawdown >= $limit ? 'failed' : 'passing', // passing = en regla
+                'unit' => 'money',
+                'currency' => $this->currency,
+                'is_hard_rule' => true
+            ];
+        }
+
+        // 3. MAX TOTAL LOSS (Pérdida Total)
+        // Regla: Equity Actual vs Balance Inicial de la cuenta
+        if ($objective->max_total_loss_percent > 0) {
+            $limit = $initial * ($objective->max_total_loss_percent / 100);
+
+            // CÁLCULO DRAWDOWN TOTAL
+            $currentTotalDrawdown = max(0, $initial - $currentEquity);
+
+            $results[] = [
+                'type' => 'max_total_loss',
+                'label' => 'Pérdida Total (' . $objective->max_total_loss_percent . '%)',
+                'target_value' => $limit,
+                'current_value' => $currentTotalDrawdown,
+                'status' => $currentTotalDrawdown >= $limit ? 'failed' : 'passing',
+                'unit' => 'money',
+                'currency' => $this->currency,
+                'is_hard_rule' => true
+            ];
+        }
+        // 4. DÍAS MÍNIMOS RENTABLES (Min Trading Days)
+        // Regla: Días con Profit >= 0.3% del Balance Inicial
+        if ($objective->min_trading_days > 0) {
+
+            $dailyProfitThreshold = $initial * 0.003;
+
+            // CORRECCIÓN POSTGRESQL:
+            // 1. Agrupamos por DATE(entry_time).
+            // 2. En el HAVING usamos SUM(pnl) directamente, no el alias.
+            $profitableDays = $this->trades()
+                ->selectRaw('DATE(entry_time) as trade_date') // Seleccionamos la fecha
+                ->groupByRaw('DATE(entry_time)')              // Agrupamos por la fecha calculada
+                ->havingRaw('SUM(pnl) >= ?', [$dailyProfitThreshold]) // Filtramos usando la suma real
+                ->get()
+                ->count(); // Contamos cuántas filas (días) devolvió la consulta
+
+            $results[] = [
+                'type' => 'min_trading_days',
+                'label' => 'Días Rentables (>0.3%)',
+                'target_value' => $objective->min_trading_days,
+                'current_value' => $profitableDays,
+                'status' => $profitableDays >= $objective->min_trading_days ? 'passed' : 'ongoing',
+                'unit' => 'days',
+                'is_hard_rule' => false
+            ];
+        }
+
+        return collect($results);
+    }
+
     public function trades()
     {
         return $this->hasMany(Trade::class);

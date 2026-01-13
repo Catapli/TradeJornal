@@ -217,7 +217,7 @@ select.dt-input {
 }
 
 :disabled {
-    opacity: 0.5;
+    opacity: 1 !important;
 }
 
 .animate-cycle-words {

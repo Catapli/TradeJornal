@@ -18,8 +18,8 @@ class SyncMt5Account implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 300;
-    public $tries = 1;
+    public $timeout = 400;
+    public $tries = 2;
 
     public function __construct(public Account $account) {}
 
