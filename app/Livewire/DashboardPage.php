@@ -26,6 +26,9 @@ class DashboardPage extends Component
     public $calendarDate; // Fecha de referencia (ej: 2026-01-01)
     public $calendarGrid = []; // Array con los datos para la vista
 
+    public $evolutionChartData = [];
+    public $dailyPnLChartData = [];
+
     public function mount()
     {
         $this->user = Auth::user();
@@ -171,6 +174,55 @@ class DashboardPage extends Component
             'count_wins' => $winDays,
             'count_losses' => $lossDays
         ];
+
+        // 5. CÁLCULO DE EVOLUCIÓN (AREA CHART)
+        $this->calculateEvolution();
+        // 6. CÁLCULO DE BARRAS PNL DIARIO
+        $this->calculateDailyBars();
+    }
+
+    private function calculateEvolution()
+    {
+        $query = $this->getTradesQuery();
+
+        // Obtenemos solo fecha y pnl, ordenados cronológicamente
+        $trades = $query->select(['exit_time', 'pnl'])
+            ->whereNotNull('exit_time')
+            ->orderBy('exit_time', 'asc')
+            ->get();
+
+        // 1. Agrupamos por día (Y-m-d) y sumamos el PnL de ese día
+        $dailyPnL = $trades->groupBy(function ($trade) {
+            return $trade->exit_time->format('Y-m-d');
+        })->map(function ($dayTrades) {
+            return $dayTrades->sum('pnl');
+        });
+
+        // 2. Construimos la suma acumulativa
+        $labels = []; // Fechas
+        $data = [];   // PnL Acumulado
+
+        // Punto de partida (Opcional, para que el gráfico nazca en 0)
+        // Si tienes trades muy antiguos, quizás prefieras no poner esto, 
+        // pero el usuario pidió "empezando por 0".
+        $labels[] = 'Inicio';
+        $data[] = 0;
+
+        $runningTotal = 0;
+
+        foreach ($dailyPnL as $date => $pnl) {
+            $runningTotal += $pnl;
+
+            $labels[] = $date;
+            $data[] = round($runningTotal, 2);
+        }
+
+        $this->evolutionChartData = [
+            'categories' => $labels,
+            'data' => $data,
+            // Enviamos el total final para decidir el color del gráfico (Verde/Rojo)
+            'is_positive' => $runningTotal >= 0
+        ];
     }
 
     // Hook de Livewire: Se ejecuta cuando cambia el multiselect
@@ -237,6 +289,31 @@ class DashboardPage extends Component
         }
 
         $this->calendarGrid = $grid;
+    }
+
+    private function calculateDailyBars()
+    {
+        $query = $this->getTradesQuery();
+
+        $trades = $query->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl')
+            ->whereNotNull('exit_time')
+            ->groupByRaw('DATE(exit_time)')
+            ->orderBy('date', 'asc') // Cronológico
+            ->get();
+
+        $categories = [];
+        $data = [];
+
+        foreach ($trades as $day) {
+            // Formato fecha corto: "13 Ene"
+            $categories[] = \Carbon\Carbon::parse($day->date)->translatedFormat('d M');
+            $data[] = round($day->daily_pnl, 2);
+        }
+
+        $this->dailyPnLChartData = [
+            'categories' => $categories,
+            'data' => $data
+        ];
     }
 
 

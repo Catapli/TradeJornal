@@ -135,6 +135,10 @@ select.dt-input {
     @apply text-white;
 }
 
+.datatable tbody {
+    @apply text-white;
+}
+
 .mdtimepicker .mdtp__wrapper {
     position: absolute;
     display: flex;

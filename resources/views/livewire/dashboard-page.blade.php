@@ -9,6 +9,11 @@
         <x-loader></x-loader>
     </div>
 
+    {{-- ? Loading JS --}}
+    <div x-show="showLoading">
+        <x-loader></x-loader>
+    </div>
+
     <header class="relative top-0 z-10 col-span-12 mt-[50px] flex w-auto justify-between bg-white pb-2 pr-3 shadow">
         <div class="flex min-h-11 max-w-7xl items-center space-x-1.5 px-4 py-1 sm:px-6 lg:px-8">
             <i class="fas fa-chart-bar text-xl text-black"></i>
@@ -16,17 +21,17 @@
                 {{ __('Dashboard') }}
             </h2>
         </div>
-        <x-input-multiselect wire:model.live="selectedAccounts"
+        <x-input-multiselect wire:model="selectedAccounts"
                              :options="$availableAccounts"
                              placeholder="Selecciona las cuentas..."
                              icono='<i class="fa-solid fa-users-viewfinder"></i>' />
     </header>
 
 
-    <div class="col-span-12 space-y-8 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
+    <div class="col-span-12 grid grid-cols-12 gap-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
 
         {{-- GRID DE STATS --}}
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div class="col-span-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 
 
             {{-- CARD: PNL  --}}
@@ -214,8 +219,66 @@
 
         </div>
 
+        {{-- CARD: GRÁFICO DE EVOLUCIÓN PNL --}}
+        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+             wire:ignore>
+            <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">Curva de Rendimiento Acumulado</h3>
+
+            </div>
+
+            {{-- Contenedor del Gráfico --}}
+            <div class="h-[200px] w-full min-w-0"
+                 x-ref="evolutionChart"></div>
+        </div>
+
+        {{-- CARD: PNL DIARIO (BARRAS) --}}
+        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+             wire:ignore>
+            <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">PnL Diario Neto</h3>
+                {{-- Leyenda Simple --}}
+                <div class="flex gap-3 text-xs font-medium">
+                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Profit</div>
+                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span> Loss</div>
+                </div>
+            </div>
+
+            {{-- Contenedor del Gráfico --}}
+            <div class="h-[200px] w-full"
+                 x-ref="dailyPnLBarChart"></div>
+        </div>
+
+        <div class="col-span-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-800">
+                Operaciones Recientes
+            </h3>
+
+            <div id="container_table"
+                 class="items-center transition-all duration-300"
+                 wire:ignore>
+                <div>
+                    <table id="table_history"
+                           class="datatable">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Fecha Cierre</th>
+                                <th>Simbolo</th>
+                                <th>PNL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
         {{-- CARD: CALENDARIO DE PNL --}}
-        <div class="col-span-12 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="col-span-7 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
 
             {{-- HEADER: Título y Navegación --}}
             <div class="mb-6 flex items-center justify-between">
@@ -284,7 +347,7 @@
                             $todayClass = $day['is_today'] ? 'ring-2 ring-blue-500 ring-offset-2' : '';
                         @endphp
 
-                        <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} relative flex h-24 flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md">
+                        <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} relative flex h-24 cursor-pointer flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md">
 
                             {{-- Número del día --}}
                             <span class="{{ $day['is_current_month'] ? 'text-gray-500' : 'text-gray-300' }} text-xs font-semibold">

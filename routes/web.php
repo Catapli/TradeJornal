@@ -79,6 +79,7 @@ Route::middleware([
 
     //? API
     Route::get('/trades/data', [TradeController::class, 'data']);        //? Obtener Trades
+    Route::get('/trades/dashboard', [TradeController::class, 'dashboard']);        //? Obtener Trades
     Route::get('/logs/data', [LogController::class, 'index']);        //? Obtener Logs
     Route::get('/users/data', [UserController::class, 'data']);       //? Obtener Usuarios
     Route::get('/rols/data', [RolsController::class, 'data']);

@@ -1,8 +1,65 @@
 document.addEventListener("alpine:init", () => {
     Alpine.data("dashboard", () => ({
         winRateChart: null,
+        tableRecents: null,
+        showLoading: false,
 
         init() {
+            const self = this;
+
+            if (!$.fn.DataTable.isDataTable("#table_history")) {
+                self.tableRecents = $("#table_history").DataTable({
+                    ajax: {
+                        url: "/trades/dashboard",
+                        data: function (d) {
+                            // Agregar parámetros adicionales para el filtro
+                            d.accounts = self.$wire.selectedAccounts;
+                        },
+                    },
+                    // lengthMenu: [5, 10, 20, 25, 50],
+                    pageLength: 5,
+                    order: [[1, "desc"]],
+                    searching: false,
+                    lengthChange: false,
+                    columns: [
+                        { data: "id" },
+                        { data: "exit_time" },
+                        { data: "trade_asset.symbol" },
+                        { data: "pnl" },
+                    ],
+                    pagingType: "numbers",
+                    language: {
+                        url: "/datatable/es-ES.json",
+                    },
+                    columnDefs: [
+                        { visible: false, targets: 0 },
+                        {
+                            targets: 3,
+                            render: function (data, type, row) {
+                                // Aseguramos que sea un número para evitar errores con toFixed
+                                let val = parseFloat(data);
+                                let formatted = val.toFixed(2);
+
+                                if (val >= 0) {
+                                    // ✅ CORRECTO: Usando comillas invertidas ` ` para el HTML
+                                    return `<span class="text-green-600 font-bold">
+                        +${formatted}
+                    </span>`;
+                                } else {
+                                    // Para negativos, normalmente querrás ver el número en rojo
+                                    return `<span class="text-red-600 font-bold">
+                        ${formatted}
+                    </span>`;
+                                }
+                            },
+                        },
+                        {
+                            targets: "_all", // Aplica a todas las columnas
+                            className: "dt-left", // Usa 'dt-left' si no usas Bootstrap
+                        },
+                    ],
+                });
+            }
             // 1. Inicializar gráfico al cargar
             this.renderWinRateChart();
             // ... otros inits ...
@@ -11,11 +68,31 @@ document.addEventListener("alpine:init", () => {
             // ... otros renders ...
             this.renderDailyWinLossChart(); // 👈 Inicializar
 
+            this.renderEvolutionChart();
+
+            this.renderDailyPnLChart(); // 👈 Inicializar
+
             // 2. Escuchar cambios desde Livewire (cuando cambias el select)
             Livewire.on("dashboard-updated", () => {
+                // 👇 RECARGAR DATATABLE
+                this.showLoading = true;
+                if (this.tableRecents) {
+                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
+                    this.tableRecents.ajax.reload(() => {
+                        console.log("✅ Tabla recargada completamente");
+
+                        // Aquí puedes ejecutar tu lógica:
+                        // - Actualizar contadores externos
+                        // - Reinicializar tooltips
+                        // - Calcular totales en JS
+                        this.showLoading = false;
+                    }, false); // 'false' evita que la paginación vuelva a la página 1
+                }
                 this.renderWinRateChart();
                 this.renderAvgPnLChart();
                 this.renderDailyWinLossChart();
+                this.renderEvolutionChart();
+                this.renderDailyPnLChart(); // 👈 Inicializa
             });
         },
 
@@ -84,6 +161,98 @@ document.addEventListener("alpine:init", () => {
                 if (el) {
                     this.winRateChart = new ApexCharts(el, options);
                     this.winRateChart.render();
+                }
+            }
+        },
+
+        renderDailyPnLChart() {
+            const payload = this.$wire.dailyPnLChartData;
+            const categories = payload?.categories || [];
+            const seriesData = payload?.data || [];
+
+            if (seriesData.length === 0) return;
+
+            // Configuración base
+            const options = {
+                series: [
+                    {
+                        name: "PnL Diario",
+                        data: seriesData,
+                    },
+                ],
+                chart: {
+                    type: "bar",
+                    height: 200,
+                    fontFamily: "Inter, sans-serif",
+                    toolbar: { show: false },
+                    animations: { enabled: true },
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        borderRadiusApplication: "end",
+                        columnWidth: "50%",
+                        colors: {
+                            ranges: [
+                                {
+                                    from: -1000000000,
+                                    to: -0.01,
+                                    color: "#F43F5E",
+                                },
+                                { from: 0, to: 1000000000, color: "#10B981" },
+                            ],
+                        },
+                    },
+                },
+                dataLabels: { enabled: false },
+                xaxis: {
+                    categories: categories, // Importante para la carga inicial
+                    labels: { show: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: "#6b7280" },
+                        formatter: function (val) {
+                            return val.toFixed(0) + " €";
+                        },
+                    },
+                },
+                grid: {
+                    borderColor: "#f3f4f6",
+                    strokeDashArray: 4,
+                    yaxis: { lines: { show: true } },
+                },
+                tooltip: {
+                    theme: "light",
+                    y: {
+                        formatter: function (val) {
+                            return new Intl.NumberFormat("es-ES", {
+                                style: "currency",
+                                currency: "EUR",
+                            }).format(val);
+                        },
+                    },
+                },
+            };
+
+            if (this.dailyPnLBarChart) {
+                // 👇 SOLUCIÓN: Actualizar TODO en un solo golpe
+                this.dailyPnLBarChart.updateOptions({
+                    series: [
+                        {
+                            name: "PnL Diario", // Mantiene el nombre correcto
+                            data: seriesData,
+                        },
+                    ],
+                    xaxis: {
+                        categories: categories, // Actualiza las fechas ocultas para el tooltip
+                    },
+                });
+            } else {
+                const el = this.$refs.dailyPnLBarChart;
+                if (el) {
+                    this.dailyPnLBarChart = new ApexCharts(el, options);
+                    this.dailyPnLBarChart.render();
                 }
             }
         },
@@ -259,6 +428,103 @@ document.addEventListener("alpine:init", () => {
                 if (el) {
                     this.dailyWinLossChart = new ApexCharts(el, options);
                     this.dailyWinLossChart.render();
+                }
+            }
+        },
+
+        renderEvolutionChart() {
+            const payload = this.$wire.evolutionChartData;
+            const categories = payload?.categories || [];
+            const seriesData = payload?.data || [];
+            const isPositive = payload?.is_positive ?? true;
+
+            if (seriesData.length === 0) {
+                if (this.evolutionChart) this.evolutionChart.destroy();
+                return;
+            }
+
+            const mainColor = isPositive ? "#10B981" : "#F43F5E";
+
+            const options = {
+                series: [
+                    {
+                        name: "PnL Acumulado",
+                        data: seriesData,
+                    },
+                ],
+                chart: {
+                    type: "area",
+                    height: 200,
+                    width: "100%",
+                    fontFamily: "Inter, sans-serif",
+                    toolbar: { show: false },
+                    animations: { enabled: true },
+                },
+                colors: [mainColor], // Color inicial
+                fill: {
+                    type: "gradient",
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.4,
+                        opacityTo: 0.05,
+                        stops: [0, 100],
+                    },
+                },
+                stroke: { curve: "smooth", width: 2 },
+                dataLabels: { enabled: false },
+                xaxis: {
+                    categories: categories,
+                    type: "category",
+                    labels: { show: false },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: "#6b7280" },
+                        formatter: function (value) {
+                            return value.toFixed(0) + " €";
+                        },
+                    },
+                },
+                grid: {
+                    borderColor: "#f3f4f6",
+                    strokeDashArray: 4,
+                    yaxis: { lines: { show: true } },
+                    xaxis: { lines: { show: false } },
+                },
+                tooltip: {
+                    theme: "light",
+                    y: {
+                        formatter: function (val) {
+                            return new Intl.NumberFormat("es-ES", {
+                                style: "currency",
+                                currency: "EUR",
+                            }).format(val);
+                        },
+                    },
+                },
+            };
+
+            if (this.evolutionChart) {
+                // 👇 SOLUCIÓN: Forzar actualización de Color, Datos y Fechas a la vez
+                this.evolutionChart.updateOptions({
+                    colors: [mainColor], // Actualiza Verde/Rojo
+                    series: [
+                        {
+                            name: "PnL Acumulado", // Evita que salga "series-1"
+                            data: seriesData,
+                        },
+                    ],
+                    xaxis: {
+                        categories: categories, // Actualiza las fechas
+                    },
+                });
+            } else {
+                const el = this.$refs.evolutionChart;
+                if (el) {
+                    this.evolutionChart = new ApexCharts(el, options);
+                    this.evolutionChart.render();
                 }
             }
         },

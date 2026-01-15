@@ -5,6 +5,17 @@
          open: false,
          selected: @entangle($attributes->wire('model')),
      
+         init() {
+             // 👇 ESTO ES LO NUEVO:
+             // Vigilamos cuando el menú se cierra
+             this.$watch('open', value => {
+                 if (value === false) {
+                     // Cuando se cierra, forzamos la actualización al padre
+                     this.$wire.$refresh();
+                 }
+             });
+         },
+     
          // Texto dinámico
          get label() {
              if (this.selected.includes('all')) return 'Todas las cuentas';
@@ -12,6 +23,7 @@
              if (this.selected.length === 1) return this.selected.length + ' cuenta seleccionada';
              return this.selected.length + ' cuentas seleccionadas';
          },
+     
      
          // Lógica de Selección Exclusiva
          toggle(value) {
@@ -118,6 +130,15 @@
                     No hay cuentas disponibles
                 </div>
             @endif
+
+            {{-- BOTÓN APLICAR FIJO AL FINAL --}}
+            <div class="sticky bottom-0 border-t border-gray-100 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+                <button class="w-full rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                        type="button"
+                        @click="open = false; $wire.$refresh()">
+                    Aplicar Filtros
+                </button>
+            </div>
         </div>
     </div>
 </div>

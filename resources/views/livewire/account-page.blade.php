@@ -620,10 +620,10 @@
                            class="datatable">
                         <thead>
                             <tr>
-                                <th>{{ __('labels.id') }}</th>
-                                <th>{{ __('labels.user') }}</th>
-                                <th>{{ __('labels.entity') }}</th>
-                                <th>{{ __('labels.active') }}</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
