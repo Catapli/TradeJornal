@@ -12,6 +12,28 @@ export default {
         "./public/datatable/**",
     ],
 
+    safelist: [
+        // Fondos
+        "bg-emerald-900",
+        "bg-red-900",
+        // Textos
+        "text-emerald-300",
+        "text-red-300",
+        "text-emerald-400",
+        "text-red-400",
+        // Bordes
+        "border-emerald-700",
+        "border-red-700",
+        // Otros posibles
+        "text-center",
+        "text-right",
+        "font-mono",
+        "text-[#0eb90e]",
+        "bg-[#00800061]",
+        "text-[#eb0b0b]",
+        "bg-[#7f101061]",
+    ],
+
     theme: {
         extend: {
             fontFamily: {

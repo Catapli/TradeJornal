@@ -245,7 +245,7 @@ class PropFirmsSeeder extends Seeder
             // Crear el Nivel (Producto)
             $level = $prime2Step->levels()->create([
                 'name'     => number_format($size / 1000) . 'k USD',
-                'currency' => '€',
+                'currency' => 'EUR',
                 'size'     => $size,
                 'fee'      => 0, // Aquí pondrías el precio real si lo quieres trackear
             ]);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Account extends Model
 {
@@ -19,6 +20,12 @@ class Account extends Model
     {
         return $this->belongsTo(ProgramObjective::class, 'program_objective_id');
     }
+
+    public function programLevel(): BelongsTo
+    {
+        return $this->belongsTo(ProgramLevel::class, 'program_level_id');
+    }
+
 
     // ← ACCESSOR STATUS FORMATEADO
     public function getStatusFormattedAttribute(): string

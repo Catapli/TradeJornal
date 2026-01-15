@@ -3,9 +3,18 @@
 
     {{-- ? Loading --}}
     <div wire:loading
-         wire:target='updatedSelectedAccountId, insertAccount'>
+         wire:target='updatedSelectedAccountId, insertAccount, updateAccount, deleteAccount'>
         <x-loader></x-loader>
     </div>
+
+    {{-- 👇 EL MODAL DE CONFIRMACIÓN (Al final) --}}
+    <x-modal-confirmation show="showDeleteModal"
+                          title="¿Eliminar Cuenta?"
+                          text="Se perderá todo el historial de trades y estadísticas. Esta acción no se puede deshacer."
+                          confirmText="Sí, borrar definitivamente"
+                          {{-- Escuchamos el evento que dispara el botón del componente --}}
+                          @confirm-action="executeDelete()" />
+
 
     {{-- Top-Right Snackbar --}}
 
@@ -293,18 +302,18 @@
                         <div class="flex items-center gap-2 rounded-lg p-1">
 
                             <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                                    @click="showOpenModalCreate()">
+                                    @click="$dispatch('open-modal-create')">
                                 <i class="fa-solid fa-plus text-green-500"></i>
                                 {{ __('labels.create_account') }}
                             </button>
-                            <button
-                                    class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                            <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                                    @click="$wire.editAccount({{ $selectedAccount->id }})">
                                 <i class="fa-solid fa-pen-to-square text-yellow-500"></i>
                                 {{ __('labels.edit_account') }}
                             </button>
                             @if (count($accounts) > 0)
-                                <button
-                                        class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+                                <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                                        @click="confirmDeleteAccount({{ $selectedAccount->id }})">
                                     <i class="fa-solid fa-xmark text-red-500"></i>
                                     {{ __('labels.delete_account') }}
                                 </button>
@@ -378,9 +387,15 @@
             </div>
 
             <div class="col-span-12 h-auto max-h-96 min-h-96 w-full bg-white p-5 sm:rounded-lg"
-                 wire:ignore>
-                <canvas x-show="!showLoadingGrafic"
-                        x-ref="canvas"></canvas>
+                 wire:ignore
+                 x-show="!showLoadingGrafic">
+                {{-- <canvas x-show="!showLoadingGrafic"
+                        x-ref="canvas"></canvas> --}}
+
+                <!-- CAMBIO AQUÍ: Usamos un div y cambiamos la referencia a 'chart' -->
+                <div class="h-full min-h-[350px] w-full"
+                     x-ref="chart">
+                </div>
             </div>
 
 
@@ -598,9 +613,9 @@
             </div>
 
             <div id="container_table"
-                 class="items-center rounded-b-md rounded-r-md border border-solid border-gray-300 bg-white shadow-lg transition-all duration-300"
+                 class="items-center transition-all duration-300"
                  wire:ignore>
-                <div class="p-3">
+                <div>
                     <table id="table_history"
                            class="datatable">
                         <thead>

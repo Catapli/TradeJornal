@@ -65,6 +65,7 @@ class AccountPage extends Component
 
 
 
+
     public $timeframes = [  // ← ASEGÚRATE de tener esto
         '1h' => ['minutes' => 60, 'format' => 'H:i'],     // "14:30"
         '24h' => ['hours' => 24, 'format' => 'd H:i'],    // "08 14:30" 
@@ -88,8 +89,11 @@ class AccountPage extends Component
             ->get() // Obtenemos colección
             ->toArray(); // Convertimos a Array para pasarlo al JS
 
+
         $this->updateData();
     }
+
+
 
     /**
      * 🔥 ESTA ES LA FUNCIÓN QUE QUERÍAS EJECUTAR
@@ -224,19 +228,12 @@ class AccountPage extends Component
                     ]);
                 }
             }
-            // $newBalance = $this->selectedAccount->initial_balance + $this->totalPnl;
-
-            // SOLO guarda si realmente hay un cambio de balance
-            // if ($this->selectedAccount->current_balance != $newBalance) {
-            //     $this->selectedAccount->current_balance = $newBalance;
-            //     $this->selectedAccount->save();
-            // }
 
             $this->calculateStatistics();
             $this->loadBalanceChart();
         }
         $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
-        $this->dispatch('account-updated', timeframe: 'all');
+        $this->dispatch('account-change', timeframe: 'all');
     }
 
     private function calculateStatistics()
@@ -356,99 +353,190 @@ class AccountPage extends Component
 
     private function formatAge($days)
     {
+        // 1. Limpiamos los decimales (6.62 -> 6)
+        $days = (int) floor($days);
+
+        // 2. Lógica de Años
         if ($days >= 365) {
             $years = floor($days / 365);
-            return $years . 'a ' . ($days % 365) . 'd';
+            $remainingDays = $days % 365;
+            return $years . 'a ' . $remainingDays . 'd';
         }
+
+        // 3. Lógica de Meses (aprox 30 días)
         if ($days >= 30) {
             $months = floor($days / 30);
-            return $months . 'm ' . ($days % 30) . 'd';
+            $remainingDays = $days % 30;
+            return $months . 'm ' . $remainingDays . 'd';
         }
+
+        // 4. Días sueltos
         return $days . ' días';
     }
 
+    // private function loadBalanceChart()
+    // {
+    //     $trades = $this->selectedAccount->trades()
+    //         ->when($this->selectedTimeframe !== 'all', function ($query) {
+    //             $config = $this->timeframes[$this->selectedTimeframe];
+    //             if (isset($config['minutes'])) {
+    //                 $query->where('exit_time', '>=', now()->subMinutes($config['minutes']));
+    //             } elseif (isset($config['hours'])) {
+    //                 $query->where('exit_time', '>=', now()->subHours($config['hours']));
+    //             } elseif (isset($config['days'])) {
+    //                 $query->where('exit_time', '>=', now()->subDays($config['days']));
+    //             }
+    //         })
+    //         ->orderBy('exit_time')
+    //         ->get();
+
+    //     $labels = ['Inicio'];
+    //     $balanceData = [$this->selectedAccount->initial_balance];
+    //     $currentBalance = $this->selectedAccount->initial_balance;
+
+    //     // ← PUNTOS FANTASMA si no hay trades
+    //     if ($trades->isEmpty()) {
+    //         $format = $this->timeframes[$this->selectedTimeframe]['format'] ?? 'H:i';
+    //         $finalBalance = $this->selectedAccount->initial_balance; // Mismo balance
+
+    //         if ($this->selectedTimeframe === '1h') {
+    //             $labels = array_merge($labels, [
+    //                 now()->subMinutes(40)->format($format),
+    //                 now()->subMinutes(20)->format($format),
+    //                 now()->format($format)
+    //             ]);
+    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+    //         } elseif ($this->selectedTimeframe === '24h') {
+    //             $labels = array_merge($labels, [
+    //                 now()->subHours(16)->format($format),
+    //                 now()->subHours(8)->format($format),
+    //                 now()->format($format)
+    //             ]);
+    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+    //         } elseif ($this->selectedTimeframe === '7d') {
+    //             $labels = array_merge($labels, [
+    //                 now()->subDays(4)->format($format),
+    //                 now()->subDays(2)->format($format),
+    //                 now()->format($format)
+    //             ]);
+    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
+    //         } else { // 'all'
+    //             $labels[] = 'Sin trades';
+    //             $balanceData[] = $finalBalance;
+    //         }
+    //     } else {
+    //         // ← TU LÓGICA ORIGINAL (funciona perfecto)
+    //         $dailyBalances = [];
+    //         foreach ($trades as $trade) {
+    //             $dateKey = $this->selectedTimeframe === 'all'
+    //                 ? $trade->exit_time->format('d M Y')
+    //                 : $trade->exit_time->format($this->timeframes[$this->selectedTimeframe]['format'] ?? 'd/m H:i');
+    //             $dailyBalances[$dateKey] = ($dailyBalances[$dateKey] ?? 0) + $trade->pnl;
+    //         }
+
+    //         foreach ($dailyBalances as $date => $pnlDay) {
+    //             $currentBalance += $pnlDay;
+    //             $labels[] = $date;
+    //             $balanceData[] = $currentBalance;
+    //         }
+    //     }
+
+    //     $this->balanceChartData = [
+    //         'labels' => $labels,
+    //         'datasets' => [
+    //             [
+    //                 'label' => $trades->isEmpty() ? 'Sin trades' : 'Balance',
+    //                 'data' => $balanceData,
+    //                 'borderColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)',
+    //                 'backgroundColor' => $trades->isEmpty() ? 'rgba(156, 163, 175, 0.1)' : 'rgba(16, 185, 129, 0.3)',
+    //                 'fill' => 'origin',
+    //                 'tension' => 0.4,
+    //                 'pointBackgroundColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)'
+    //             ],
+    //         ]
+    //     ];
+    // }
+
+
     private function loadBalanceChart()
     {
-        $trades = $this->selectedAccount->trades()
-            ->when($this->selectedTimeframe !== 'all', function ($query) {
-                $config = $this->timeframes[$this->selectedTimeframe];
-                if (isset($config['minutes'])) {
-                    $query->where('exit_time', '>=', now()->subMinutes($config['minutes']));
-                } elseif (isset($config['hours'])) {
-                    $query->where('exit_time', '>=', now()->subHours($config['hours']));
-                } elseif (isset($config['days'])) {
-                    $query->where('exit_time', '>=', now()->subDays($config['days']));
-                }
-            })
-            ->orderBy('exit_time')
-            ->get();
-
-        $labels = ['Inicio'];
-        $balanceData = [$this->selectedAccount->initial_balance];
-        $currentBalance = $this->selectedAccount->initial_balance;
-
-        // ← PUNTOS FANTASMA si no hay trades
-        if ($trades->isEmpty()) {
-            $format = $this->timeframes[$this->selectedTimeframe]['format'] ?? 'H:i';
-            $finalBalance = $this->selectedAccount->initial_balance; // Mismo balance
-
-            if ($this->selectedTimeframe === '1h') {
-                $labels = array_merge($labels, [
-                    now()->subMinutes(40)->format($format),
-                    now()->subMinutes(20)->format($format),
-                    now()->format($format)
-                ]);
-                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-            } elseif ($this->selectedTimeframe === '24h') {
-                $labels = array_merge($labels, [
-                    now()->subHours(16)->format($format),
-                    now()->subHours(8)->format($format),
-                    now()->format($format)
-                ]);
-                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-            } elseif ($this->selectedTimeframe === '7d') {
-                $labels = array_merge($labels, [
-                    now()->subDays(4)->format($format),
-                    now()->subDays(2)->format($format),
-                    now()->format($format)
-                ]);
-                $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-            } else { // 'all'
-                $labels[] = 'Sin trades';
-                $balanceData[] = $finalBalance;
-            }
-        } else {
-            // ← TU LÓGICA ORIGINAL (funciona perfecto)
-            $dailyBalances = [];
-            foreach ($trades as $trade) {
-                $dateKey = $this->selectedTimeframe === 'all'
-                    ? $trade->exit_time->format('d M Y')
-                    : $trade->exit_time->format($this->timeframes[$this->selectedTimeframe]['format'] ?? 'd/m H:i');
-                $dailyBalances[$dateKey] = ($dailyBalances[$dateKey] ?? 0) + $trade->pnl;
-            }
-
-            foreach ($dailyBalances as $date => $pnlDay) {
-                $currentBalance += $pnlDay;
-                $labels[] = $date;
-                $balanceData[] = $currentBalance;
-            }
+        // 1. Determinar la fecha de corte (Cutoff Date)
+        $cutoffDate = null;
+        if ($this->selectedTimeframe !== 'all') {
+            $config = $this->timeframes[$this->selectedTimeframe];
+            if (isset($config['minutes'])) $cutoffDate = now()->subMinutes($config['minutes']);
+            elseif (isset($config['hours'])) $cutoffDate = now()->subHours($config['hours']);
+            elseif (isset($config['days'])) $cutoffDate = now()->subDays($config['days']);
         }
 
+        // 2. Calcular el Balance Inicial REAL para ESTE periodo específico
+        // Si es '24h', el inicio es: (Balance Cuenta + Todo lo ganado/perdido ANTES de hace 24h)
+        if ($cutoffDate) {
+            $priorPnl = $this->selectedAccount->trades()
+                ->where('exit_time', '<', $cutoffDate)
+                ->sum('pnl');
+
+            $startBalance = $this->selectedAccount->initial_balance + $priorPnl;
+
+            // Etiqueta inicial dinámica (ej: "10:00" si son las 10:00 de ayer)
+            $startLabel = $cutoffDate->format('H:i');
+        } else {
+            // Si es 'all', empezamos desde el origen
+            $startBalance = $this->selectedAccount->initial_balance;
+            $startLabel = 'Inicio';
+        }
+
+        // 3. Obtener solo los trades DENTRO del periodo
+        $trades = $this->selectedAccount->trades()
+            ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
+            ->orderBy('exit_time', 'asc')
+            ->get();
+
+        // 4. Preparar Arrays
+        $labels = [$startLabel];
+        $balanceData = [(float) round($startBalance, 2)];
+        $runningBalance = $startBalance;
+
+        if ($trades->isNotEmpty()) {
+            // 5. Agrupamiento inteligente según Timeframe
+            // Usamos colecciones de Laravel para agrupar, es más limpio
+            $groupedTrades = $trades->groupBy(function ($trade) {
+                return match ($this->selectedTimeframe) {
+                    '1h' => $trade->exit_time->format('H:i'),        // Minuto a minuto
+                    '24h' => $trade->exit_time->format('H:00'),      // Agrupado por horas
+                    '7d' => $trade->exit_time->format('d/m H:00'),   // Día y hora
+                    default => $trade->exit_time->format('d M Y'),   // Por día
+                };
+            });
+
+            foreach ($groupedTrades as $timeLabel => $group) {
+                // Sumamos el PnL de todos los trades en ese intervalo (ej: en esa hora concreta)
+                $intervalPnl = $group->sum('pnl');
+
+                $runningBalance += $intervalPnl;
+
+                $labels[] = $timeLabel;
+                $balanceData[] = round($runningBalance, 2);
+            }
+        } else {
+            // Si no hubo trades en las últimas 24h, añadimos el punto final "Ahora"
+            // para que la gráfica muestre una línea plana en lugar de un solo punto
+            $labels[] = now()->format('H:i');
+            $balanceData[] = round($startBalance, 2);
+        }
+
+        // 6. Asignar a ApexCharts
         $this->balanceChartData = [
-            'labels' => $labels,
-            'datasets' => [
+            'categories' => $labels,
+            'series' => [
                 [
-                    'label' => $trades->isEmpty() ? 'Sin trades' : 'Balance',
-                    'data' => $balanceData,
-                    'borderColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)',
-                    'backgroundColor' => $trades->isEmpty() ? 'rgba(156, 163, 175, 0.1)' : 'rgba(16, 185, 129, 0.3)',
-                    'fill' => 'origin',
-                    'tension' => 0.4,
-                    'pointBackgroundColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)'
-                ],
+                    'name' => 'Balance',
+                    'data' => $balanceData
+                ]
             ]
         ];
     }
+
 
     public function showAlert($type, $message)
     {
@@ -505,6 +593,7 @@ class AccountPage extends Component
             'currency' => $level->currency,
             'initial_balance' => $level->size,
             'current_balance' => $level->size, // Al principio son iguales
+            'sync' => $this->form->sync,
 
             // Fechas
         ]);
@@ -518,34 +607,136 @@ class AccountPage extends Component
         $this->updateData();
     }
 
+    public function editAccount($id)
+    {
+        // 1. Buscamos la cuenta y sus relaciones
+        $account = Account::with('programLevel.program.propFirm')->findOrFail($id);
 
-    // public function onChangeSelectPropFirm()
-    // {
-    //     if ($this->form->selectedPropFirmID == null) {
-    //         $this->programsFirms = [];
-    //     } else {
-    //         $propFirm = PropFirm::find($this->form->selectedPropFirmID);
-    //         $this->programsFirms = $propFirm->programs;
-    //     }
-    // }
+        // 2. Rellenamos el Form Object
+        $this->form->name = $account->name;
+        $this->form->sync = $account->sync;
+        $this->form->platformBroker = $account->platform;
+        $this->form->loginPlatform = $account->mt5_login;
+        $this->form->server = $account->mt5_server;
+        // No enviamos la password por seguridad, si la deja vacía no se cambia
+        $this->form->passwordPlatform = '';
 
-    // public function onChangeSelectProgram()
-    // {
-    //     // 1. Obtenemos los tamaños ÚNICOS y ordenados
-    //     // Usamos DB query directa para ser más eficientes que cargar todos los modelos
-    //     $this->sizes = ProgramLevel::where('program_id', $this->form->selectedProgramID)
-    //         ->select('size')
-    //         ->distinct() // <--- MAGIA: Evita duplicados (100k USD y 100k EUR cuentan como uno)
-    //         ->orderBy('size', 'asc')
-    //         ->pluck('size')
-    //         ->toArray();
-    // }
+        // 3. Recuperamos los IDs para los Selects en Cascada
+        // Account -> Level -> Program -> Firm
+        $level = $account->programLevel;
 
-    // public function onChangeSelectBalance()
-    // {
-    //     $this->currencies = ProgramLevel::where('program_id', $this->form->selectedProgramID)
-    //         ->where('size', $this->form->size)->pluck('currency', 'id');  // El tamaño que acaba de elegir
-    // }
+        $this->form->selectedPropFirmID = $level->program->prop_firm_id;
+        $this->form->selectedProgramID = $level->program_id;
+        $this->form->size = $level->size; // Ojo, asegúrate de que 'size' en el select sea el valor numérico
+        $this->form->programLevelID = $level->id;
+
+        // 4. Enviamos evento al Frontend para abrir modal y llenar Alpine
+        $this->dispatch('open-modal-edit', [
+            'data' => [
+                'accountId' => $account->id,
+                'name' => $this->form->name,
+                'firmId' => $this->form->selectedPropFirmID,
+                'programId' => $this->form->selectedProgramID,
+                'size' => $this->form->size,
+                'levelId' => $this->form->programLevelID,
+                'sync' => $this->form->sync,
+                'platform' => $this->form->platformBroker,
+                'login' => $this->form->loginPlatform,
+                'server' => $this->form->server
+            ]
+        ]);
+    }
+
+    public function updateAccount($id)
+    {
+        // Lógica de validación y update...
+        $account = Account::find($id);
+
+        $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
+
+        $initialPhase = 1; // Por defecto empezamos en Fase 1
+
+
+        if ($level->program->step_count === 0) {
+            // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
+            $initialPhase = 0;
+        }
+
+        // Buscamos el objetivo correspondiente en la BD
+        $objective = $level->objectives()
+            ->where('phase_number', $initialPhase)
+            ->first();
+
+        if (!$objective) {
+            // Seguridad por si el Seeder falló o faltan datos
+            throw new \Exception("No se encontraron las reglas (Objetivos) para la Fase $initialPhase de este nivel.");
+        }
+
+        // ... update ...
+        $account->update([
+            'name' => $this->form->name,
+            'program_level_id' => $level->id,
+            'program_objective_id' => $objective->id,
+            'platform' => $this->form->platformBroker ?? 'mt5',
+            'mt5_login' => $this->form->loginPlatform,
+            'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
+            'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
+
+            'currency' => $level->currency,
+            'initial_balance' => $level->size,
+            'current_balance' => $level->size, // Al principio son iguales
+            'sync' => $this->form->sync,
+
+            // ... resto de campos ...
+        ]);
+        $account->save();
+
+
+        if ($this->form->passwordPlatform) {
+            $account->mt5_password = encrypt($this->form->passwordPlatform);
+            $account->save();
+        }
+
+        $this->dispatch('account-updated', timeframe: 'all'); // Cerrar modal y refrescar
+        $this->updateData();
+    }
+
+    public function deleteAccount($id)
+    {
+        // 1. Seguridad: Verificar que sea del usuario
+        $account = Account::where('id', $id)->where('user_id', Auth::id())->first();
+
+        if (!$account) {
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => 'Cuenta no encontrada.']);
+            return;
+        }
+
+        // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
+        $account->delete();
+
+        // 3. Lógica Post-Borrado
+        // Si la cuenta borrada era la seleccionada, cambiamos a la primera disponible
+        if ($this->selectedAccount && $this->selectedAccount->id == $id) {
+            $this->selectedAccount = Account::where('status', '!=', 'burned')
+                ->where('user_id', Auth::id())
+                ->orderBy('name')
+                ->first();
+
+            $this->selectedAccountId = $this->selectedAccount?->id;
+        }
+
+        // 4. Refrescar datos y avisar
+        $user = Auth::user();
+        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
+        $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
+
+        $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
+        $this->dispatch('account-updated', timeframe: 'all'); // Recargar tabla y charts
+        $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Cuenta eliminada correctamente.']);
+    }
+
+
 
 
 

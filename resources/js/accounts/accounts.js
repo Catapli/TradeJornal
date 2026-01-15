@@ -7,9 +7,11 @@ document.addEventListener("alpine:init", () => {
         bodyAlert: "",
         typeAlert: "error",
         showModal: false, // Control del modal
-        labelTitleModal: "Crear Cuenta",
+        labelTitleModal: "",
         typeButton: "", // Tipo de Boton para los modals
         tableHistory: null,
+        showDeleteModal: false, // Variable para mostrar el modal
+        accountToDeleteId: null, // ID temporal
 
         init() {
             const self = this; // Capturamos el scope de Alpine
@@ -19,6 +21,7 @@ document.addEventListener("alpine:init", () => {
             // Listeners de eventos globales
             window.addEventListener("timeframe-updated", (e) => {
                 this.timeframe = e.detail.timeframe;
+                this.showLoadingGrafic = true;
                 this.initChart();
             });
 
@@ -26,6 +29,19 @@ document.addEventListener("alpine:init", () => {
                 const data = e.detail[0] || e.detail; // Ajuste por si viene en array o no
                 this.showModal = false; // Cerramos modal si está abierto
                 this.triggerAlert(data.message, data.type);
+            });
+
+            // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
+            window.addEventListener("account-change", (e) => {
+                // ... tu lógica de timeframe ...
+                this.timeframe = e.detail.timeframe;
+                console.log("Prueba");
+
+                // 👇 RECARGAR DATATABLE
+                if (this.tableHistory) {
+                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
+                    this.tableHistory.ajax.reload();
+                }
             });
 
             // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
@@ -39,68 +55,196 @@ document.addEventListener("alpine:init", () => {
                     // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
                     this.tableHistory.ajax.reload();
                 }
+
+                this.showModal = false; // Cerramos modal si está abierto
+
+                this.triggerAlert(
+                    this.$s("account_updated_success"),
+                    "success",
+                );
+            });
+
+            // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
+            window.addEventListener("account-created", (e) => {
+                // ... tu lógica de timeframe ...
+                this.timeframe = e.detail.timeframe;
+
+                // 👇 RECARGAR DATATABLE
+                if (this.tableHistory) {
+                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
+                    this.tableHistory.ajax.reload();
+                }
+
+                this.showModal = false; // Cerramos modal si está abierto
+
+                this.triggerAlert(
+                    this.$s("account_created_success"),
+                    "success",
+                );
             });
 
             if (!$.fn.DataTable.isDataTable("#table_history")) {
-                self.tableHistory = $("#table_history")
-                    .on("init.dt", () => {
-                        // Sincroniza la altura del contenedor con Alpine
-                        this.height =
-                            document.getElementById("container_table")
-                                .offsetHeight + "px";
+                self.tableHistory = $("#table_history").DataTable({
+                    ajax: {
+                        url: "/trades/data",
+                        data: function (d) {
+                            let id = self.$wire.selectedAccountId;
+                            d.id = id;
+                        },
+                    },
+                    // Ordenamos por fecha de entrada descendente por defecto
+                    order: [[1, "desc"]],
+                    lengthChange: false,
+                    searching: false,
 
-                        document.getElementById(
-                            "container_table",
-                        ).style.minHeight = this.height;
-                    })
-                    .DataTable({
-                        ajax: {
-                            url: "/users/data",
-                            data: function (d) {
-                                // Agregar parámetros adicionales para el filtro
-                                let id = self.$wire.selectedAccountId;
+                    columnDefs: [
+                        {
+                            targets: "_all", // Aplica a todas las columnas
+                            className: "dt-left", // Usa 'dt-left' si no usas Bootstrap
+                        },
+                    ],
 
-                                console.log(
-                                    "Cargando tabla para Account ID:",
-                                    id,
-                                );
-                                d.id = id;
+                    // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
+                    columns: [
+                        // COLUMNA 1: ID Orden / Activo / Tipo
+                        // COLUMNA 1: ID Orden / Activo / Tipo
+                        {
+                            data: "ticket",
+                            name: "ticket",
+                            title: "Orden / Activo",
+                            render: function (data, type, row) {
+                                // Lógica de colores (igual que antes)
+                                let isBuy =
+                                    row.direction === "buy" ||
+                                    row.type === "BUY" ||
+                                    row.direction === "long";
+                                let badgeClass = isBuy
+                                    ? "bg-[#00800061] text-[#0eb90e] border-emerald-700"
+                                    : "bg-[#7f101061] text-[#eb0b0b] border-red-700";
+                                let label = isBuy ? "Buy" : "Sell";
+
+                                return `
+            <!-- Contenedor Flex Fila: Alinea Badge (Izq) y Textos (Der) -->
+            <div class="flex items-center gap-3">
+                
+                <!-- 1. BADGE IZQUIERDA (Centrado verticalmente gracias a items-center del padre) -->
+                <div class="flex-shrink-0">
+                    <span class="text-sm px-2 py-1 rounded border ${badgeClass} font-bold uppercase tracking-wider">
+                        ${label}
+                    </span>
+                </div>
+
+                <!-- 2. TEXTOS DERECHA (Apilados verticalmente) -->
+                <div class="flex flex-col items-start gap-0.5">
+                    
+                    <!-- Ticket ID + Copiar -->
+                    <div class="font-bold text-white text-sm flex items-center gap-2">
+                        ${data}
+                    </div>
+
+                    <!-- Símbolo (Debajo del ID) -->
+                    <span class="text-xs font-medium text-gray-400">
+                        ${row.symbol}
+                    </span>
+                </div>
+            </div>
+        `;
                             },
                         },
-                        lengthMenu: [5, 10, 20, 25, 50],
-                        pageLength: 5,
-                        columns: [
-                            { data: "id" },
-                            { data: "name" },
-                            { data: "town.town" },
-                            { data: "active" },
-                        ],
-                        pagingType: "numbers",
-                        language: {
-                            url: "/datatable/es-ES.json",
+
+                        // COLUMNA 2: Tiempo (Abrir / Cerrar)
+                        {
+                            data: "entry_time",
+                            name: "entry_time",
+                            title: "Tiempo",
+                            render: function (data, type, row) {
+                                return `
+                    <div class="flex flex-col text-sm gap-1">
+                        <div class="flex justify-start gap-2">
+                            <span class="text-gray-300 ">Abrir:</span>
+                            <span class="text-white font-mono ">${data}</span>
+                        </div>
+                        <div class="flex justify-start gap-2">
+                            <span class="text-gray-300 ">Cerrar:</span>
+                            <span class="text-white font-mono ">${row.exit_time}</span>
+                        </div>
+                    </div>
+                `;
+                            },
                         },
 
-                        createdRow: function (row, data, dataIndex) {
-                            $(row).on("click", function () {
-                                self.$wire.id_user = data.id;
-                                self.$wire.call("findUserById");
-                                self.registerSelected = true;
-                            });
-                        },
-                        columnDefs: [
-                            { width: "5%", targets: 0 },
-                            {
-                                targets: 3, // Índice de la columna a formatear
-                                render: function (data, type, row) {
-                                    if (data) {
-                                        return '<i class="fa-solid fa-circle-check text-green-600"></i>';
-                                    } else {
-                                        return '<i class="fa-solid fa-circle-xmark text-red-600"></i>';
-                                    }
-                                },
+                        // COLUMNA 3: Lotes
+                        {
+                            data: "size",
+                            name: "size",
+                            title: "Lotes",
+                            class: "text-left font-bold text-white", // Centrado y negrita
+                            render: function (data) {
+                                return data; // Simple
                             },
-                        ],
-                    });
+                        },
+
+                        // COLUMNA 4: Precio (Abrir / Cerrar)
+                        {
+                            data: "entry_price",
+                            name: "entry_price",
+                            title: "Precio",
+                            render: function (data, type, row) {
+                                return `
+                    <div class="flex flex-col text-sm gap-1">
+                        <div class="flex gap-2">
+                            <span class="text-gray-300 w-10 ">Abrir:</span>
+                            <span class="text-white font-mono font-bold ">${data}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-gray-300 w-10 ">Cerrar:</span>
+                            <span class="text-white font-mono font-bold ">${row.exit_price}</span>
+                        </div>
+                    </div>
+                `;
+                            },
+                        },
+
+                        // COLUMNA 5: Beneficios (PnL)
+                        {
+                            data: "pnl",
+                            name: "pnl",
+                            title: "Beneficio",
+                            class: "text-right", // Alineado a la derecha
+                            render: function (data, type, row) {
+                                let val = parseFloat(data);
+
+                                // Determinar color
+                                let colorClass =
+                                    val >= 0
+                                        ? "text-emerald-400"
+                                        : "text-red-400";
+
+                                // Formatear a 2 decimales (ej: "10.50" o "-5.20")
+                                let formatted = val.toFixed(2);
+
+                                // Si es mayor que 0, le pegamos el "+" delante.
+                                // Si es negativo, ya trae el "-" incluido en 'formatted'.
+                                // Si es 0, se queda como "0.00"
+                                let textWithSign =
+                                    val > 0 ? "+" + formatted : formatted;
+
+                                return `
+            <span class="font-bold text-base font-mono ${colorClass}">
+                ${textWithSign}
+            </span>
+        `;
+                            },
+                        },
+                    ],
+                    // Estilos generales de la tabla para modo oscuro
+                    createdRow: function (row, data, dataIndex) {
+                        // Añadir clases a la fila (borde inferior, fondo oscuro, hover)
+                        $(row).addClass(
+                            "border-b border-gray-700 hover:bg-gray-800 transition-colors",
+                        );
+                    },
+                });
             }
         },
 
@@ -112,6 +256,22 @@ document.addEventListener("alpine:init", () => {
             setTimeout(() => (this.showAlert = false), 4000);
         },
 
+        // 1. ABRIR MODAL
+        confirmDeleteAccount(id) {
+            this.accountToDeleteId = id;
+            this.showDeleteModal = true;
+        },
+
+        // 2. EJECUTAR BORRADO (Llamado desde el botón rojo del modal)
+        executeDelete() {
+            console.log("Prueba");
+            if (this.accountToDeleteId) {
+                this.$wire.deleteAccount(this.accountToDeleteId);
+                this.showDeleteModal = false;
+                this.accountToDeleteId = null;
+            }
+        },
+
         setTimeframe(value) {
             this.showLoadingGrafic = true;
             this.$wire.setTimeframe(value);
@@ -119,41 +279,134 @@ document.addEventListener("alpine:init", () => {
 
         showOpenModalCreate() {
             this.showModal = true;
+            this.labelTitleModal = this.$t("create_account");
         },
 
+        showOpenModalEdit() {
+            this.showModal = true;
+            this.labelTitleModal = this.$t("edit_account");
+        },
+
+        // initChart() {
+        //     const canvas = this.$refs.canvas;
+        //     if (!canvas) return;
+
+        //     this.showLoadingGrafic = false;
+
+        //     // Usamos nextTick para asegurar que el DOM está listo
+        //     this.$nextTick(() => {
+        //         if (window.balanceChart) window.balanceChart.destroy();
+
+        //         const ctx = canvas.getContext("2d");
+        //         // Accedemos a los datos de Livewire de forma segura
+        //         const labels = this.$wire.balanceChartData?.labels || [];
+        //         const datasets = this.$wire.balanceChartData?.datasets || [];
+
+        //         if (!labels.length) return;
+
+        //         window.balanceChart = new Chart(ctx, {
+        //             type: "line",
+        //             data: { labels, datasets },
+        //             options: {
+        //                 responsive: true,
+        //                 maintainAspectRatio: false,
+        //                 interaction: { intersect: false, mode: "index" },
+        //                 // Tus opciones de chart...
+        //             },
+        //         });
+        //     });
+        // },
         initChart() {
-            const canvas = this.$refs.canvas;
-            if (!canvas) return;
+            // 1. Referencia al div (nota que cambié 'canvas' por 'chart' en la vista)
+            const chartEl = this.$refs.chart;
+            if (!chartEl) return;
 
-            this.showLoadingGrafic = false;
-
-            // Usamos nextTick para asegurar que el DOM está listo
             this.$nextTick(() => {
-                if (window.balanceChart) window.balanceChart.destroy();
+                // 2. Limpiar gráfico anterior si existe
+                if (window.balanceChart) {
+                    window.balanceChart.destroy();
+                }
 
-                const ctx = canvas.getContext("2d");
-                // Accedemos a los datos de Livewire de forma segura
-                const labels = this.$wire.balanceChartData?.labels || [];
-                const datasets = this.$wire.balanceChartData?.datasets || [];
+                // 3. Obtener datos de Livewire
+                const categories =
+                    this.$wire.balanceChartData?.categories || [];
+                const seriesData = this.$wire.balanceChartData?.series || [];
 
-                if (!labels.length) return;
+                // Si no hay datos, no pintamos nada (o podrías pintar un empty state)
+                if (!categories.length) return;
 
-                window.balanceChart = new Chart(ctx, {
-                    type: "line",
-                    data: { labels, datasets },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { intersect: false, mode: "index" },
-                        // Tus opciones de chart...
+                // 4. Configuración de ApexCharts (Area Spline)
+                const options = {
+                    series: seriesData,
+                    chart: {
+                        type: "area", // Tipo Área
+                        height: 350,
+                        fontFamily: "Inter, sans-serif",
+                        toolbar: { show: false }, // Ocultar menú de descarga
+                        animations: { enabled: true },
                     },
-                });
+                    dataLabels: { enabled: false }, // No mostrar números sobre cada punto
+                    stroke: {
+                        curve: "smooth", // 👇 ESTO HACE EL EFECTO SPLINE (CURVAS)
+                        width: 2,
+                    },
+
+                    // Colores: Verde Esmeralda (estilo TradeZella/Tailwind)
+                    colors: ["#10B981"],
+
+                    fill: {
+                        type: "gradient", // Degradado hacia abajo
+                        gradient: {
+                            shadeIntensity: 1,
+                            opacityFrom: 0.4, // Más opaco arriba
+                            opacityTo: 0.05, // Casi transparente abajo
+                            stops: [0, 90, 100],
+                        },
+                    },
+
+                    xaxis: {
+                        categories: categories, // Las fechas/horas desde PHP
+                        tooltip: { enabled: false },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false },
+                        labels: {
+                            style: { colors: "#9ca3af", fontSize: "12px" }, // Tailwind gray-400
+                        },
+                    },
+
+                    yaxis: {
+                        labels: {
+                            style: { colors: "#9ca3af", fontSize: "12px" },
+                            formatter: (value) => {
+                                return value.toFixed(2) + " €";
+                            }, // Formato moneda
+                        },
+                    },
+
+                    grid: {
+                        borderColor: "#f3f4f6", // Grid muy sutil
+                        strokeDashArray: 4,
+                        yaxis: { lines: { show: true } },
+                    },
+
+                    tooltip: {
+                        theme: "light",
+                        y: {
+                            formatter: function (val) {
+                                return val + " €";
+                            },
+                        },
+                    },
+                };
+
+                // 5. Renderizar
+                window.balanceChart = new ApexCharts(chartEl, options);
+                window.balanceChart.render();
+                this.showLoadingGrafic = false;
             });
         },
     }));
 
-    // COMPONENTE 2: Lógica del Selector (Formulario Prop Firms)
-    // COMPONENTE 2: Lógica del Selector
     Alpine.data("accountSelector", (data) => ({
         // 1. Blindaje de datos iniciales
         allFirms: Array.isArray(data) ? data : [],
@@ -168,6 +421,9 @@ document.addEventListener("alpine:init", () => {
         platformBroker: "",
         loginPlatform: "",
         passwordPlatform: "",
+        mode: "create", // 'create' o 'edit'
+        editingAccountId: null,
+        isLoading: false, // <--- LA CLAVE PARA QUE NO SE ROMPA LA CASCADA
 
         // 2. Funciones seguras en lugar de Getters complejos
         getPrograms() {
@@ -212,52 +468,114 @@ document.addEventListener("alpine:init", () => {
 
             // 3. Watchers (Solo sincronizamos cuando el usuario CAMBIA algo)
             this.$watch("selectedFirmId", (value) => {
+                if (this.isLoading) return; // <--- STOP SI CARGAMOS DATOS
+
                 this.selectedProgramId = "";
                 this.selectedSize = "";
                 this.selectedLevelId = "";
 
-                // 2. LÓGICA PARA BUSCAR EL SERVIDOR
-                // Buscamos la empresa seleccionada en el array de datos
+                // Lógica del servidor
                 const firm = this.allFirms.find((f) => f.id == value);
-
-                // Si existe, asignamos su server, si no, vacío
                 this.selectedServer = firm ? firm.server : "";
+
                 this.syncToLivewire();
             });
 
             this.$watch("selectedProgramId", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.selectedSize = "";
                 this.selectedLevelId = "";
                 this.syncToLivewire();
             });
 
             this.$watch("selectedSize", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.selectedLevelId = "";
                 this.syncToLivewire();
             });
 
             this.$watch("selectedLevelId", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.syncToLivewire();
             });
 
             this.$watch("syncronize", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.syncToLivewire();
             });
 
             this.$watch("platformBroker", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.syncToLivewire();
             });
 
             this.$watch("loginPlatform", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.syncToLivewire();
             });
 
             this.$watch("passwordPlatform", () => {
+                if (this.isLoading) return; // <--- STOP
                 this.syncToLivewire();
+            });
+
+            // ESCUCHAMOS EL EVENTO DE EDICIÓN
+            window.addEventListener("open-modal-edit", (event) => {
+                let data = event.detail[0].data; // Livewire envía array
+                this.loadEditData(data);
+            });
+
+            // ESCUCHAMOS APERTURA DE CREACIÓN (Para limpiar)
+            window.addEventListener("open-modal-create", () => {
+                this.resetForm();
+                this.mode = "create";
+                this.labelTitleModal = this.$t("create_account"); // O tu traducción
+                this.showOpenModalCreate(); // Tu función que pone showModal = true
             });
 
             // ❌ ELIMINADO: this.syncToLivewire()
             // No sincronizamos al inicio para evitar errores de $wire undefined
+        },
+
+        // FUNCIÓN PARA CARGAR DATOS DE EDICIÓN
+        loadEditData(data) {
+            // 1. Bloqueamos los watchers para evitar que limpien los campos al asignar
+            this.isLoading = true;
+
+            // 2. Modo Edición
+            this.mode = "edit";
+            this.editingAccountId = data.accountId;
+            this.nameAccount = data.name;
+
+            // 3. ASIGNACIÓN EN CASCADA (Forzando tipos)
+
+            // Empresa
+            this.selectedFirmId = data.firmId;
+            this.selectedServer = data.server;
+
+            // Programa
+            this.selectedProgramId = data.programId;
+
+            // Tamaño (CRÍTICO: Forzamos a Float para coincidir con getSizes que usa parseFloat)
+            // Si no hacemos esto, '100000' (string) != 100000 (number) y getCurrencies falla.
+            this.selectedSize = parseFloat(data.size);
+
+            // Divisa / Nivel Final
+            this.selectedLevelId = data.levelId;
+
+            // Datos Sync
+            this.syncronize = Boolean(data.sync);
+            this.platformBroker = data.platform;
+            this.loginPlatform = data.login;
+            this.passwordPlatform = ""; // Dejar vacío por seguridad
+
+            // 4. Sincronizar y Abrir
+            this.syncToLivewire();
+
+            this.$nextTick(() => {
+                this.isLoading = false; // Reactivamos watchers
+                this.showOpenModalEdit(); // Abrimos el modal
+            });
         },
 
         syncToLivewire() {
@@ -353,20 +671,46 @@ document.addEventListener("alpine:init", () => {
                     return false;
                 }
 
-                if (
-                    this.$wire.form.passwordPlatform === null ||
-                    this.$wire.form.passwordPlatform.trim() === ""
-                ) {
-                    this.triggerAlert(
-                        this.$e("enter_password_platform"),
-                        "error",
-                    );
-                    this.inputRed(this.$refs.passwordPlatform);
-                    return false;
+                if (this.mode === "create") {
+                    if (
+                        this.$wire.form.passwordPlatform === null ||
+                        this.$wire.form.passwordPlatform.trim() === ""
+                    ) {
+                        this.triggerAlert(
+                            this.$e("enter_password_platform"),
+                            "error",
+                        );
+                        this.inputRed(this.$refs.passwordPlatform);
+                        return false;
+                    }
                 }
             }
+            this.syncToLivewire();
 
-            this.$wire.call("insertAccount");
+            // AL FINAL, DECIDIMOS QUÉ LLAMAR
+            if (this.mode === "edit") {
+                // Llamamos a update pasando el ID
+                this.$wire.call("updateAccount", this.editingAccountId);
+            } else {
+                this.$wire.call("insertAccount");
+            }
+        },
+
+        resetForm() {
+            this.isLoading = true;
+            this.mode = "create"; // <--- Importante resetear el modo
+            this.editingAccountId = null;
+
+            this.selectedFirmId = "";
+            this.selectedProgramId = "";
+            this.selectedSize = "";
+            this.selectedLevelId = "";
+            this.nameAccount = "";
+            this.syncronize = false;
+            this.loginPlatform = "";
+            this.passwordPlatform = "";
+
+            this.isLoading = false;
         },
 
         // ? Colorear Borde Rojo Input

@@ -39,6 +39,7 @@ class SyncMt5Account implements ShouldQueue
 
             // 1. Auditoría de descuadre (lo que ya teníamos)
             if (abs($calculatedBalance - $apiBalance) > 0.01) {
+                Log::warning("⚠️ Descuadre detectado en cuenta {$this->account->id}. Calculado: $calculatedBalance, API: $apiBalance. Re-sincronizando todo.");
                 $apiData = $gateway->syncAccount($this->account, true);
                 $apiBalance = (float)$apiData['balance'];
             }

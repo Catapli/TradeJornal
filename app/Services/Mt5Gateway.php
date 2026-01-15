@@ -17,9 +17,16 @@ class Mt5Gateway
     public function syncAccount($account, $forceAll = false)
     {
         $password = decrypt($account->mt5_password);
-        $dateStart = $forceAll ? null : $account->last_sync;
+        if ($forceAll) {
+            $dateStart = null;
+        } else {
+            $dateStart = $account->last_sync;
+        }
+        // $dateStart = $forceAll ? null : $account->last_sync;
         // Determinamos si necesitamos pedir la fecha inicial
         $needFirstDate = is_null($account->funded_date);
+
+        Log::info("Fecha Inicial: " . $account->last_sync);
 
         $response = Http::timeout(60)->post('http://185.116.236.222:5000/sync-account', [
             'login' => $account->mt5_login,
@@ -44,7 +51,7 @@ class Mt5Gateway
     private function importTrades($account, $trades, $isFullSync = false)
     {
         $positions = collect($trades)->groupBy('position_id')->filter(fn($deals) => count($deals) >= 2);
-
+        Log::info($positions);
         // Lista para guardar los tickets que SI existen en MT5
         $validTickets = [];
 
@@ -54,12 +61,17 @@ class Mt5Gateway
             $exit = $sortedDeals->last();
             $totalPnL = $deals->sum('net_pnl');
 
+            Log::info("Importando trade:");
+            Log::info($entry);
+            Log::info($exit);
+
             $trade = Trade::updateOrCreate(
                 ['ticket' => $entry['ticket'], 'account_id' => $account->id],
                 [
                     'trade_asset_id' => TradeAsset::firstOrCreate(['symbol' => $entry['symbol']])->id,
                     'direction' => $entry['type'] === 'BUY' ? 'long' : 'short',
                     'entry_price' => $entry['price'],
+                    'exit_price' => $exit['price'],
                     'size' => $entry['volume'],
                     'pnl' => $totalPnL,
                     'entry_time' => $entry['time'],

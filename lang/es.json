@@ -10,10 +10,12 @@
         "enter_account_name": "Por favor, introduzca el Nombre de la Cuenta"
     },
     "success": {
-        "account_created_success": "Cuenta creada exitosamente."
+        "account_created_success": "Cuenta creada exitosamente.",
+        "account_updated_success": "Cuenta actualizada exitosamente."
     },
 
     "titles": {
-        "create_account": "Crear Cuenta"
+        "create_account": "Crear Cuenta",
+        "edit_account": "Editar Cuenta"
     }
 }

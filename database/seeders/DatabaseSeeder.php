@@ -50,10 +50,10 @@ class DatabaseSeeder extends Seeder
 
         // * Cuentas
 
-        $fivekaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 5000)->first();
+        $fivekaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 5000)->where('currency', 'USD')->first();
         $fiveAccountObjective = ProgramObjective::where('program_level_id', $fivekaccountPrime->id)->where('phase_number', "1")->first();
 
-        $tenkaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 10000)->first();
+        $tenkaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 10000)->where('currency', 'USD')->first();
         $tenAccountObjective = ProgramObjective::where('program_level_id', $tenkaccountPrime->id)->where('phase_number', "1")->first();
 
         Account::create([
@@ -68,6 +68,7 @@ class DatabaseSeeder extends Seeder
             'mt5_server' => 'Neomaaa-Live',
             'program_level_id' => $fivekaccountPrime->id,
             'program_objective_id' => $fiveAccountObjective->id,
+            'sync' => true
         ]);
 
 
@@ -83,12 +84,13 @@ class DatabaseSeeder extends Seeder
             'mt5_server' => 'Neomaaa-Live',
             'program_level_id' => $tenkaccountPrime->id,
             'program_objective_id' => $tenAccountObjective->id,
+            "sync" => true
         ]);
 
 
         TradeAsset::create([
             'symbol' => 'EURUSD',
-            'name' => 'Euro Dólar',
+            'name' => 'Euro Dolar',
             'category' => 'Forex',
         ]);
 

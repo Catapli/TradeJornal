@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('ticket')->unique(); // ID único broker
             $table->enum('direction', ['long', 'short']);
             $table->decimal('entry_price', 12, 5);
+            $table->decimal('exit_price', 12, 5);
             $table->decimal('size', 12, 2);
             $table->decimal('pnl', 10, 2);
             $table->unsignedBigInteger('duration_minutes');

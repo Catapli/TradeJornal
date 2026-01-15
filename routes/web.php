@@ -9,6 +9,7 @@ use App\Http\Controllers\RolsController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Controllers\TownController;
+use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TrafficController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ZoneController;
@@ -77,6 +78,7 @@ Route::middleware([
 
 
     //? API
+    Route::get('/trades/data', [TradeController::class, 'data']);        //? Obtener Trades
     Route::get('/logs/data', [LogController::class, 'index']);        //? Obtener Logs
     Route::get('/users/data', [UserController::class, 'data']);       //? Obtener Usuarios
     Route::get('/rols/data', [RolsController::class, 'data']);

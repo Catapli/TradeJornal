@@ -114,17 +114,25 @@ select.dt-input {
 
 /* Hover TR */
 .dataTable tbody tr:hover {
-    @apply bg-gray-200 cursor-pointer !important;
+    @apply bg-gray-500  !important;
 }
 
 /* Estilo para filas impares */
 .dataTable tbody tr:nth-child(odd) {
-    @apply bg-white;
+    @apply bg-gray-600;
 }
 
 /* Estilo para filas pares */
 .dataTable tbody tr:nth-child(even) {
-    @apply bg-gray-100;
+    @apply bg-gray-600;
+}
+
+.datatable thead {
+    @apply bg-primary text-white;
+}
+
+.datatable .dt-empty {
+    @apply text-white;
 }
 
 .mdtimepicker .mdtp__wrapper {
