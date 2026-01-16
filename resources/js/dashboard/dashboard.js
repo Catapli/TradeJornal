@@ -3,6 +3,7 @@ document.addEventListener("alpine:init", () => {
         winRateChart: null,
         tableRecents: null,
         showLoading: false,
+        showModalDetails: false,
 
         init() {
             const self = this;
@@ -17,7 +18,7 @@ document.addEventListener("alpine:init", () => {
                         },
                     },
                     // lengthMenu: [5, 10, 20, 25, 50],
-                    pageLength: 5,
+                    pageLength: 10,
                     order: [[1, "desc"]],
                     searching: false,
                     lengthChange: false,
@@ -60,6 +61,16 @@ document.addEventListener("alpine:init", () => {
                     ],
                 });
             }
+
+            // 3. Watchers (Solo sincronizamos cuando el usuario CAMBIA algo)
+            this.$watch("showModalDetails", (value) => {
+                if (value) {
+                    document.body.classList.add("overflow-hidden");
+                } else {
+                    document.body.classList.remove("overflow-hidden");
+                }
+            });
+
             // 1. Inicializar gráfico al cargar
             this.renderWinRateChart();
             // ... otros inits ...
@@ -527,6 +538,17 @@ document.addEventListener("alpine:init", () => {
                     this.evolutionChart.render();
                 }
             }
+        },
+
+        closeDayModal() {
+            this.showModalDetails = false;
+            this.aiAnalysis = null;
+            this.$wire.$set("aiAnalysis", null);
+        },
+
+        openDayDetails(value) {
+            this.showModalDetails = true;
+            this.$wire.call("openDayDetails", value);
         },
     }));
 });

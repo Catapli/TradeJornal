@@ -1,6 +1,254 @@
 <div class="max-w-fullxl mx-auto grid grid-cols-12"
      x-data="dashboard">
 
+    {{-- MODAL DE DETALLE DEL DÍA --}}
+    <div class="fixed inset-0 z-[150] overflow-y-auto"
+         aria-labelledby="modal-title"
+         x-show="showModalDetails"
+         role="dialog"
+         x-cloak
+         aria-modal="true">
+
+        {{-- Fondo oscuro (Backdrop) --}}
+        <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+
+            {{-- Transición de fondo --}}
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                 @click="closeDayModal"
+                 aria-hidden="true">
+            </div>
+
+            {{-- Truco para centrar verticalmente --}}
+            <span class="hidden sm:inline-block sm:h-screen sm:align-middle"
+                  aria-hidden="true">&#8203;</span>
+
+            {{-- Contenedor del Modal --}}
+            <div class="inline-block transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl sm:align-middle">
+
+                {{-- Cabecera --}}
+                <div class="border-b border-gray-100 bg-white px-4 pb-4 pt-5 sm:p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 id="modal-title"
+                                class="text-xl font-bold leading-6 text-gray-900">
+                                Resumen del Día
+                            </h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                {{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('l, d \d\e F \d\e Y') }}
+                            </p>
+                        </div>
+
+                        {{-- Botón Cerrar (X) --}}
+                        <button class="rounded-full bg-gray-50 p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none"
+                                @click="closeDayModal">
+                            <i class="fa-solid fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Cuerpo (Tabla) --}}
+                {{-- SECCIÓN COACH IA --}}
+                <div class="border-b border-indigo-100 bg-indigo-50 px-4 py-4 sm:px-6">
+                    <div class="flex flex-col gap-4">
+
+                        <div class="flex items-center justify-between">
+                            <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
+                                <i class="fa-solid fa-robot text-indigo-600"></i> Análisis Inteligente
+                            </h4>
+
+                            {{-- Botón (Solo visible si no hay análisis aún) --}}
+                            @if (!$aiAnalysis)
+                                <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                                        wire:click="analyzeDayWithAi"
+                                        wire:loading.attr="disabled">
+
+                                    {{-- Icono y Texto Normal --}}
+                                    <span class="flex items-center gap-2"
+                                          wire:loading.remove
+                                          wire:target="analyzeDayWithAi">
+                                        <span>Analizar Día</span>
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    </span>
+
+                                    {{-- Estado Cargando --}}
+                                    <span class="flex items-center gap-2"
+                                          wire:loading
+                                          wire:target="analyzeDayWithAi">
+                                        <svg class="h-4 w-4 animate-spin text-white"
+                                             xmlns="http://www.w3.org/2000/svg"
+                                             fill="none"
+                                             viewBox="0 0 24 24">
+                                            <circle class="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    stroke-width="4"></circle>
+                                            <path class="opacity-75"
+                                                  fill="currentColor"
+                                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Analizando...
+                                    </span>
+                                </button>
+                            @endif
+                        </div>
+
+                        {{-- RESULTADO DEL ANÁLISIS --}}
+
+                        {{-- 1. Skeleton Loading (Mientras piensa) --}}
+                        <div class="animate-pulse space-y-2"
+                             wire:loading
+                             wire:target="analyzeDayWithAi">
+                            <div class="h-4 w-3/4 rounded bg-indigo-200"></div>
+                            <div class="h-4 w-1/2 rounded bg-indigo-200"></div>
+                        </div>
+
+                        {{-- 2. El Texto de la IA --}}
+                        @if ($aiAnalysis)
+                            <div class="relative rounded-lg border border-indigo-100 bg-white p-4 shadow-sm">
+                                {{-- Botón cerrar análisis --}}
+                                <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                                        wire:click="$set('aiAnalysis', null)">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+
+                                <div class="prose prose-sm max-w-none text-gray-800">
+                                    {{-- Renderizamos el Markdown que manda Gemini --}}
+                                    {!! Str::markdown($aiAnalysis) !!}
+                                </div>
+                            </div>
+                        @endif
+
+                    </div>
+                </div>
+                {{-- Cuerpo (Tabla) --}}
+                <div class="min-h-[200px] bg-white px-4 sm:p-6"> {{-- min-h para evitar saltos de altura --}}
+
+                    {{-- 1. ESTADO DE CARGA (Spinner) --}}
+                    {{-- Se muestra SOLO mientras se ejecuta 'openDayDetails' --}}
+                    <div class="w-full flex-col items-center justify-center py-12"
+                         wire:loading.flex
+                         wire:target="openDayDetails">
+
+                        <svg class="mb-4 h-10 w-10 animate-spin text-blue-600"
+                             xmlns="http://www.w3.org/2000/svg"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                            <circle class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"></circle>
+                            <path class="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-500">Cargando operaciones...</p>
+                    </div>
+
+                    {{-- 2. ESTADO DE CONTENIDO (Tabla) --}}
+                    {{-- Se OCULTA mientras se ejecuta 'openDayDetails' --}}
+                    <div wire:loading.remove
+                         wire:target="openDayDetails">
+
+                        @if (count($dayTrades) > 0)
+                            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                                <table class="min-w-full divide-y divide-gray-200 overflow-hidden">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Hora</th>
+                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Cuenta</th>
+                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Símbolo</th>
+                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tipo</th>
+                                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lotes</th>
+                                            <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Resultado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        @foreach ($dayTrades as $trade)
+                                            <tr class="transition hover:bg-gray-50">
+                                                <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                                                    {{ \Carbon\Carbon::parse($trade->exit_time)->format('H:i') }}
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 text-sm">
+                                                    <span class="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                                                        {{ $trade->account->name ?? 'N/A' }}
+                                                    </span>
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-gray-900">
+                                                    {{ $trade->asset->name ?? $trade->tradeAsset->symbol }}
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 text-sm">
+                                                    @if ($trade->direction == 'long')
+                                                        <span class="rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600">BUY</span>
+                                                    @else
+                                                        <span class="rounded bg-rose-50 px-2 py-1 text-xs font-bold text-rose-600">SELL</span>
+                                                    @endif
+                                                </td>
+                                                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600">
+                                                    {{ $trade->size }}
+                                                </td>
+                                                <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
+                                                    {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot class="bg-gray-50">
+                                        <tfoot class="border-t border-gray-200 bg-gray-50">
+                                            <tr>
+                                                {{-- Total Operaciones (Ocupa 2 columnas) --}}
+                                                <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
+                                                    colspan="2">
+                                                    Total Operaciones:
+                                                </td>
+
+                                                {{-- Valor Operaciones (Ocupa 1 columna) --}}
+                                                <td class="{{ $dayTrades->count() <= 2 ? 'text-emerald-600' : ($dayTrades->count() <= 4 ? 'text-orange-500' : 'text-rose-600') }} px-4 py-3 text-left text-base font-black">
+                                                    {{ $dayTrades->count() }}
+                                                </td>
+
+                                                {{-- Total Día Label (Ocupa 2 columnas) --}}
+                                                <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
+                                                    colspan="2">
+                                                    Total Día:
+                                                </td>
+
+                                                {{-- Valor Total Día (Ocupa 1 columna - Alineado con PnL) --}}
+                                                <td class="{{ $dayTrades->sum('pnl') >= 0 ? 'text-emerald-600' : 'text-rose-600' }} px-4 py-3 text-right text-base font-black">
+                                                    {{ $dayTrades->sum('pnl') >= 0 ? '+' : '' }}{{ number_format($dayTrades->sum('pnl'), 2) }} $
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        @else
+                            <div class="py-12 text-center">
+                                <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                                    <i class="fa-solid fa-box-open text-gray-400"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900">Sin operaciones</h3>
+                                <p class="text-gray-500">No hay registros para este día en las cuentas seleccionadas.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Footer botones --}}
+                <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button class="inline-flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                            type="button"
+                            @click="closeDayModal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 
     {{-- ? Loading --}}
@@ -345,23 +593,25 @@
 
                             // Borde extra si es HOY
                             $todayClass = $day['is_today'] ? 'ring-2 ring-blue-500 ring-offset-2' : '';
+
+                            $hasTrades = !is_null($day['pnl']);
+
+                            $cursorClass = $hasTrades ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : 'cursor-default';
                         @endphp
 
-                        <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} relative flex h-24 cursor-pointer flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md">
+                        <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} {{ $cursorClass }} relative flex h-24 flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md"
+                             @if ($hasTrades) @click="openDayDetails('{{ $day['date'] }}')" @endif>
 
-                            {{-- Número del día --}}
+                            {{-- ... El resto del contenido de la celda se queda igual ... --}}
                             <span class="{{ $day['is_current_month'] ? 'text-gray-500' : 'text-gray-300' }} text-xs font-semibold">
                                 {{ $day['day'] }}
                             </span>
 
-                            {{-- PnL (Solo si hay trades) --}}
                             @if (!is_null($day['pnl']))
                                 <div class="flex flex-col items-end">
                                     <span class="{{ $textColor }} text-sm font-black">
-                                        {{ $day['pnl'] > 0 ? '+' : '' }}{{ number_format($day['pnl'], 0) }}€
+                                        {{ $day['pnl'] > 0 ? '+' : '' }}{{ number_format($day['pnl'], 2) }}€
                                     </span>
-                                    {{-- Opcional: Badge pequeño --}}
-                                    {{-- <span class="text-[10px] font-bold opacity-70">3 trades</span> --}}
                                 </div>
                             @endif
 

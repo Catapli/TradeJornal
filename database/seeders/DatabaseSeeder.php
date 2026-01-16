@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Models\Zone;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -40,6 +41,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Jordi',
             'email' => 'jordi@gmail.com',
             'google_id' => '',
+            'sync_token' => Str::random(32)
         ]);
 
         //? DATOS FALSOS
@@ -84,7 +86,7 @@ class DatabaseSeeder extends Seeder
             'mt5_server' => 'Neomaaa-Live',
             'program_level_id' => $tenkaccountPrime->id,
             'program_objective_id' => $tenAccountObjective->id,
-            "sync" => true
+            "sync" => true,
         ]);
 
 

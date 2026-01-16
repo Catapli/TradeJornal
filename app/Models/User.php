@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
@@ -36,7 +37,8 @@ class User extends Authenticatable
         'email',
         'password',
         'town_id',
-        'role_id'
+        'role_id',
+        'sync_token',
     ];
 
     /**
@@ -67,6 +69,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function regenerateSyncToken()
+    {
+        $this->sync_token = Str::random(32);
+        $this->save();
+
+        return $this->sync_token;
     }
 
 

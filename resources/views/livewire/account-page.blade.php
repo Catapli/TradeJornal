@@ -204,7 +204,7 @@
                                 Nunca
                             @endif
                         </span>
-
+                        <livewire:sync-token-modal />
                         <div class="flex items-center"> <!-- Quitamos clases que puedan estorbar y aseguramos flex -->
 
                             {{-- En header cuenta seleccionada --}}

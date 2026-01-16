@@ -17,11 +17,13 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::post('login', [AuthController::class, 'login']);
+// Route::post('login', [AuthController::class, 'login']);
 
-Route::post('login/2fa-verify', [AuthController::class, 'verify2fa']);
+// Route::post('login/2fa-verify', [AuthController::class, 'verify2fa']);
 
-Route::post('loginGoogle', [AuthController::class, 'loginGoogle']);
+// Route::post('loginGoogle', [AuthController::class, 'loginGoogle']);
 
 
-Route::post('send-notification', [NotificationController::class, 'sendPushNotification']);
+// Route::post('send-notification', [NotificationController::class, 'sendPushNotification']);
+
+Route::post('/mt5-sync', [App\Http\Controllers\Mt5SyncController::class, 'sync']);

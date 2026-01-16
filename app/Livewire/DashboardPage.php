@@ -8,6 +8,8 @@ use App\Models\Trade;
 use App\Models\Traffic;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class DashboardPage extends Component
@@ -25,9 +27,17 @@ class DashboardPage extends Component
     // Estado del Calendario
     public $calendarDate; // Fecha de referencia (ej: 2026-01-01)
     public $calendarGrid = []; // Array con los datos para la vista
+    // PROPIEDADES NUEVAS PARA EL MODAL
+    public $showDayModal = false;
+    public $selectedDate = null;
+    public $dayTrades = [];
 
     public $evolutionChartData = [];
     public $dailyPnLChartData = [];
+
+    // PROPIEDADES PARA LA IA
+    public $aiAnalysis = null;
+    public $isAnalyzing = false;
 
     public function mount()
     {
@@ -314,6 +324,110 @@ class DashboardPage extends Component
             'categories' => $categories,
             'data' => $data
         ];
+    }
+
+    public function analyzeDayWithAi()
+    {
+        // 1. Evitar doble click
+        $this->isAnalyzing = true;
+        $this->aiAnalysis = null; // Limpiamos análisis previo
+
+        // 2. Validación: ¿Hay operaciones?
+        if (empty($this->dayTrades) || count($this->dayTrades) == 0) {
+            $this->aiAnalysis = "No hay operaciones en este día para analizar.";
+            $this->isAnalyzing = false;
+            return;
+        }
+
+
+
+        // 3. Formatear los datos: FORZAMOS EL ORDEN CRONOLÓGICO (De 00:00 a 23:59)
+        // Usamos sortBy('exit_time') para asegurar que la IA lea la historia en orden correcto
+        $tradesText = collect($this->dayTrades)
+            ->sortBy('exit_time') // <--- ESTA ES LA CLAVE
+            ->map(function ($trade) {
+                $hora = \Carbon\Carbon::parse($trade->exit_time)->format('H:i');
+                $tipo = strtoupper($trade->direction);
+                $simbolo = $trade->asset->name ?? $trade->tradeAsset->symbol ?? 'N/A';
+                return "- [{$hora}] {$simbolo} ({$tipo}) | Lotes: {$trade->size} | PnL: {$trade->pnl}";
+            })->join("\n");
+
+        Log::info($tradesText);
+
+        // 4. El Prompt (La instrucción maestra)
+        $prompt = "
+            Actúa como un Risk Manager profesional de una firma de Prop Trading.
+            Analiza la siguiente lista de operaciones realizadas por un trader en un solo día.
+            
+            DATOS DEL DÍA:
+            $tradesText
+            
+            TAREA:
+            Detecta patrones de comportamiento peligrosos. Fíjate en:
+            - Sobreoperativa (muchas ops en poco tiempo).
+            - Venganza (aumentar lotaje tras perder).
+            - Gestión de riesgo (¿gana poco y pierde mucho?).
+            
+            FORMATO DE RESPUESTA (Usa Markdown):
+            - **Evaluación:** (Del 1 al 10).
+            - **Observación Clave:** (Máximo 2 frases, sé directo y duro si es necesario).
+            - **Consejo:** (Una acción concreta para mejorar).
+        ";
+
+        try {
+            $apiKey = env('GEMINI_API_KEY');
+
+            // 5. Petición a Google Gemini (Modelo Flash, rápido y gratis)
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ]
+            ]);
+
+            if ($response->successful()) {
+                // La estructura de Google es un poco anidada, así se saca el texto:
+                $this->aiAnalysis = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+            } else {
+                Log::error('Error Gemini API', ['body' => $response->body()]);
+                $this->aiAnalysis = "⚠️ El Coach IA no está disponible en este momento (Error API).";
+            }
+        } catch (\Exception $e) {
+            Log::error('Excepción Gemini', ['message' => $e->getMessage()]);
+            $this->aiAnalysis = "⚠️ Ocurrió un error técnico al contactar con la IA.";
+        }
+
+        $this->isAnalyzing = false;
+    }
+
+
+    // Esta función se llama al hacer click en un día
+    public function openDayDetails($date)
+    {
+        $this->selectedDate = $date;
+
+        // 1. REUTILIZAMOS LA MISMA QUERY BASE DEL CALENDARIO
+        // Esto garantiza que los filtros de Cuentas y el estado 'burned' coincidan al 100%
+        $query = $this->getTradesQuery();
+
+        // 2. Solo añadimos el filtro de fecha y las relaciones para la tabla
+        $this->dayTrades = $query->whereDate('exit_time', $date)
+            ->with(['account', 'tradeAsset']) // Traemos relación cuenta y activo
+            ->orderBy('exit_time', 'asc')
+            ->get();
+
+        $this->showDayModal = true;
+    }
+
+    public function closeDayModal()
+    {
+        $this->showDayModal = false;
+        $this->dayTrades = []; // Limpiamos para ahorrar memoria
     }
 
 

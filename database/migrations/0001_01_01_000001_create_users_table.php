@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('google_id')->nullable();
             $table->string('fcm_token', 250)->nullable();
             $table->boolean('is_superadmin')->default(false);
+            $table->string('sync_token')->nullable()->unique();
             $table->rememberToken();
             $table->timestamps();
         });
