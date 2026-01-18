@@ -27,6 +27,15 @@ return new class extends Migration
             $table->timestamp('exit_time')->nullable();
             $table->text('notes')->nullable();
             $table->string('screenshot')->nullable();
+            $table->text('ai_analysis')->nullable();
+            $table->string('chart_data_path')->nullable();
+            // MAE: Maximum Adverse Excursion (El peor precio/pérdida máxima latente)
+            $table->decimal('mae_price', 16, 8)->nullable()->after('pnl');
+
+            // MFE: Maximum Favorable Excursion (El mejor precio/ganancia máxima latente)
+            $table->decimal('mfe_price', 16, 8)->nullable()->after('mae_price');
+
+
             $table->index(['account_id']);
             $table->index('entry_time');
             $table->timestamps();

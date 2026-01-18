@@ -1,9 +1,190 @@
+import {
+    createChart,
+    CandlestickSeries,
+    createSeriesMarkers,
+} from "lightweight-charts";
+
+console.log("🚀 [DEBUG] dashboard.js cargado (SAFE MODE)");
+
+class TradeChartController {
+    constructor(container) {
+        this.container = container;
+        this.chart = null;
+        this.series = null;
+        this.priceLines = [];
+        this.seriesMarkers = null; // 👈 manejador de marcadores
+        this.init();
+    }
+
+    init() {
+        if (this.container.clientWidth === 0) return;
+
+        const options = {
+            layout: {
+                background: { type: "solid", color: "#111827" },
+                textColor: "#9CA3AF",
+            },
+            grid: {
+                vertLines: { color: "#374151" },
+                horzLines: { color: "#374151" },
+            },
+            width: this.container.clientWidth,
+            height: 400,
+            timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+                borderColor: "#4B5563",
+            },
+            rightPriceScale: { borderColor: "#4B5563" },
+        };
+
+        try {
+            this.chart = createChart(this.container, options);
+
+            // Añadimos la serie y la guardamos
+            this.series = this.chart.addSeries(CandlestickSeries, {
+                upColor: "#10B981",
+                downColor: "#EF4444",
+                borderVisible: false,
+                wickUpColor: "#10B981",
+                wickDownColor: "#EF4444",
+            });
+
+            this.seriesMarkers = createSeriesMarkers(this.series, []);
+            // DEBUG CRÍTICO: Vamos a ver qué métodos tiene realmente esta serie
+            console.log("✅ SERIE CREADA. Métodos disponibles:", this.series);
+
+            new ResizeObserver((entries) => {
+                if (!entries.length || !this.chart) return;
+                const { width, height } = entries[0].contentRect;
+                if (width > 0) this.chart.applyOptions({ width, height });
+            }).observe(this.container);
+        } catch (e) {
+            console.error("🛑 Error init:", e);
+        }
+    }
+
+    drawTradeLines(entryPrice, exitPrice, direction) {
+        // Protección: Si no existe removePriceLine, salimos
+        if (!this.series || typeof this.series.removePriceLine !== "function")
+            return;
+
+        try {
+            this.priceLines.forEach((line) =>
+                this.series.removePriceLine(line),
+            );
+            this.priceLines = [];
+
+            if (!entryPrice || !exitPrice) return;
+
+            const isLong = direction === "long";
+            const isWin = isLong
+                ? exitPrice >= entryPrice
+                : exitPrice <= entryPrice;
+            const exitColor = isWin ? "#10B981" : "#EF4444";
+
+            this.priceLines.push(
+                this.series.createPriceLine({
+                    price: parseFloat(entryPrice),
+                    color: "#3B82F6",
+                    lineWidth: 2,
+                    lineStyle: 2,
+                    axisLabelVisible: true,
+                    title: "ENTRADA",
+                }),
+            );
+
+            this.priceLines.push(
+                this.series.createPriceLine({
+                    price: parseFloat(exitPrice),
+                    color: exitColor,
+                    lineWidth: 2,
+                    lineStyle: 0,
+                    axisLabelVisible: true,
+                    title: "SALIDA",
+                }),
+            );
+        } catch (e) {
+            console.warn("⚠️ Error dibujando líneas:", e);
+        }
+    }
+
+    async loadData(path, entryPrice, exitPrice, direction) {
+        // Si la serie no existe, intentamos iniciar
+        if (!this.series) this.init();
+        if (!this.series) return false;
+
+        if (!path) {
+            this.series.setData([]);
+            return false;
+        }
+
+        try {
+            console.log("🔍 Cargando path:", path);
+
+            const res = await fetch(`/storage/${path}?t=${Date.now()}`);
+            console.log("📊 Response OK?", res.ok, res.status);
+
+            if (!res.ok) throw new Error("404");
+            const data = await res.json();
+            console.log("📈 Datos crudos:", data);
+            console.log("🕯️ Velas count:", data.candles?.length || 0);
+
+            if (data.candles && data.candles.length > 0) {
+                this.series.setData(data.candles);
+
+                // MARCADORES
+                if (
+                    this.seriesMarkers &&
+                    data.markers &&
+                    Array.isArray(data.markers)
+                ) {
+                    const candleTimes = data.candles.map((c) => c.time);
+
+                    const adjustedMarkers = data.markers
+                        .map((m) => {
+                            const closestTime = candleTimes.reduce(
+                                (prev, curr) => {
+                                    return Math.abs(curr - m.time) <
+                                        Math.abs(prev - m.time)
+                                        ? curr
+                                        : prev;
+                                },
+                            );
+                            return {
+                                ...m,
+                                time: closestTime,
+                                size: 1,
+                            };
+                        })
+                        .sort((a, b) => a.time - b.time);
+
+                    this.seriesMarkers.setMarkers(adjustedMarkers);
+                }
+
+                this.drawTradeLines(entryPrice, exitPrice, direction);
+
+                setTimeout(() => {
+                    if (this.chart) this.chart.timeScale().fitContent();
+                }, 50);
+
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error("🛑 Error carga:", e);
+        }
+        return false;
+    }
+}
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("dashboard", () => ({
         winRateChart: null,
         tableRecents: null,
         showLoading: false,
         showModalDetails: false,
+        currentView: "list", // 'list' o 'detail'
 
         init() {
             const self = this;
@@ -543,6 +724,7 @@ document.addEventListener("alpine:init", () => {
         closeDayModal() {
             this.showModalDetails = false;
             this.aiAnalysis = null;
+            this.currentView = "list";
             this.$wire.$set("aiAnalysis", null);
         },
 
@@ -551,4 +733,59 @@ document.addEventListener("alpine:init", () => {
             this.$wire.call("openDayDetails", value);
         },
     }));
+
+    Alpine.data("chartViewer", () => {
+        let controller = null;
+
+        return {
+            loading: false,
+            hasData: false,
+
+            init() {
+                this.$nextTick(() => {
+                    if (this.$refs.chartContainer) {
+                        controller = new TradeChartController(
+                            this.$refs.chartContainer,
+                        );
+                    }
+                });
+
+                window.addEventListener("trade-selected", (e) => {
+                    this.load(
+                        e.detail.path,
+                        e.detail.entry,
+                        e.detail.exit,
+                        e.detail.direction,
+                    );
+                });
+            },
+
+            load(path, entry, exit, direction) {
+                // Si no hay controller, reintentamos un poco
+                if (!controller) {
+                    if (this.$refs.chartContainer) {
+                        controller = new TradeChartController(
+                            this.$refs.chartContainer,
+                        );
+                    } else {
+                        setTimeout(
+                            () => this.load(path, entry, exit, direction),
+                            200,
+                        );
+                        return;
+                    }
+                }
+
+                this.loading = true;
+                this.hasData = false;
+
+                controller
+                    .loadData(path, entry, exit, direction)
+                    .then((success) => {
+                        this.hasData = success;
+                        this.loading = false;
+                    });
+            },
+        };
+    });
 });

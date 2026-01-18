@@ -12,27 +12,9 @@ class Trade extends Model
     /** @use HasFactory<\Database\Factories\TradeFactory> */
     use HasFactory;
 
-    protected $fillable = [
-        'account_id',
-        'trade_asset_id',
-        'strategy_id',
-        'ticket',
-        'direction',
-        'entry_price',
-        'exit_price',
-        'size',
-        'pnl',
-        'pnl_pct',
-        'rr_ratio',
-        'risk_amount',
-        'reward_amount',
-        'duration_minutes',
-        'status',
-        'entry_time',
-        'exit_time',
-        'notes',
-        'screenshot'
-    ];
+    protected $guarded = ['id'];
+
+
 
     protected $casts = [
         'entry_price' => 'decimal:5',

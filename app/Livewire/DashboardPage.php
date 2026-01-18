@@ -35,9 +35,12 @@ class DashboardPage extends Component
     public $evolutionChartData = [];
     public $dailyPnLChartData = [];
 
+    public $selectedTrade = null;
+
     // PROPIEDADES PARA LA IA
     public $aiAnalysis = null;
     public $isAnalyzing = false;
+    public $isAnalyzingTrade = false; // Spinner específico para el trade individual
 
     public function mount()
     {
@@ -344,34 +347,51 @@ class DashboardPage extends Component
         // 3. Formatear los datos: FORZAMOS EL ORDEN CRONOLÓGICO (De 00:00 a 23:59)
         // Usamos sortBy('exit_time') para asegurar que la IA lea la historia en orden correcto
         $tradesText = collect($this->dayTrades)
-            ->sortBy('exit_time') // <--- ESTA ES LA CLAVE
+            ->sortBy('exit_time')
             ->map(function ($trade) {
                 $hora = \Carbon\Carbon::parse($trade->exit_time)->format('H:i');
                 $tipo = strtoupper($trade->direction);
                 $simbolo = $trade->asset->name ?? $trade->tradeAsset->symbol ?? 'N/A';
-                return "- [{$hora}] {$simbolo} ({$tipo}) | Lotes: {$trade->size} | PnL: {$trade->pnl}";
+
+                // Calculamos distancias si existen
+                $extraInfo = "";
+                if ($trade->mae_price && $trade->mfe_price) {
+                    // Calculamos la distancia absoluta respecto a la entrada para contexto
+                    // No le pasamos el precio exacto (ej: 1.0923) sino el concepto "Drawdown vs Runup"
+                    // Pero para simplificar el prompt, le pasamos los precios y que la IA calcule si quiere,
+                    // o mejor, le pasamos la "Eficiencia".
+
+                    // Simple: Pasamos los datos crudos, Gemini es listo.
+                    $extraInfo = "| MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}";
+                }
+
+                return "- [{$hora}] {$simbolo} ({$tipo}) | Lotes: {$trade->size} | PnL: {$trade->pnl} {$extraInfo}";
             })->join("\n");
 
         Log::info($tradesText);
 
         // 4. El Prompt (La instrucción maestra)
         $prompt = "
-            Actúa como un Risk Manager profesional de una firma de Prop Trading.
-            Analiza la siguiente lista de operaciones realizadas por un trader en un solo día.
+            Realiza una auditoría de riesgo y comportamiento de la sesión de trading completa de hoy.
+            Sé estricto, objetivo y profesional.
             
-            DATOS DEL DÍA:
+            DATOS DE LA SESIÓN (Cronológicos):
             $tradesText
             
-            TAREA:
-            Detecta patrones de comportamiento peligrosos. Fíjate en:
-            - Sobreoperativa (muchas ops en poco tiempo).
-            - Venganza (aumentar lotaje tras perder).
-            - Gestión de riesgo (¿gana poco y pierde mucho?).
-            
-            FORMATO DE RESPUESTA (Usa Markdown):
-            - **Evaluación:** (Del 1 al 10).
-            - **Observación Clave:** (Máximo 2 frases, sé directo y duro si es necesario).
-            - **Consejo:** (Una acción concreta para mejorar).
+            INSTRUCCIONES DE ANÁLISIS (Busca estos patrones):
+            1. CONTROL EMOCIONAL (Tilt): ¿Hay operaciones consecutivas rápidas tras una pérdida (Revenge Trading)?
+            2. GESTIÓN DE RIESGO: ¿Aumenta el lotaje tras perder (Martingala)? ¿Corta las ganancias rápido y deja correr las pérdidas?
+            3. DISCIPLINA: ¿Hay sobreoperativa (muchas operaciones mediocres) o selección de calidad?
+
+            REGLAS DE FORMATO:
+            - NO escribas introducciones, saludos ni frases dramáticas.
+            - Empieza DIRECTAMENTE con el primer punto del formato.
+
+            FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
+            - **📊 Resumen:** Una frase que defina el estado mental y técnico del trader hoy.
+            - **🚩 Alertas Detectadas:** Lista de errores graves (Tilt, Sobreoperativa, etc.). Si fue un día limpio, indica 'Ninguna'.
+            - **💡 Consejo para Mañana:** Una acción correctiva concreta.
+            - **🏆 Nota del Día:** [0/10] (Basado en la disciplina, no solo en el dinero ganado).
         ";
 
         try {
@@ -387,7 +407,10 @@ class DashboardPage extends Component
                             ['text' => $prompt]
                         ]
                     ]
-                ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.4, // 0.4 es ideal para análisis técnico (bajo = más lógico/estricto)
+                ],
             ]);
 
             if ($response->successful()) {
@@ -428,7 +451,130 @@ class DashboardPage extends Component
     {
         $this->showDayModal = false;
         $this->dayTrades = []; // Limpiamos para ahorrar memoria
+        $this->selectedTrade = null; // Reseteamos también esto
     }
+
+    public function selectTrade($tradeId)
+    {
+        // Cargamos el trade con todas sus relaciones necesarias para el detalle
+        // (Incluimos 'account' y 'asset' por si acaso no estaban cargadas antes)
+        $this->selectedTrade = Trade::with(['account', 'tradeAsset'])->find($tradeId);
+        Log::info('Trade seleccionado' . $this->selectedTrade->screenshot);
+        // 2. DISPARAR EVENTO PARA EL GRÁFICO (Esto es lo nuevo)
+        // Enviamos la ruta directamente al navegador
+        // $this->dispatch('trade-selected', path: $this->selectedTrade->chart_data_path);
+        $this->dispatch(
+            'trade-selected',
+            path: $this->selectedTrade->chart_data_path,
+            entry: $this->selectedTrade->entry_price,
+            exit: $this->selectedTrade->exit_price,
+            direction: $this->selectedTrade->direction
+        );
+    }
+
+    public function analyzeIndividualTrade()
+    {
+        // 1. Validaciones
+        if (!$this->selectedTrade) return;
+
+        $this->isAnalyzingTrade = true;
+        $trade = $this->selectedTrade;
+
+        // 2. Preparar el Prompt de Texto (Contexto Numérico)
+        $contextoDatos = "
+            DATOS DEL TRADE:
+            - Activo: {$trade->tradeAsset->name}
+            - Tipo: " . strtoupper($trade->direction) . "
+            - Entrada: {$trade->entry_price} | Salida: {$trade->exit_price}
+            - Resultado: {$trade->pnl} (Lotes: {$trade->size})
+            - Duración: {$trade->duration_minutes} min
+            - Eficiencia: MAE (Contra): {$trade->mae_price} | MFE (Favor): {$trade->mfe_price}
+        ";
+
+        $prompt = "
+            Realiza una auditoría técnica y psicológica de esta operación de trading.
+            Sé estricto, objetivo y profesional.
+            
+            DATOS Y CONTEXTO:
+            $contextoDatos
+            
+            INSTRUCCIONES DE ANÁLISIS (Usa estos criterios):
+            1. ANÁLISIS DE ESTRUCTURA (Visual):
+               - Si hay imagen: ¿La entrada respeta Soportes/Resistencias, Order Blocks o Tendencia?
+               - ¿Fue una entrada precisa ('Sniper') o persecución del precio (FOMO)?
+            2. EFICIENCIA DE EJECUCIÓN (Datos MAE/MFE):
+               - MAE vs PnL: ¿Soportó mucho drawdown para ganar poco? (Riesgo/Beneficio invertido).
+               - MFE vs Salida: ¿Dejó mucho dinero en la mesa por miedo (cierre prematuro)?
+            3. PSICOLOGÍA IMPLÍCITA:
+               - Basado en duración y resultado: ¿Planificado o Impulsivo?
+
+            REGLAS DE FORMATO:
+            - NO escribas introducciones, saludos ni frases dramáticas tipo 'Escucha bien'.
+            - Empieza DIRECTAMENTE con el primer punto del formato.
+
+            FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
+            - **🎯 Calidad de Entrada:** [Mala/Regular/Excelente] + Explicación técnica breve.
+            - **🧠 Gestión (Miedo/Codicia):** Análisis basado en MAE/MFE y salida.
+            - **⚖️ Veredicto Final:** Conclusión directa sobre si la ejecución fue profesional o amateur.
+            - **💡 Consejo de Mejora:** Una acción táctica concreta para aplicar en la siguiente operación similar.
+            - **🏆 Nota de Ejecución:** [0/10] (Puntúa la técnica, no el dinero ganado).
+        ";
+        // 3. Preparar el Payload para Gemini
+        $parts = [
+            ['text' => $prompt]
+        ];
+
+        // 4. Si hay imagen, la codificamos en Base64 y la adjuntamos
+        if ($trade->screenshot && \Illuminate\Support\Facades\Storage::disk('public')->exists($trade->screenshot)) {
+
+            // Obtenemos el contenido crudo del archivo
+            $imageContent = \Illuminate\Support\Facades\Storage::disk('public')->get($trade->screenshot);
+            $base64Image = base64_encode($imageContent);
+
+            // Añadimos la parte de imagen al payload
+            $parts[] = [
+                'inline_data' => [
+                    'mime_type' => 'image/png', // Asumimos PNG por el script Python
+                    'data' => $base64Image
+                ]
+            ];
+        }
+
+        Log::info('Partes: ' . json_encode($parts));
+
+        try {
+            $apiKey = env('GEMINI_API_KEY');
+
+            // Usamos gemini-3-flash-preview porque es Multimodal (acepta imágenes)
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}", [
+                    'contents' => [
+                        ['parts' => $parts]
+                    ],
+                    'generationConfig' => [
+                        'temperature' => 0.4, // 0.4 es ideal para análisis técnico (bajo = más lógico/estricto)
+                    ],
+                ]);
+
+            if ($response->successful()) {
+                $analysisText = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+
+                // Guardamos en BD para no gastar API la próxima vez
+                $trade->update(['ai_analysis' => $analysisText]);
+
+                // Actualizamos la propiedad local para que se vea al instante
+                $this->selectedTrade->ai_analysis = $analysisText;
+            } else {
+                // Si falla, mostramos error pero no guardamos en BD
+                $this->dispatch('notify', 'Error en Gemini: ' . $response->body()); // O un toast simple
+            }
+        } catch (\Exception $e) {
+            Log::error("Error AI Trade: " . $e->getMessage());
+        }
+
+        $this->isAnalyzingTrade = false;
+    }
+
 
 
 
