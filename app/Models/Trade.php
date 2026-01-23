@@ -43,4 +43,10 @@ class Trade extends Model
     {
         return $this->belongsTo(Strategy::class);
     }
+
+    public function mistakes()
+    {
+        // Asumiendo que ya creaste el modelo Mistake y la tabla pivote trade_mistake
+        return $this->belongsToMany(\App\Models\Mistake::class, 'trade_mistake');
+    }
 }

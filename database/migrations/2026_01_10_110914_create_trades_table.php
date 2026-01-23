@@ -38,6 +38,7 @@ return new class extends Migration
 
             $table->index(['account_id']);
             $table->index('entry_time');
+            $table->index(['user_id', 'exit_time', 'id']);
             $table->timestamps();
         });
     }

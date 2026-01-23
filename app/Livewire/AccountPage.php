@@ -15,9 +15,12 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class AccountPage extends Component
 {
+
+    use WithPagination;
 
     public $accounts;
     public $showCreateModal = false;
@@ -66,6 +69,9 @@ class AccountPage extends Component
 
 
 
+
+
+
     public $timeframes = [  // ← ASEGÚRATE de tener esto
         '1h' => ['minutes' => 60, 'format' => 'H:i'],     // "14:30"
         '24h' => ['hours' => 24, 'format' => 'd H:i'],    // "08 14:30" 
@@ -91,6 +97,16 @@ class AccountPage extends Component
 
 
         $this->updateData();
+    }
+
+    // Propiedad Computada para los trades
+    public function getHistoryTradesProperty()
+    {
+        return Trade::query()
+            ->where('account_id', $this->selectedAccountId)
+            ->with('tradeAsset') // Carga impaciente para optimizar
+            ->orderBy('exit_time', 'desc') // Orden por fecha de salida
+            ->paginate(10); // Paginación de 15 elementos
     }
 
 
@@ -205,6 +221,7 @@ class AccountPage extends Component
     {
         $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
         $this->updateData();
+        $this->resetPage();
         $this->dispatch('timeframe-updated', timeframe: 'all');
     }
 
@@ -374,88 +391,7 @@ class AccountPage extends Component
         return $days . ' días';
     }
 
-    // private function loadBalanceChart()
-    // {
-    //     $trades = $this->selectedAccount->trades()
-    //         ->when($this->selectedTimeframe !== 'all', function ($query) {
-    //             $config = $this->timeframes[$this->selectedTimeframe];
-    //             if (isset($config['minutes'])) {
-    //                 $query->where('exit_time', '>=', now()->subMinutes($config['minutes']));
-    //             } elseif (isset($config['hours'])) {
-    //                 $query->where('exit_time', '>=', now()->subHours($config['hours']));
-    //             } elseif (isset($config['days'])) {
-    //                 $query->where('exit_time', '>=', now()->subDays($config['days']));
-    //             }
-    //         })
-    //         ->orderBy('exit_time')
-    //         ->get();
 
-    //     $labels = ['Inicio'];
-    //     $balanceData = [$this->selectedAccount->initial_balance];
-    //     $currentBalance = $this->selectedAccount->initial_balance;
-
-    //     // ← PUNTOS FANTASMA si no hay trades
-    //     if ($trades->isEmpty()) {
-    //         $format = $this->timeframes[$this->selectedTimeframe]['format'] ?? 'H:i';
-    //         $finalBalance = $this->selectedAccount->initial_balance; // Mismo balance
-
-    //         if ($this->selectedTimeframe === '1h') {
-    //             $labels = array_merge($labels, [
-    //                 now()->subMinutes(40)->format($format),
-    //                 now()->subMinutes(20)->format($format),
-    //                 now()->format($format)
-    //             ]);
-    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-    //         } elseif ($this->selectedTimeframe === '24h') {
-    //             $labels = array_merge($labels, [
-    //                 now()->subHours(16)->format($format),
-    //                 now()->subHours(8)->format($format),
-    //                 now()->format($format)
-    //             ]);
-    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-    //         } elseif ($this->selectedTimeframe === '7d') {
-    //             $labels = array_merge($labels, [
-    //                 now()->subDays(4)->format($format),
-    //                 now()->subDays(2)->format($format),
-    //                 now()->format($format)
-    //             ]);
-    //             $balanceData = [$finalBalance, $finalBalance, $finalBalance, $finalBalance];
-    //         } else { // 'all'
-    //             $labels[] = 'Sin trades';
-    //             $balanceData[] = $finalBalance;
-    //         }
-    //     } else {
-    //         // ← TU LÓGICA ORIGINAL (funciona perfecto)
-    //         $dailyBalances = [];
-    //         foreach ($trades as $trade) {
-    //             $dateKey = $this->selectedTimeframe === 'all'
-    //                 ? $trade->exit_time->format('d M Y')
-    //                 : $trade->exit_time->format($this->timeframes[$this->selectedTimeframe]['format'] ?? 'd/m H:i');
-    //             $dailyBalances[$dateKey] = ($dailyBalances[$dateKey] ?? 0) + $trade->pnl;
-    //         }
-
-    //         foreach ($dailyBalances as $date => $pnlDay) {
-    //             $currentBalance += $pnlDay;
-    //             $labels[] = $date;
-    //             $balanceData[] = $currentBalance;
-    //         }
-    //     }
-
-    //     $this->balanceChartData = [
-    //         'labels' => $labels,
-    //         'datasets' => [
-    //             [
-    //                 'label' => $trades->isEmpty() ? 'Sin trades' : 'Balance',
-    //                 'data' => $balanceData,
-    //                 'borderColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)',
-    //                 'backgroundColor' => $trades->isEmpty() ? 'rgba(156, 163, 175, 0.1)' : 'rgba(16, 185, 129, 0.3)',
-    //                 'fill' => 'origin',
-    //                 'tension' => 0.4,
-    //                 'pointBackgroundColor' => $trades->isEmpty() ? 'rgb(156, 163, 175)' : 'rgb(16, 185, 129)'
-    //             ],
-    //         ]
-    //     ];
-    // }
 
 
     private function loadBalanceChart()

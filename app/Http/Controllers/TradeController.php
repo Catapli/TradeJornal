@@ -80,7 +80,7 @@ class TradeController extends Controller
                 'trade_asset_id',
                 'exit_time',
                 'pnl'
-            ]);
+            ])->limit(10);
 
         return datatables()->of($trades)
             ->editColumn('exit_time', function ($row) {

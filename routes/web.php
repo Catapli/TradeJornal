@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\CameraController;
 use App\Http\Controllers\CollabListController;
+use App\Http\Controllers\JournalImageController;
 use App\Http\Controllers\ListsController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\RolsController;
@@ -55,25 +56,39 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 
+    // ? Ruta Journal Page
+    Route::get('/journal', function () {
+        return view('journal.index');
+    })->name('journal');
+
+    Route::get('/calendar', function () {
+        return view('calendar.index');
+    })->name('calendar');
+
+    Route::get('/trades', function () {
+        return view('trades.index');
+    })->name('trades');
+
+
     //? Vista Rols
-    Route::get('/rols', function () {
-        return view('rols.index');
-    })->name('rols')->middleware('check.permission:rols,r');
+    // Route::get('/rols', function () {
+    //     return view('rols.index');
+    // })->name('rols')->middleware('check.permission:rols,r');
 
-    //? Vista Towns
-    Route::get('/municipios', function () {
-        return view('towns.index');
-    })->name('municipios')->middleware('check.permission:towns,r');
+    // //? Vista Towns
+    // Route::get('/municipios', function () {
+    //     return view('towns.index');
+    // })->name('municipios')->middleware('check.permission:towns,r');
 
-    //? Vista Logs
-    Route::get('/logs', function () {
-        return view('logs.index');
-    })->name('logs')->middleware('check.permission:logs,r');
+    // //? Vista Logs
+    // Route::get('/logs', function () {
+    //     return view('logs.index');
+    // })->name('logs')->middleware('check.permission:logs,r');
 
-    //? Vista Users
-    Route::get('/users', function () {
-        return view('users.index');
-    })->name('users')->middleware('check.permission:users,r');
+    // //? Vista Users
+    // Route::get('/users', function () {
+    //     return view('users.index');
+    // })->name('users')->middleware('check.permission:users,r');
 
 
 
@@ -83,6 +98,9 @@ Route::middleware([
     Route::get('/logs/data', [LogController::class, 'index']);        //? Obtener Logs
     Route::get('/users/data', [UserController::class, 'data']);       //? Obtener Usuarios
     Route::get('/rols/data', [RolsController::class, 'data']);
+    Route::post('/journal/upload-image', [JournalImageController::class, 'store'])
+        ->middleware('auth')
+        ->name('journal.upload');
 });
 
 Route::get('/health', function () {

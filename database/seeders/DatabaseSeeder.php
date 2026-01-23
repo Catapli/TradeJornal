@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        $this->call(PropFirmsSeeder::class);
+        $this->call([PropFirmsSeeder::class, MistakesSeeder::class]);
 
 
         //! DATOS PRODUCCION
@@ -57,6 +57,8 @@ class DatabaseSeeder extends Seeder
 
         $tenkaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 10000)->where('currency', 'USD')->first();
         $tenAccountObjective = ProgramObjective::where('program_level_id', $tenkaccountPrime->id)->where('phase_number', "1")->first();
+
+
 
         // Account::create([
         //     'user_id' => 1,

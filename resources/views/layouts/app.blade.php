@@ -18,6 +18,8 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap"
               rel="stylesheet" />
 
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
         <link rel="icon"
               href="{{ asset('img/favicon/logo_only.ico') }}"
               type="image/x-icon">
@@ -30,6 +32,11 @@
         @livewireStyles
     </head>
 
+    <livewire:trade-detail-modal />
+
+
+
+
     <body class="overflow-x-hidden font-sans antialiased">
         <livewire:language-manager />
         <x-banner />
@@ -38,6 +45,8 @@
             @livewire('navigation-menu')
 
             @include('sidebar-menu')
+
+            @livewire('trade-toast') {{-- El espía invisible --}}
 
 
             @if (isset($header))

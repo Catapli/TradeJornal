@@ -8,7 +8,11 @@
         <meta name="csrf-token"
               content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Cloud Detrafic') }}</title>
+        <title>{{ config('app.name', 'TradeForge') }}</title>
+
+        <link rel="icon"
+              href="{{ asset('img/favicon/logo_only.ico') }}"
+              type="image/x-icon">
 
         <!-- Fonts -->
         <link rel="preconnect"
@@ -25,6 +29,7 @@
 
     <body>
         <div class="font-sans text-gray-900 antialiased">
+            <livewire:language-manager />
             {{ $slot }}
         </div>
 

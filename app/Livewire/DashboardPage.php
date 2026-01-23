@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Account;
 use App\Models\Alert;
+use App\Models\JournalEntry;
 use App\Models\Trade;
 use App\Models\Traffic;
 use Carbon\Carbon;
@@ -41,6 +42,16 @@ class DashboardPage extends Component
     public $aiAnalysis = null;
     public $isAnalyzing = false;
     public $isAnalyzingTrade = false; // Spinner específico para el trade individual
+
+    // Propiedades para el Journal
+    // PROPIEDADES PÚBLICAS
+    public $journalEntry;
+    public $journalContent = '';
+    public $journalMood = null;
+    public $tags = [];
+
+    // 1. Añade esto a las propiedades públicas
+    public $heatmapData = [];
 
     public function mount()
     {
@@ -125,13 +136,13 @@ class DashboardPage extends Component
         }
 
         // Hacemos una única consulta a la base de datos para sumar balances
-        $sums = $accountsQuery->selectRaw('
-        SUM(current_balance) as total_current, 
-        SUM(initial_balance) as total_initial
-    ')->first();
+        //     $sums = $accountsQuery->selectRaw('
+        //     SUM(current_balance) as total_current, 
+        //     SUM(initial_balance) as total_initial
+        // ')->first();
 
-        // El PnL es simplemente la diferencia: (Lo que tengo ahora - Lo que tenía al principio)
-        $this->pnlTotal = ($sums->total_current ?? 0) - ($sums->total_initial ?? 0);
+        // Reutilizamos $query que ya tiene los filtros de cuenta, usuario y status 'burned' aplicados.
+        $this->pnlTotal = $query->sum('pnl');
 
 
         // ------------------------------------------------------
@@ -192,6 +203,66 @@ class DashboardPage extends Component
         $this->calculateEvolution();
         // 6. CÁLCULO DE BARRAS PNL DIARIO
         $this->calculateDailyBars();
+
+        // 7. Calculo del MAPA DE CALOR TEMPORAL
+        $this->calculateHeatmap();
+    }
+
+    public function getRecentTradesProperty()
+    {
+        // Reutilizamos tu query maestra (que ya filtra por cuentas, usuario y status)
+        return $this->getTradesQuery()
+            ->with('tradeAsset') // Carga impaciente para optimizar rendimiento
+            ->orderBy('exit_time', 'desc') // Los más recientes primero
+            ->take(10) // Limitamos a 10 fijo
+            ->get();
+    }
+
+    private function calculateHeatmap()
+    {
+        $query = $this->getTradesQuery();
+
+        // === VERSIÓN POSTGRESQL ===
+        // EXTRACT(ISODOW) devuelve: 1 (Lunes) a 7 (Domingo).
+        // Restamos 1 para obtener: 0 (Lunes) a 6 (Domingo), igual que MySQL WEEKDAY.
+
+        $rawStats = $query->selectRaw('
+            (CAST(EXTRACT(ISODOW FROM exit_time) AS INTEGER) - 1) as day_index, 
+            CAST(EXTRACT(HOUR FROM exit_time) AS INTEGER) as hour, 
+            SUM(pnl) as total_pnl
+        ')
+            ->whereNotNull('exit_time')
+            // Filtramos solo Lunes (1) a Viernes (5) usando ISODOW estándar
+            ->whereRaw('EXTRACT(ISODOW FROM exit_time) <= 5')
+            // Agrupamos por las fórmulas exactas (Postgres es estricto con el Group By)
+            ->groupByRaw('(CAST(EXTRACT(ISODOW FROM exit_time) AS INTEGER) - 1), CAST(EXTRACT(HOUR FROM exit_time) AS INTEGER)')
+            ->get();
+
+        // Inicializamos la estructura para ApexCharts (5 días x 24 horas)
+        // ApexCharts Heatmap espera: [{ name: 'Lunes', data: [{x: '00:00', y: 50}, ...] }]
+        $days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        $chartData = [];
+
+        foreach ($days as $index => $dayName) {
+            $hourlyData = [];
+            for ($h = 0; $h < 24; $h++) {
+                // Buscamos si hay datos para este Día/Hora
+                $stat = $rawStats->where('day_index', $index)->where('hour', $h)->first();
+
+                // x = Hora, y = PnL
+                $hourlyData[] = [
+                    'x' => sprintf('%02d:00', $h),
+                    'y' => $stat ? round($stat->total_pnl, 2) : 0
+                ];
+            }
+            $chartData[] = [
+                'name' => $dayName,
+                'data' => $hourlyData
+            ];
+        }
+
+        // ApexCharts dibuja de abajo a arriba, invertimos para que Lunes quede arriba
+        $this->heatmapData = array_reverse($chartData);
     }
 
     private function calculateEvolution()
@@ -278,7 +349,14 @@ class DashboardPage extends Component
             ->get()
             ->keyBy('date'); // Indexamos por fecha para búsqueda rápida
 
-        // 3. Construir el Grid
+        // 3. TUS JOURNALS 
+        // Traemos solo el mood y si tiene contenido
+        $journals = JournalEntry::where('user_id', $this->user->id)
+            ->whereBetween('date', [$startOfCalendar, $endOfCalendar])
+            ->get()
+            ->keyBy('date'); // Indexamos por fecha (Y-m-d desde el cast del modelo)
+
+        // 4. Construir el Grid
         $grid = [];
         $currentDay = $startOfCalendar->copy();
 
@@ -290,10 +368,20 @@ class DashboardPage extends Component
             $dayData = $trades->get($dayString);
             $pnl = $dayData ? $dayData->daily_pnl : null;
 
+            // Datos del Journal (Buscamos por objeto Carbon o String según tu cast)
+            // Al usar keyBy('date') en Eloquent con cast 'date', la clave suele ser string Y-m-d 00:00:00
+            // Para asegurar, buscamos flexiblemente:
+            $journalData = $journals->first(function ($item) use ($dayString) {
+                return $item->date->format('Y-m-d') === $dayString;
+            });
+
             $grid[] = [
                 'day' => $currentDay->format('d'),
                 'date' => $dayString,
                 'pnl' => $pnl,
+                // NUEVOS DATOS PARA LA VISTA
+                'journal_mood' => $journalData ? $journalData->mood : null,
+                'has_notes' => $journalData && !empty($journalData->content),
                 'is_current_month' => $currentDay->month === $date->month,
                 'is_today' => $currentDay->isToday(),
             ];
@@ -313,6 +401,8 @@ class DashboardPage extends Component
             ->groupByRaw('DATE(exit_time)')
             ->orderBy('date', 'asc') // Cronológico
             ->get();
+
+
 
         $categories = [];
         $data = [];
@@ -400,7 +490,7 @@ class DashboardPage extends Component
             // 5. Petición a Google Gemini (Modelo Flash, rápido y gratis)
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}", [
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                 'contents' => [
                     [
                         'parts' => [
@@ -443,6 +533,10 @@ class DashboardPage extends Component
             ->with(['account', 'tradeAsset']) // Traemos relación cuenta y activo
             ->orderBy('exit_time', 'asc')
             ->get();
+
+        $this->journalEntry = JournalEntry::where('user_id', $this->user->id)
+            ->where('date', $this->selectedDate)
+            ->first();
 
         $this->showDayModal = true;
     }
@@ -547,7 +641,7 @@ class DashboardPage extends Component
 
             // Usamos gemini-3-flash-preview porque es Multimodal (acepta imágenes)
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}", [
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [
                         ['parts' => $parts]
                     ],

@@ -18,12 +18,18 @@ window.ApexCharts = ApexCharts;
 window.createChart = createChart; // <--- ¡AQUÍ LA HACEMOS GLOBAL!
 window.mdtimepicker = mdtimepicker;
 
+// Importar Trix y sus estilos
+import Trix from "trix";
+import "trix/dist/trix.css";
+
 // ============================================================
 // 3. IMPORTAR TUS SCRIPTS (AHORA YA PUEDEN VER LAS GLOBALES)
 // ============================================================
 import "./logs/logs.js";
 import "./users/users.js";
 import "./accounts/accounts.js";
-import "./dashboard/dashboard.js"; // <--- Ahora cuando esto cargue, window.createChart YA existe
+import "./dashboard/dashboard.js";
+import "./journal/journal.js";
+import "./trades/trades.js";
 
 Alpine.plugin(translations);

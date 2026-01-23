@@ -21,18 +21,18 @@
 
             {{-- CONTENEDOR PRINCIPAL DEL MODAL --}}
             {{-- Aquí inicializamos 'currentView' para alternar entre 'list' y 'detail' --}}
-            <div class="inline-block w-full transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:max-w-5xl sm:align-middle">
+            <div class="inline-block w-full transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:max-w-6xl sm:align-middle">
 
                 {{-- ======================================================================= --}}
-                {{-- VISTA 1: LISTADO DEL DÍA (Tu código actual + Click en Fila) --}}
-                {{-- ======================================================================= --}}
-                <div x-show="currentView === 'list'"
+                {{-- VISTA 1: LISTADO DEL DÍA --}}
+                <div class="flex h-full flex-col"
+                     x-show="currentView === 'list'"
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="opacity-0 -translate-x-5"
-                     x-transition:enter-end="opacity-100 translate-x-0">
+                     x-transition:enter-end="opacity-100 translate-x-0"> {{-- Clase h-full añadida para estructura --}}
 
-                    {{-- Cabecera del Listado --}}
-                    <div class="border-b border-gray-100 bg-white px-4 pb-4 pt-5 sm:p-6">
+                    {{-- 1. CABECERA (Se mantiene igual, ancho completo) --}}
+                    <div class="flex-shrink-0 border-b border-gray-100 bg-white px-4 pb-4 pt-5 sm:p-6">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-xl font-bold leading-6 text-gray-900">Resumen del Día</h3>
@@ -47,233 +47,235 @@
                         </div>
                     </div>
 
-                    {{-- SECCIÓN COACH IA (General del Día) --}}
-                    <div class="border-b border-indigo-100 bg-indigo-50 px-4 py-4 sm:px-6">
-                        <div class="flex flex-col gap-4">
-                            <div class="flex items-center justify-between">
-                                <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
-                                    <i class="fa-solid fa-robot text-indigo-600"></i> Análisis Inteligente
-                                </h4>
-                                @if (!$aiAnalysis)
-                                    <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
-                                            wire:click="analyzeDayWithAi"
-                                            wire:loading.attr="disabled">
-                                        <span class="flex items-center gap-2"
-                                              wire:loading.remove
-                                              wire:target="analyzeDayWithAi">
-                                            <span>Analizar Día</span> <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                        </span>
-                                        <span class="flex items-center gap-2"
-                                              wire:loading
-                                              wire:target="analyzeDayWithAi">
-                                            <svg class="h-4 w-4 animate-spin text-white"
-                                                 fill="none"
-                                                 viewBox="0 0 24 24">
-                                                <circle class="opacity-25"
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        stroke-width="4"></circle>
-                                                <path class="opacity-75"
-                                                      fill="currentColor"
-                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Analizando...
-                                        </span>
-                                    </button>
+                    {{-- 2. CONTENIDO PRINCIPAL (GRID 2 COLUMNAS) --}}
+                    <div class="flex-grow overflow-y-auto bg-gray-50 p-4 sm:p-6">
+                        <div class="grid h-full grid-cols-1 gap-6 lg:grid-cols-3">
+
+                            {{-- COLUMNA IZQUIERDA: IA + TABLA (Ocupa 2 espacios) --}}
+                            <div class="flex flex-col space-y-6 lg:col-span-2">
+
+                                {{-- A. SECCIÓN COACH IA --}}
+                                <div class="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
+                                    <div class="flex flex-col gap-4">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
+                                                <i class="fa-solid fa-robot text-indigo-600"></i> Análisis Inteligente
+                                            </h4>
+                                            @if (!$aiAnalysis)
+                                                <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+                                                        wire:click="analyzeDayWithAi"
+                                                        wire:loading.attr="disabled">
+                                                    <span class="flex items-center gap-2"
+                                                          wire:loading.remove
+                                                          wire:target="analyzeDayWithAi">
+                                                        <span>Analizar Día</span> <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                                    </span>
+                                                    <span class="flex items-center gap-2"
+                                                          wire:loading
+                                                          wire:target="analyzeDayWithAi">
+                                                        <i class="fa-solid fa-circle-notch fa-spin"></i> Analizando...
+                                                    </span>
+                                                </button>
+                                            @endif
+                                        </div>
+
+                                        {{-- Loading Skeleton --}}
+                                        <div class="animate-pulse space-y-2"
+                                             wire:loading
+                                             wire:target="analyzeDayWithAi">
+                                            <div class="h-4 w-3/4 rounded bg-indigo-50"></div>
+                                            <div class="h-4 w-1/2 rounded bg-indigo-50"></div>
+                                        </div>
+
+                                        {{-- Resultado IA --}}
+                                        @if ($aiAnalysis)
+                                            <div class="relative rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+                                                <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                                                        wire:click="$set('aiAnalysis', null)"><i class="fa-solid fa-times"></i></button>
+                                                <div class="prose prose-sm max-w-none text-gray-800">{!! Str::markdown($aiAnalysis) !!}</div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- B. TABLA DE OPERACIONES (Tu código original) --}}
+                                <div class="flex flex-grow flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+                                    {{-- Spinner --}}
+                                    <div class="w-full justify-center py-12 text-center"
+                                         wire:loading.flex
+                                         wire:target="openDayDetails">
+                                        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+                                        <p class="mt-2 text-sm text-gray-500">Cargando...</p>
+                                    </div>
+
+                                    {{-- Tabla --}}
+                                    <div class="max-h-[55vh] flex-grow overflow-x-auto"
+                                         wire:loading.remove
+                                         wire:target="openDayDetails">
+                                        @if (count($dayTrades) > 0)
+                                            <table class="min-w-full divide-y divide-gray-200">
+                                                <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                                                    <tr>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Hora</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Símbolo</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tipo</th>
+                                                        <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Ejecución</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lotes</th>
+                                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Resultado</th>
+                                                        <th class="px-4 py-3"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200 bg-white">
+                                                    @foreach ($dayTrades as $trade)
+                                                        {{-- COPIAR AQUÍ TU TR DENTRO DEL FOREACH EXACTAMENTE COMO LO TENÍAS --}}
+                                                        <tr class="group cursor-pointer transition hover:bg-indigo-50"
+                                                            @click="currentView = 'detail'; $wire.selectTrade({{ $trade->id }})">
+                                                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                                                                {{ \Carbon\Carbon::parse($trade->exit_time)->format('H:i') }}
+                                                            </td>
+                                                            <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-gray-900">
+                                                                {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
+                                                            </td>
+                                                            <td class="whitespace-nowrap px-4 py-3 text-sm">
+                                                                <span class="{{ $trade->direction == 'long' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600' }} rounded px-2 py-1 text-xs font-bold">
+                                                                    {{ strtoupper($trade->direction) }}
+                                                                </span>
+                                                            </td>
+                                                            {{-- BARRA MAE/MFE (Zella Scale) CON TOOLTIPS --}}
+                                                            <td class="px-2 py-3 align-middle">
+                                                                @if ($trade->mae_price && $trade->mfe_price)
+                                                                    @php
+                                                                        // 1. Cálculos de Distancia (Puntos)
+                                                                        $distMae = abs($trade->entry_price - $trade->mae_price);
+                                                                        $distMfe = abs($trade->entry_price - $trade->mfe_price);
+                                                                        $totalRange = $distMae + $distMfe;
+                                                                        if ($totalRange == 0) {
+                                                                            $totalRange = 0.00001;
+                                                                        }
+
+                                                                        // 2. Porcentajes Visuales
+                                                                        $pctRed = ($distMae / $totalRange) * 100;
+                                                                        $pctGreen = ($distMfe / $totalRange) * 100;
+
+                                                                        // 3. Posición Marcador
+                                                                        $distExit = abs($trade->entry_price - $trade->exit_price);
+                                                                        $isProfit = ($trade->direction == 'long' && $trade->exit_price >= $trade->entry_price) || ($trade->direction == 'short' && $trade->exit_price <= $trade->entry_price);
+
+                                                                        if ($isProfit) {
+                                                                            $markerPos = $pctRed + ($distExit / $totalRange) * 100;
+                                                                        } else {
+                                                                            $markerPos = $pctRed - ($distExit / $totalRange) * 100;
+                                                                        }
+                                                                        $markerPos = max(0, min(100, $markerPos));
+
+                                                                        // 4. CÁLCULO MONETARIO (Estimación basada en PnL Real)
+                                                                        // Calculamos cuánto vale cada punto de movimiento en dinero para este trade concreto
+                                                                        $priceDiff = $trade->exit_price - $trade->entry_price;
+                                                                        if (abs($priceDiff) < 0.0000001) {
+                                                                            $priceDiff = 0.0000001;
+                                                                        } // Evitar div por cero
+
+                                                                        // Valor por punto = PnL Total / Distancia Recorrida
+                                                                        $valuePerPoint = $trade->pnl / $priceDiff;
+
+                                                                        // Dinero en MAE (Siempre negativo visualmente para el tooltip)
+                                                                        // Fórmula: (Precio MAE - Precio Entrada) * Valor Punto
+                                                                        $maeMoney = abs(($trade->mae_price - $trade->entry_price) * $valuePerPoint) * -1;
+
+                                                                        // Dinero en MFE (Siempre positivo visualmente)
+                                                                        $mfeMoney = abs(($trade->mfe_price - $trade->entry_price) * $valuePerPoint);
+                                                                    @endphp
+
+                                                                    {{-- CONTENEDOR PRINCIPAL --}}
+                                                                    <div class="relative mx-auto flex h-4 w-32 select-none items-center">
+
+                                                                        {{-- A. CAPA VISUAL (Colores - Con Overflow Hidden) --}}
+                                                                        <div class="pointer-events-none absolute inset-x-0 flex h-1.5 overflow-hidden rounded-full">
+                                                                            <div class="h-full bg-rose-400"
+                                                                                 style="width: {{ $pctRed }}%"></div>
+                                                                            <div class="z-10 h-full w-[2px] bg-white opacity-50"></div>
+                                                                            <div class="h-full bg-emerald-400"
+                                                                                 style="width: {{ $pctGreen }}%"></div>
+                                                                        </div>
+
+                                                                        {{-- B. CAPA INTERACTIVA (Invisible - Sin Overflow para permitir Tooltips) --}}
+                                                                        <div class="absolute inset-0 flex h-full w-full items-center">
+
+                                                                            {{-- ZONA ROJA (Hover) --}}
+                                                                            <div class="group/red relative h-4 cursor-help"
+                                                                                 style="width: {{ $pctRed }}%">
+                                                                                {{-- Tooltip Rojo --}}
+                                                                                <div
+                                                                                     class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-rose-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/red:block">
+                                                                                    Máx. Riesgo: {{ number_format($maeMoney, 2) }} €
+                                                                                    {{-- Triangulito abajo --}}
+                                                                                    <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-900"></div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {{-- ZONA VERDE (Hover) --}}
+                                                                            <div class="group/green relative h-4 cursor-help"
+                                                                                 style="width: {{ $pctGreen }}%">
+                                                                                {{-- Tooltip Verde --}}
+                                                                                <div
+                                                                                     class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/green:block">
+                                                                                    Máx. Potencial: +{{ number_format($mfeMoney, 2) }} €
+                                                                                    {{-- Triangulito abajo --}}
+                                                                                    <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-emerald-900"></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {{-- C. MARCADOR DE SALIDA (Encima de todo) --}}
+                                                                        <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm"
+                                                                             style="left: {{ $markerPos }}%; transform: translateX(-50%);">
+                                                                        </div>
+
+                                                                    </div>
+                                                                @else
+                                                                    <span class="block text-center text-xs text-gray-300">-</span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600">{{ $trade->size }}</td>
+                                                            <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
+                                                                {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                                            </td>
+                                                            <td class="px-4 py-3 text-right text-gray-300">
+                                                                <i class="fa-solid fa-chevron-right group-hover:text-indigo-600"></i>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                                <tfoot class="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 shadow-sm">
+                                                    <tr>
+                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
+                                                            colspan="5">Total:</td>
+                                                        <td class="{{ $dayTrades->sum('pnl') >= 0 ? 'text-emerald-600' : 'text-rose-600' }} px-4 py-3 text-right text-base font-black"
+                                                            colspan="2">
+                                                            {{ $dayTrades->sum('pnl') >= 0 ? '+' : '' }}{{ number_format($dayTrades->sum('pnl'), 2) }} $
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        @else
+                                            <div class="py-12 text-center">
+                                                <i class="fa-solid fa-box-open mb-3 text-4xl text-gray-300"></i>
+                                                <h3 class="text-gray-500">Sin operaciones</h3>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- COLUMNA DERECHA: JOURNAL (NUEVO) --}}
+                            <div class="flex h-full flex-col lg:col-span-1">
+                                @if ($selectedDate)
+                                    <livewire:daily-journal :date="$selectedDate"
+                                                            :wire:key="'journal-'.$selectedDate" />
                                 @endif
                             </div>
 
-                            {{-- Resultado IA --}}
-                            <div class="animate-pulse space-y-2"
-                                 wire:loading
-                                 wire:target="analyzeDayWithAi">
-                                <div class="h-4 w-3/4 rounded bg-indigo-200"></div>
-                                <div class="h-4 w-1/2 rounded bg-indigo-200"></div>
-                            </div>
-
-                            @if ($aiAnalysis)
-                                <div class="relative rounded-lg border border-indigo-100 bg-white p-4 shadow-sm">
-                                    <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                                            wire:click="$set('aiAnalysis', null)"><i class="fa-solid fa-times"></i></button>
-                                    <div class="prose prose-sm max-w-none text-gray-800">{!! Str::markdown($aiAnalysis) !!}</div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    {{-- CUERPO: TABLA --}}
-                    <div class="min-h-[300px] bg-white px-4 sm:p-6">
-                        {{-- Spinner de carga del día --}}
-                        <div class="w-full flex-col items-center justify-center py-12"
-                             wire:loading.flex
-                             wire:target="openDayDetails">
-                            <i class="fa-solid fa-circle-notch fa-spin mb-4 text-3xl text-indigo-500"></i>
-                            <p class="text-sm font-medium text-gray-500">Cargando operaciones...</p>
-                        </div>
-
-                        {{-- Tabla de Datos --}}
-                        <div wire:loading.remove
-                             wire:target="openDayDetails">
-                            @if (count($dayTrades) > 0)
-                                <div class="overflow-x-auto rounded-lg border border-gray-200">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Hora</th>
-                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Símbolo</th>
-                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tipo</th>
-                                                <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Ejecución</th>
-                                                <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lotes</th>
-                                                <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Resultado</th>
-                                                <th class="px-4 py-3"></th> {{-- Flecha --}}
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-200 bg-white">
-                                            @foreach ($dayTrades as $trade)
-                                                {{-- 👇 AQUÍ ESTÁ EL CLICK MÁGICO 👇 --}}
-                                                <tr class="group cursor-pointer transition hover:bg-indigo-50"
-                                                    @click="currentView = 'detail'; $wire.selectTrade({{ $trade->id }})">
-
-                                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                                                        {{ \Carbon\Carbon::parse($trade->exit_time)->format('H:i') }}
-                                                    </td>
-                                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-gray-900">
-                                                        {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
-                                                    </td>
-                                                    <td class="whitespace-nowrap px-4 py-3 text-sm">
-                                                        <span class="{{ $trade->direction == 'long' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600' }} rounded px-2 py-1 text-xs font-bold">
-                                                            {{ strtoupper($trade->direction) }}
-                                                        </span>
-                                                    </td>
-
-                                                    {{-- BARRA MAE/MFE (Zella Scale) CON TOOLTIPS --}}
-                                                    <td class="px-2 py-3 align-middle">
-                                                        @if ($trade->mae_price && $trade->mfe_price)
-                                                            @php
-                                                                // 1. Cálculos de Distancia (Puntos)
-                                                                $distMae = abs($trade->entry_price - $trade->mae_price);
-                                                                $distMfe = abs($trade->entry_price - $trade->mfe_price);
-                                                                $totalRange = $distMae + $distMfe;
-                                                                if ($totalRange == 0) {
-                                                                    $totalRange = 0.00001;
-                                                                }
-
-                                                                // 2. Porcentajes Visuales
-                                                                $pctRed = ($distMae / $totalRange) * 100;
-                                                                $pctGreen = ($distMfe / $totalRange) * 100;
-
-                                                                // 3. Posición Marcador
-                                                                $distExit = abs($trade->entry_price - $trade->exit_price);
-                                                                $isProfit = ($trade->direction == 'long' && $trade->exit_price >= $trade->entry_price) || ($trade->direction == 'short' && $trade->exit_price <= $trade->entry_price);
-
-                                                                if ($isProfit) {
-                                                                    $markerPos = $pctRed + ($distExit / $totalRange) * 100;
-                                                                } else {
-                                                                    $markerPos = $pctRed - ($distExit / $totalRange) * 100;
-                                                                }
-                                                                $markerPos = max(0, min(100, $markerPos));
-
-                                                                // 4. CÁLCULO MONETARIO (Estimación basada en PnL Real)
-                                                                // Calculamos cuánto vale cada punto de movimiento en dinero para este trade concreto
-                                                                $priceDiff = $trade->exit_price - $trade->entry_price;
-                                                                if (abs($priceDiff) < 0.0000001) {
-                                                                    $priceDiff = 0.0000001;
-                                                                } // Evitar div por cero
-
-                                                                // Valor por punto = PnL Total / Distancia Recorrida
-                                                                $valuePerPoint = $trade->pnl / $priceDiff;
-
-                                                                // Dinero en MAE (Siempre negativo visualmente para el tooltip)
-                                                                // Fórmula: (Precio MAE - Precio Entrada) * Valor Punto
-                                                                $maeMoney = abs(($trade->mae_price - $trade->entry_price) * $valuePerPoint) * -1;
-
-                                                                // Dinero en MFE (Siempre positivo visualmente)
-                                                                $mfeMoney = abs(($trade->mfe_price - $trade->entry_price) * $valuePerPoint);
-                                                            @endphp
-
-                                                            {{-- CONTENEDOR PRINCIPAL --}}
-                                                            <div class="relative mx-auto flex h-4 w-32 select-none items-center">
-
-                                                                {{-- A. CAPA VISUAL (Colores - Con Overflow Hidden) --}}
-                                                                <div class="pointer-events-none absolute inset-x-0 flex h-1.5 overflow-hidden rounded-full">
-                                                                    <div class="h-full bg-rose-400"
-                                                                         style="width: {{ $pctRed }}%"></div>
-                                                                    <div class="z-10 h-full w-[2px] bg-white opacity-50"></div>
-                                                                    <div class="h-full bg-emerald-400"
-                                                                         style="width: {{ $pctGreen }}%"></div>
-                                                                </div>
-
-                                                                {{-- B. CAPA INTERACTIVA (Invisible - Sin Overflow para permitir Tooltips) --}}
-                                                                <div class="absolute inset-0 flex h-full w-full items-center">
-
-                                                                    {{-- ZONA ROJA (Hover) --}}
-                                                                    <div class="group/red relative h-4 cursor-help"
-                                                                         style="width: {{ $pctRed }}%">
-                                                                        {{-- Tooltip Rojo --}}
-                                                                        <div
-                                                                             class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-rose-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/red:block">
-                                                                            Máx. Riesgo: {{ number_format($maeMoney, 2) }} €
-                                                                            {{-- Triangulito abajo --}}
-                                                                            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-900"></div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {{-- ZONA VERDE (Hover) --}}
-                                                                    <div class="group/green relative h-4 cursor-help"
-                                                                         style="width: {{ $pctGreen }}%">
-                                                                        {{-- Tooltip Verde --}}
-                                                                        <div
-                                                                             class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/green:block">
-                                                                            Máx. Potencial: +{{ number_format($mfeMoney, 2) }} €
-                                                                            {{-- Triangulito abajo --}}
-                                                                            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-emerald-900"></div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {{-- C. MARCADOR DE SALIDA (Encima de todo) --}}
-                                                                <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm"
-                                                                     style="left: {{ $markerPos }}%; transform: translateX(-50%);">
-                                                                </div>
-
-                                                            </div>
-                                                        @else
-                                                            <span class="block text-center text-xs text-gray-300">-</span>
-                                                        @endif
-                                                    </td>
-
-                                                    <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600">{{ $trade->size }}</td>
-                                                    <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
-                                                        {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
-                                                    </td>
-                                                    <td class="px-4 py-3 text-right text-gray-300">
-                                                        <i class="fa-solid fa-chevron-right group-hover:text-indigo-600"></i>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                        <tfoot class="border-t border-gray-200 bg-gray-50">
-                                            <tr>
-                                                <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
-                                                    colspan="5">Total Día:</td>
-                                                <td class="{{ $dayTrades->sum('pnl') >= 0 ? 'text-emerald-600' : 'text-rose-600' }} px-4 py-3 text-right text-base font-black"
-                                                    colspan="2">
-                                                    {{ $dayTrades->sum('pnl') >= 0 ? '+' : '' }}{{ number_format($dayTrades->sum('pnl'), 2) }} $
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            @else
-                                <div class="py-12 text-center">
-                                    <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                                        <i class="fa-solid fa-box-open text-gray-400"></i>
-                                    </div>
-                                    <h3 class="text-lg font-medium text-gray-900">Sin operaciones</h3>
-                                </div>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -324,7 +326,7 @@
                              wire:target="selectTrade">
                             @if ($selectedTrade)
                                 {{-- Info Cabecera --}}
-                                <div class="mb-8 flex items-end justify-between">
+                                <div class="mb-4 flex items-end justify-between">
                                     <div>
                                         <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ticket #{{ $selectedTrade->ticket }}</span>
                                         <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
@@ -343,6 +345,12 @@
                                 </div>
 
                                 <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+
+                                    <div class="col-span-3">
+                                        <livewire:mistake-selector :trade="$selectedTrade"
+                                                                   :wire:key="'mistake-selector-'.$selectedTrade->id" />
+                                    </div>
+
 
                                     {{-- COLUMNA DATOS (Tu código original intacto) --}}
                                     <div class="space-y-6 lg:col-span-1">
@@ -429,7 +437,9 @@
                                                             <span class="block text-center text-xs text-gray-300">-</span>
                                                         @endif
                                                     </dd>
+
                                                 </div>
+
                                             </dl>
                                         </div>
 
@@ -449,6 +459,10 @@
                                         {{-- 1. CONTENEDOR DEL GRÁFICO (Híbrido: TradingView + Fallback Imagen) --}}
                                         <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
                                              x-data="chartViewer()"
+                                             :class="isFullscreen
+                                                 ?
+                                                 'fixed inset-0 z-[60] h-screen w-screen bg-gray-900' :
+                                                 'relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg'"
                                              {{-- ESCUCHADOR DE EVENTO: Espera a que el backend diga "Ya tengo los datos" --}}
                                              x-init="$nextTick(() => {
                                                  // Escuchar eventos DESPUÉS de estar listo
@@ -465,6 +479,65 @@
                                                  @endif
                                              })"
                                              wire:ignore>
+
+                                            {{-- BARRA DE HERRAMIENTAS --}}
+                                            <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
+                                                 x-show="hasData"
+                                                 x-transition>
+
+                                                {{-- Botones de Timeframe --}}
+                                                <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
+                                                    <button class="rounded px-3 py-1 text-xs font-bold transition-all"
+                                                            @click="changeTimeframe(tf)"
+                                                            :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700'"
+                                                            x-text="tf.toUpperCase()">
+                                                    </button>
+                                                </template>
+
+                                                {{-- SEPARADOR VERTICAL --}}
+                                                <div class="mx-1 h-4 w-px bg-gray-600"></div>
+
+                                                {{-- BOTÓN VOLUMEN --}}
+                                                <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                        @click="toggleVol()"
+                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        title="Mostrar/Ocultar Volumen">
+
+                                                    {{-- Icono de barras (FontAwesome o SVG manual) --}}
+                                                    <i class="fa-solid fa-chart-column"></i>
+                                                    <span>VOL</span>
+                                                </button>
+
+                                                {{-- BOTÓN EMA --}}
+                                                <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                        @click="toggleEma()"
+                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        title="Mostrar/Ocultar EMA 50">
+
+                                                    {{-- Icono de línea --}}
+                                                    <i class="fa-solid fa-wave-square"></i>
+                                                    <span>EMA 50</span>
+                                                </button>
+                                                {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
+                                                <div class="flex-grow"></div>
+
+                                                {{-- BOTÓN PANTALLA COMPLETA --}}
+                                                <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
+                                                        @click="toggleFullscreen()"
+                                                        :title="isFullscreen ? 'Salir de Pantalla Completa' : 'Pantalla Completa'">
+
+                                                    {{-- Icono Cambiante --}}
+                                                    <template x-if="!isFullscreen">
+                                                        <i class="fa-solid fa-expand"></i>
+                                                    </template>
+                                                    <template x-if="isFullscreen">
+                                                        <i class="fa-solid fa-compress"></i>
+                                                    </template>
+                                                </button>
+
+                                            </div>
+
+
 
                                             {{-- El Div donde se pinta el gráfico JS --}}
                                             <div id="firstContainer"
@@ -588,6 +661,36 @@
         </div>
     </div>
 
+    {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
+    <div x-data="{
+        initialLoad: true,
+        init() {
+            // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
+            document.addEventListener('livewire:initialized', () => {
+                this.initialLoad = false;
+            });
+    
+            // Fallback de seguridad: por si Livewire ya cargó antes de este script
+            setTimeout(() => { this.initialLoad = false }, 800);
+        }
+    }">
+
+        {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
+        {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+             x-show="initialLoad"
+             x-transition:leave="transition ease-in duration-500"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+
+            {{-- Aquí tu componente loader --}}
+            <div class="flex flex-col items-center">
+                <x-loader />
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
+            </div>
+        </div>
+    </div>
+
 
 
     {{-- ? Loading --}}
@@ -608,6 +711,8 @@
                 {{ __('Dashboard') }}
             </h2>
         </div>
+        <livewire:ai-daily-tip :selected-accounts="$selectedAccounts" />
+
         <x-input-multiselect wire:model="selectedAccounts"
                              :options="$availableAccounts"
                              placeholder="Selecciona las cuentas..."
@@ -836,31 +941,137 @@
                  x-ref="dailyPnLBarChart"></div>
         </div>
 
-        <div class="col-span-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 class="text-lg font-bold text-gray-800">
-                Operaciones Recientes
-            </h3>
-
-            <div id="container_table"
-                 class="items-center transition-all duration-300"
-                 wire:ignore>
+        {{-- CARD: HEATMAP TEMPORAL --}}
+        <div class="col-span-12 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+             wire:ignore>
+            <div class="mb-4 flex items-center justify-between">
                 <div>
-                    <table id="table_history"
-                           class="datatable">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Fecha Cierre</th>
-                                <th>Simbolo</th>
-                                <th>PNL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-
-                        </tbody>
-                    </table>
+                    <h3 class="text-lg font-bold text-gray-800">Mapa de Calor Operativo</h3>
+                    <p class="text-xs text-gray-500">Rendimiento acumulado por Hora y Día</p>
                 </div>
+                {{-- Leyenda visual simple --}}
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="rounded bg-rose-500 px-2 py-1 text-white">Pérdida</span>
+                    <span class="rounded bg-gray-100 px-2 py-1 text-gray-500">Neutro</span>
+                    <span class="rounded bg-emerald-500 px-2 py-1 text-white">Ganancia</span>
+                </div>
+            </div>
 
+            {{-- Contenedor Gráfico --}}
+            <div class="h-[350px] w-full"
+                 x-ref="heatmapChart"></div>
+        </div>
+
+        <div class="col-span-5 flex h-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+
+            {{-- Cabecera de la Tarjeta --}}
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                <h3 class="text-lg font-bold text-gray-800">
+                    Operaciones Recientes
+                </h3>
+
+                {{-- Indicador de carga sutil --}}
+                <div wire:loading
+                     wire:target="selectedAccounts">
+                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i>
+                </div>
+            </div>
+
+            {{-- Cuerpo de la Tabla --}}
+            <div class="flex-grow overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
+                                scope="col">
+                                Fecha
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
+                                scope="col">
+                                Activo
+                            </th>
+                            <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-400"
+                                scope="col">
+                                Tipo
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-400"
+                                scope="col">
+                                P&L
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @forelse ($this->recentTrades as $trade)
+                            <tr class="group cursor-pointer transition duration-150 hover:bg-indigo-50/60"
+                                class="whitespace-nowrap px-4 py-3 text-sm text-gray-500"
+                                {{-- 
+                            LÓGICA DEL CLICK:
+                            1. showModalDetails = true: Abre el contenedor del modal
+                            2. currentView = 'detail': Fuerza la vista de detalle directo
+                            3. $wire.selectTrade(...): Carga los datos del trade en el backend
+                        --}}
+                                wire:click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
+
+
+                                {{-- 1. Fecha Cierre --}}
+                                <td class="whitespace-nowrap px-6 py-4">
+                                    <span class="text-sm font-bold text-gray-900">
+                                        {{ \Carbon\Carbon::parse($trade->exit_time)->format('d-m-Y H:i') }}
+                                    </span>
+                                </td>
+
+                                {{-- 2. Símbolo (Ej: EURUSD) --}}
+                                <td class="whitespace-nowrap px-6 py-4">
+                                    <span class="text-sm font-bold text-gray-900">
+                                        {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
+                                    </span>
+                                </td>
+
+                                {{-- 3. Tipo (Badge) --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    @if ($trade->direction == 'long')
+                                        <span class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                            LONG <i class="fa-solid fa-arrow-trend-up ml-1"></i>
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-md bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                            SHORT <i class="fa-solid fa-arrow-trend-down ml-1"></i>
+                                        </span>
+                                    @endif
+                                </td>
+
+                                {{-- 4. PNL --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm font-black">
+                                        {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            {{-- Estado Vacío --}}
+                            <tr>
+                                <td class="py-12 text-center"
+                                    colspan="4">
+                                    <div class="flex flex-col items-center justify-center text-gray-400">
+                                        <div class="mb-3 rounded-full bg-gray-100 p-4">
+                                            <i class="fa-solid fa-chart-simple text-2xl text-gray-300"></i>
+                                        </div>
+                                        <p class="text-sm font-medium">No hay operaciones recientes</p>
+                                        <p class="mt-1 text-xs text-gray-400">Tus nuevos trades aparecerán aquí</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- Footer opcional --}}
+            <div class="border-t border-gray-100 bg-gray-50 px-6 py-3 text-right">
+                <a class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800"
+                   href="{{ route('journal') }}">
+                    Ver diario completo <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
             </div>
         </div>
 
@@ -906,8 +1117,8 @@
                 <div class="grid grid-cols-7 gap-2">
                     @foreach ($calendarGrid as $day)
                         @php
-                            // Lógica de colores
-                            $bgColor = 'bg-gray-50'; // Default (Sin trades)
+                            // TU LÓGICA EXACTA (Sin cambios)
+                            $bgColor = 'bg-gray-50';
                             $textColor = 'text-gray-400';
                             $borderColor = 'border-transparent';
 
@@ -921,31 +1132,46 @@
                                     $textColor = 'text-rose-700';
                                     $borderColor = 'border-rose-200';
                                 } else {
-                                    // Breakeven (0)
                                     $bgColor = 'bg-blue-50';
                                     $textColor = 'text-blue-600';
                                 }
                             }
 
-                            // Opacidad para días de otro mes
                             $opacity = $day['is_current_month'] ? 'opacity-100' : 'opacity-40 grayscale';
-
-                            // Borde extra si es HOY
                             $todayClass = $day['is_today'] ? 'ring-2 ring-blue-500 ring-offset-2' : '';
-
                             $hasTrades = !is_null($day['pnl']);
-
                             $cursorClass = $hasTrades ? 'cursor-pointer hover:ring-2 hover:ring-blue-300' : 'cursor-default';
+
+                            // MAPA DE EMOJIS (Solo para visualizar)
+                            $emojis = ['fire' => '🔥', 'happy' => '🙂', 'neutral' => '😐', 'sad' => '😡'];
                         @endphp
 
                         <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} {{ $cursorClass }} relative flex h-24 flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md"
                              @if ($hasTrades) @click="openDayDetails('{{ $day['date'] }}')" @endif>
 
-                            {{-- ... El resto del contenido de la celda se queda igual ... --}}
-                            <span class="{{ $day['is_current_month'] ? 'text-gray-500' : 'text-gray-300' }} text-xs font-semibold">
-                                {{ $day['day'] }}
-                            </span>
+                            {{-- CAMBIO SOLO AQUÍ: Cabecera con Flex para separar Número e Iconos --}}
+                            <div class="flex w-full items-start justify-between">
 
+                                {{-- Tu número de día original --}}
+                                <span class="{{ $day['is_current_month'] ? 'text-gray-500' : 'text-gray-300' }} text-xs font-semibold">
+                                    {{ $day['day'] }}
+                                </span>
+
+                                {{-- NUEVO: Iconos del Journal (Solo visual) --}}
+                                <div class="flex gap-1">
+                                    {{-- Icono Mood --}}
+                                    @if (isset($day['journal_mood']) && isset($emojis[$day['journal_mood']]))
+                                        <span class="text-xs leading-none">{{ $emojis[$day['journal_mood']] }}</span>
+                                    @endif
+
+                                    {{-- Icono Libro (si hay notas pero no mood) --}}
+                                    @if (($day['has_notes'] ?? false) && !isset($day['journal_mood']))
+                                        <i class="fa-solid fa-book text-[10px] text-indigo-400"></i>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Tu PnL original --}}
                             @if (!is_null($day['pnl']))
                                 <div class="flex flex-col items-end">
                                     <span class="{{ $textColor }} text-sm font-black">

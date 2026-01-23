@@ -381,5 +381,171 @@ class PropFirmsSeeder extends Seeder
                 ]),
             ]);
         }
+
+        //! =================================================================
+        // * Bullfy
+        // ---------------------------------------------------------
+        // 1. CREAR LA EMPRESA (Bullfy)
+        // ---------------------------------------------------------
+        $bullfy = PropFirm::create([
+            'name'    => 'Bullfy',
+            'slug'    => 'bullfy',
+            'server' => 'Bullfy-Trade',
+            'website' => 'https://www.bullfy.com/',
+            // 'logo' => 'path/to/logo.png'
+        ]);
+
+        // =================================================================
+        //* Una Fase
+        // =================================================================
+
+        $bullfyOnePhase = $bullfy->programs()->create([
+            'name'       => 'One Phase',
+            'slug'       => 'bullfy-1-step',
+            'step_count' => 1,
+        ]);
+
+        // Array con todos los balances disponibles en la imagen
+        $balances = [5000, 10000, 25000, 50000, 100000, 200000];
+        $balancesFunded = [500, 1000, 5000, 10000, 25000, 50000];
+
+        foreach ($balances as $size) {
+            // Crear el Nivel (Producto)
+            $level = $bullfyOnePhase->levels()->create([
+                'name'     => number_format($size / 1000) . 'k USD',
+                'currency' => 'USD',
+                'size'     => $size,
+                'fee'      => 0, // Aquí pondrías el precio real si lo quieres trackear
+            ]);
+
+            // Definir las reglas (Datos aproximados estándar, ajusta con las reglas reales de Neoma)
+
+            // FASE 1 (Única Fase)
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 1,
+                'name'                   => 'Phase 1',
+                'profit_target_percent'  => 12.00, // Generalmente 8%
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 10.00, // O 8%, depende de "Origin"
+                'min_trading_days'       => 5,
+                'loss_type'              => 'balance_based', // Importante verificar si es Balance o Equity
+            ]);
+
+            // LIVE (Funded)
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 0, // 0 = Live
+                'name'                   => 'Live Account',
+                'profit_target_percent'  => null,
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 10.00,
+                'min_trading_days'       => 4,
+                'rules_metadata'         => json_encode([
+                    'profit_split' => 80, // El default es 80%
+                    'platforms' => ['mt5', 'ctrader', 'tradelocker'] // Guardamos info útil
+                ]),
+            ]);
+        }
+
+        // =================================================================
+        //* 2 Fases
+        // =================================================================
+
+
+        $bullfyTwoPhase = $bullfy->programs()->create([
+            'name'       => 'Two Phases',
+            'slug'       => 'bullfy-2-step',
+            'step_count' => 1,
+        ]);
+
+        foreach ($balances as $size) {
+            // Crear el Nivel (Producto)
+            $level = $bullfyTwoPhase->levels()->create([
+                'name'     => number_format($size / 1000) . 'k USD',
+                'currency' => 'USD',
+                'size'     => $size,
+                'fee'      => 0, // Aquí pondrías el precio real si lo quieres trackear
+            ]);
+
+            // Definir las reglas (Datos aproximados estándar, ajusta con las reglas reales de Neoma)
+
+            // FASE 1
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 1,
+                'name'                   => 'Phase 1',
+                'profit_target_percent'  => 8.00, // Generalmente 8%
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 10.00, // O 8%, depende de "Origin"
+                'min_trading_days'       => 3,
+                'loss_type'              => 'balance_based', // Importante verificar si es Balance o Equity
+            ]);
+
+            // FASE 2
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 2,
+                'name'                   => 'Phase 2',
+                'profit_target_percent'  => 5.00, // Generalmente 8%
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 10.00, // O 8%, depende de "Origin"
+                'min_trading_days'       => 3,
+                'loss_type'              => 'balance_based', // Importante verificar si es Balance o Equity
+            ]);
+
+
+            // LIVE (Funded)
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 0, // 0 = Live
+                'name'                   => 'Live Account',
+                'profit_target_percent'  => null,
+                'max_daily_loss_percent' => 5.00,
+                'max_total_loss_percent' => 10.00,
+                'min_trading_days'       => 5,
+                'rules_metadata'         => json_encode([
+                    'profit_split' => 80, // El default es 80%
+                    'platforms' => ['mt5'] // Guardamos info útil
+                ]),
+            ]);
+        }
+
+        // =================================================================
+        // * PRIME - Instant Funded
+        // =================================================================
+
+        $primeFundedBullfy = $bullfy->programs()->create([
+            'name'       => 'Prime (Instant Funded)',
+            'slug'       => 'bullfy-prime-instant-funded',
+            'step_count' => 0,
+        ]);
+
+        foreach ($balancesFunded as $size) {
+            // Crear el Nivel (Producto)
+            $level = $primeFundedBullfy->levels()->create([
+                'name'     => number_format($size / 1000) . 'k USD',
+                'currency' => 'USD',
+                'size'     => $size,
+                'fee'      => 0, // Aquí pondrías el precio real si lo quieres trackear
+            ]);
+
+            // Definir las reglas (Datos aproximados estándar, ajusta con las reglas reales de Neoma)
+
+            // LIVE (Funded)
+            ProgramObjective::create([
+                'program_level_id'       => $level->id,
+                'phase_number'           => 0, // 0 = Live
+                'name'                   => 'Live Account',
+                'profit_target_percent'  => null,
+                'max_daily_loss_percent' => 3.00,
+                'max_total_loss_percent' => 6.00,
+                'min_trading_days'       => null,
+                'rules_metadata'         => json_encode([
+                    'profit_split' => 70, // El default es 80%
+                    'platforms' => ['mt5'] // Guardamos info útil
+                ]),
+            ]);
+        }
     }
 }

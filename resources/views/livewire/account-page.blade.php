@@ -1,6 +1,36 @@
 {{-- CONTENEDOR PRINCIPAL: Solo lógica de dashboard --}}
 <div x-data="dashboardLogic()">
 
+    {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
+    <div x-data="{
+        initialLoad: true,
+        init() {
+            // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
+            document.addEventListener('livewire:initialized', () => {
+                this.initialLoad = false;
+            });
+    
+            // Fallback de seguridad: por si Livewire ya cargó antes de este script
+            setTimeout(() => { this.initialLoad = false }, 800);
+        }
+    }">
+
+        {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
+        {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+             x-show="initialLoad"
+             x-transition:leave="transition ease-in duration-500"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+
+            {{-- Aquí tu componente loader --}}
+            <div class="flex flex-col items-center">
+                <x-loader />
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
+            </div>
+        </div>
+    </div>
+
     {{-- ? Loading --}}
     <div wire:loading
          wire:target='updatedSelectedAccountId, insertAccount, updateAccount, deleteAccount'>
@@ -604,37 +634,156 @@
 
         </div>
 
-        <div class="col-span-12 m-1 mt-4 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-6 shadow-2xl transition-all duration-300">
+        <div class="col-span-12 m-1 mt-4 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 shadow-2xl transition-all duration-300">
 
-            <div class="mb-5 flex items-center justify-between">
-                <div class="flex items-center">
-                    <h3 class="font-google text-lg font-bold text-gray-800">Histórico de la Cuenta</h3>
+            {{-- CABECERA --}}
+            <div class="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-8 py-5">
+                <div class="flex items-center gap-3">
+                    <div class="rounded-lg bg-indigo-100 p-2 text-indigo-600">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Histórico de la Cuenta</h3>
+                        <p class="text-xs text-gray-500">Registro completo de operaciones cerradas</p>
+                    </div>
+                </div>
+
+                {{-- Spinner de carga --}}
+                <div wire:loading
+                     wire:target="selectedAccountId, gotoPage, nextPage, previousPage">
+                    <i class="fa-solid fa-circle-notch fa-spin text-xl text-indigo-500"></i>
                 </div>
             </div>
 
-            <div id="container_table"
-                 class="items-center transition-all duration-300"
-                 wire:ignore>
-                <div>
-                    <table id="table_history"
-                           class="datatable">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
+            {{-- TABLA --}}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50 text-xs font-bold uppercase tracking-wider text-gray-400">
+                        <tr>
+                            <th class="px-6 py-4 text-left"
+                                scope="col">Orden / Activo</th>
+                            <th class="px-6 py-4 text-left"
+                                scope="col">Tiempo (In / Out)</th>
+                            <th class="px-6 py-4 text-center"
+                                scope="col">Volumen</th>
+                            <th class="px-6 py-4 text-left"
+                                scope="col">Precios (In / Out)</th>
+                            <th class="px-6 py-4 text-right"
+                                scope="col">Beneficio</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @forelse ($this->historyTrades as $trade)
+                            <tr class="group cursor-pointer transition duration-150 hover:bg-indigo-50/40"
+                                wire:key="history-{{ $trade->id }}"
+                                @click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
+
+                                {{-- COLUMNA 1: BADGE + TICKET + SIMBOLO --}}
+                                <td class="whitespace-nowrap px-6 py-4">
+                                    <div class="flex items-center gap-4">
+                                        {{-- Badge Tipo --}}
+                                        <div class="flex-shrink-0">
+                                            @if (in_array(strtoupper($trade->direction), ['BUY', 'LONG']))
+                                                <span class="inline-flex h-8 w-12 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-xs font-black text-emerald-600 shadow-sm">
+                                                    BUY
+                                                </span>
+                                            @else
+                                                <span class="inline-flex h-8 w-12 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-xs font-black text-rose-600 shadow-sm">
+                                                    SELL
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        {{-- Info Ticket --}}
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-bold text-gray-900 transition-colors group-hover:text-indigo-600">
+                                                #{{ $trade->ticket }}
+                                            </span>
+                                            <span class="text-xs font-medium text-gray-400">
+                                                {{ $trade->tradeAsset->name ?? ($trade->tradeAsset->symbol ?? $trade->symbol) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- COLUMNA 2: TIEMPO (APILADO) --}}
+                                <td class="whitespace-nowrap px-6 py-4">
+                                    <div class="flex flex-col gap-1.5">
+                                        {{-- Entrada --}}
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="w-10 font-medium text-gray-400">Abrir:</span>
+                                            <span class="font-mono text-gray-600">
+                                                {{ \Carbon\Carbon::parse($trade->entry_time)->format('d M H:i') }}
+                                            </span>
+                                        </div>
+                                        {{-- Salida --}}
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="w-10 font-medium text-gray-400">Cerrar:</span>
+                                            <span class="font-mono font-bold text-gray-900">
+                                                {{ \Carbon\Carbon::parse($trade->exit_time)->format('d M H:i') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- COLUMNA 3: LOTES --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    <span class="inline-block rounded bg-gray-100 px-2 py-1 font-mono text-xs font-bold text-gray-700">
+                                        {{ $trade->size }}
+                                    </span>
+                                </td>
+
+                                {{-- COLUMNA 4: PRECIOS (APILADO) --}}
+                                <td class="whitespace-nowrap px-6 py-4">
+                                    <div class="flex flex-col gap-1.5">
+                                        {{-- Entrada --}}
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="w-10 font-medium text-gray-400">In:</span>
+                                            <span class="font-mono text-gray-600">
+                                                {{ number_format($trade->entry_price, 5) }}
+                                            </span>
+                                        </div>
+                                        {{-- Salida --}}
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="w-10 font-medium text-gray-400">Out:</span>
+                                            <span class="font-mono font-bold text-gray-900">
+                                                {{ number_format($trade->exit_price, 5) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- COLUMNA 5: PNL --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    <div class="flex flex-col items-end">
+                                        <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono text-base font-black">
+                                            {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                        </span>
+                                        {{-- Opcional: Mostrar % o pips debajo si lo tuvieras --}}
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-
-                        </tbody>
-                    </table>
-                </div>
-
+                        @empty
+                            <tr>
+                                <td class="py-12 text-center text-gray-400"
+                                    colspan="5">
+                                    <div class="flex flex-col items-center">
+                                        <div class="mb-3 rounded-full bg-gray-50 p-4">
+                                            <i class="fa-solid fa-scroll text-2xl text-gray-300"></i>
+                                        </div>
+                                        <p>No hay historial disponible para esta cuenta.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
 
-
+            {{-- PAGINACIÓN CON ESTILO PERSONALIZADO --}}
+            <div class="border-t border-gray-100 bg-gray-50 px-6 py-3">
+                {{ $this->historyTrades->links('vendor.livewire.tradeforge-pagination', data: ['scrollTo' => false]) }}
+            </div>
         </div>
 
 

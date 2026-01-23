@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Account;
+use Carbon\Carbon;
+use App\Notifications\NewTradeNotification;
 use App\Models\Trade;
 use App\Models\TradeAsset;
 use App\Models\User;
@@ -25,17 +26,32 @@ class Mt5SyncController extends Controller
             'trades' => 'array',
         ]);
 
-        Log::info("Iniciando Sync");
+        Log::info("Iniciando Sync. Datos recibidos:", [
+            'token_recibido' => $request->sync_token,
+            'login_recibido' => $data['account_login'],
+        ]);
 
-        // Buscar usuario por token
-        // DESPUÉS (Token perpetuo)
-        $user = User::where('sync_token', $request->sync_token)
-            ->firstOrFail();
 
-        // Buscar UNA account del usuario por login
+        // 1. BUSCAR USUARIO
+        $user = User::where('sync_token', $request->sync_token)->first();
+
+        if (!$user) {
+            Log::error("❌ Sync Fallido: Token inválido: " . $request->sync_token);
+            return response()->json(['error' => 'Token de usuario inválido.'], 404);
+        }
+
+        // 2. BUSCAR CUENTA
+        // Nota: Asegúrate de que en la BD la columna sea 'mt5_login' o 'login' según tu migración.
+        // A veces se guarda como int y llega como string, pero Laravel suele manejarlo bien.
         $account = $user->accounts()
-            ->where('mt5_login', $data['account_login'])
-            ->firstOrFail();
+            ->where('mt5_login', $data['account_login']) // Asegúrate que esta columna existe en la tabla accounts
+            ->first();
+
+        if (!$account) {
+            Log::error("❌ Sync Fallido: Cuenta {$data['account_login']} no encontrada para usuario {$user->id}");
+            return response()->json(['error' => "La cuenta {$data['account_login']} no existe o no pertenece a este usuario."], 404);
+        }
+
 
         $inserted = 0;
         foreach ($data['trades'] ?? [] as $tradeData) {
@@ -43,6 +59,11 @@ class Mt5SyncController extends Controller
                 ['symbol' => $tradeData['trade_asset_symbol']],
                 ['name' => $tradeData['trade_asset_symbol']]
             );
+
+
+            Log::info("Mostrando JSON Sync. Datos recibidos:", [
+                'json' => $tradeData['chart_data']
+            ]);
 
             // 1. GESTIÓN DE IMAGEN (Decodificar Base64)
             $screenshotPath = null;
@@ -107,6 +128,39 @@ class Mt5SyncController extends Controller
             if ($chartDataPath) {
                 $trade->chart_data_path = $chartDataPath;
                 $trade->save();
+            }
+            // =========================================================
+            // 🔔 LÓGICA DE NOTIFICACIÓN BLINDADA (FIX POSTGRES)
+            // =========================================================
+
+            $exitTime = \Carbon\Carbon::parse($tradeData['exit_time']);
+            $now = now();
+            $diffInMinutes = $exitTime->diffInMinutes($now);
+
+            // 3. COMPROBAR DUPLICADOS (FIX)
+            // En lugar de una query JSON compleja que falla en Postgres,
+            // traemos las últimas 10 notificaciones de este usuario y miramos dentro con PHP.
+
+            $alreadyNotified = $user->notifications()
+                ->where('type', 'App\Notifications\NewTradeNotification') // Solo miramos las de trades
+                ->latest()
+                ->take(10) // Optimizamos trayendo solo las últimas 10
+                ->get()
+                ->contains(function ($notification) use ($trade) {
+                    // Comprobamos si el trade_id coincide
+                    return isset($notification->data['trade_id']) &&
+                        $notification->data['trade_id'] == $trade->id;
+                });
+
+            // 4. CONDICIONES FINALES
+            if (!$alreadyNotified && $diffInMinutes < 60) {
+
+                $user->notify(new \App\Notifications\NewTradeNotification($trade));
+
+                Log::info("🔔 Notificación enviada: Ticket {$trade->ticket}");
+            } else {
+                // Log limpio para depuración (opcional)
+                // Log::debug("🔕 Skip: {$trade->ticket} | Diff: {$diffInMinutes}m | Ya notificado: " . ($alreadyNotified ? 'SI' : 'NO'));
             }
             $inserted++;
         }
