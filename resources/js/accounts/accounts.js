@@ -317,89 +317,100 @@ document.addEventListener("alpine:init", () => {
         //     });
         // },
         initChart() {
-            // 1. Referencia al div (nota que cambié 'canvas' por 'chart' en la vista)
             const chartEl = this.$refs.chart;
             if (!chartEl) return;
 
             this.$nextTick(() => {
-                // 2. Limpiar gráfico anterior si existe
+                // Limpiar instancia previa para evitar duplicados
                 if (window.balanceChart) {
                     window.balanceChart.destroy();
                 }
 
-                // 3. Obtener datos de Livewire
                 const categories =
                     this.$wire.balanceChartData?.categories || [];
                 const seriesData = this.$wire.balanceChartData?.series || [];
 
-                // Si no hay datos, no pintamos nada (o podrías pintar un empty state)
+                // Si no hay datos, salimos (o podrías mostrar un div de "Sin datos")
                 if (!categories.length) return;
 
-                // 4. Configuración de ApexCharts (Area Spline)
                 const options = {
                     series: seriesData,
                     chart: {
-                        type: "area", // Tipo Área
+                        type: "area",
                         height: 350,
                         fontFamily: "Inter, sans-serif",
-                        toolbar: { show: false }, // Ocultar menú de descarga
+                        toolbar: { show: false },
                         animations: { enabled: true },
                     },
-                    dataLabels: { enabled: false }, // No mostrar números sobre cada punto
+                    dataLabels: { enabled: false },
+
+                    // --- ESTILOS DE LÍNEA ---
                     stroke: {
-                        curve: "smooth", // 👇 ESTO HACE EL EFECTO SPLINE (CURVAS)
-                        width: 2,
+                        curve: "smooth",
+                        width: [2, 3, 2], // MFE fino, Balance grueso, MAE fino
+                        dashArray: [5, 0, 5], // MFE y MAE punteados, Balance sólido
                     },
 
-                    // Colores: Verde Esmeralda (estilo TradeZella/Tailwind)
-                    colors: ["#10B981"],
+                    // --- COLORES SEMÁNTICOS ---
+                    // Azul (Cielo/Potencial), Verde (Realidad), Rojo (Riesgo/Suelo)
+                    colors: ["#3B82F6", "#10B981", "#EF4444"],
 
+                    // --- RELLENO ---
+                    // Solo rellenamos el Balance Real para darle peso visual y no ensuciar
                     fill: {
-                        type: "gradient", // Degradado hacia abajo
+                        type: ["solid", "gradient", "solid"],
                         gradient: {
                             shadeIntensity: 1,
-                            opacityFrom: 0.4, // Más opaco arriba
-                            opacityTo: 0.05, // Casi transparente abajo
-                            stops: [0, 90, 100],
+                            opacityFrom: 0.4,
+                            opacityTo: 0.05,
+                            stops: [0, 100],
                         },
+                        opacity: [0, 0.3, 0], // Transparente, Semitransparente, Transparente
                     },
 
                     xaxis: {
-                        categories: categories, // Las fechas/horas desde PHP
+                        categories: categories,
                         tooltip: { enabled: false },
                         axisBorder: { show: false },
                         axisTicks: { show: false },
                         labels: {
-                            style: { colors: "#9ca3af", fontSize: "12px" }, // Tailwind gray-400
+                            style: { colors: "#9ca3af", fontSize: "12px" },
                         },
                     },
 
                     yaxis: {
                         labels: {
                             style: { colors: "#9ca3af", fontSize: "12px" },
-                            formatter: (value) => {
-                                return value.toFixed(2) + " €";
-                            }, // Formato moneda
+                            formatter: (val) => val.toFixed(2) + " €",
                         },
                     },
 
                     grid: {
-                        borderColor: "#f3f4f6", // Grid muy sutil
+                        borderColor: "#f3f4f6",
                         strokeDashArray: 4,
                         yaxis: { lines: { show: true } },
                     },
 
+                    // --- TOOLTIP COMPARTIDO ---
                     tooltip: {
                         theme: "light",
+                        shared: true, // Muestra los 3 valores a la vez al pasar el ratón
+                        intersect: false,
                         y: {
                             formatter: function (val) {
-                                return val + " €";
+                                return val.toFixed(2) + " €";
                             },
                         },
                     },
+
+                    // --- LEYENDA ARRIBA A LA DERECHA ---
+                    legend: {
+                        position: "top",
+                        horizontalAlign: "right",
+                        offsetY: -20,
+                    },
                 };
 
-                // 5. Renderizar
                 window.balanceChart = new ApexCharts(chartEl, options);
                 window.balanceChart.render();
                 this.showLoadingGrafic = false;

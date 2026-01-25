@@ -12,3 +12,6 @@ Artisan::command('inspire', function () {
 Schedule::command('accounts:update-snapshots')
     ->dailyAt('00:00')
     ->timezone('Europe/Madrid'); // <--- 3. OJO CON ESTO (Leer nota abajo)
+
+// Ejecutar cada 6 horas para actualizar datos "Actual" y nuevas previsiones
+Schedule::command('calendar:sync')->everySixHours();

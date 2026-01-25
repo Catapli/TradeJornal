@@ -31,5 +31,6 @@ import "./accounts/accounts.js";
 import "./dashboard/dashboard.js";
 import "./journal/journal.js";
 import "./trades/trades.js";
+import "./economic/economic.js";
 
 Alpine.plugin(translations);

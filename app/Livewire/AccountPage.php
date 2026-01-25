@@ -396,7 +396,7 @@ class AccountPage extends Component
 
     private function loadBalanceChart()
     {
-        // 1. Determinar la fecha de corte (Cutoff Date)
+        // 1. Configurar Fecha de Corte (Igual que antes)
         $cutoffDate = null;
         if ($this->selectedTimeframe !== 'all') {
             $config = $this->timeframes[$this->selectedTimeframe];
@@ -405,69 +405,122 @@ class AccountPage extends Component
             elseif (isset($config['days'])) $cutoffDate = now()->subDays($config['days']);
         }
 
-        // 2. Calcular el Balance Inicial REAL para ESTE periodo específico
-        // Si es '24h', el inicio es: (Balance Cuenta + Todo lo ganado/perdido ANTES de hace 24h)
+        // 2. Calcular Balance Inicial (Igual que antes)
         if ($cutoffDate) {
             $priorPnl = $this->selectedAccount->trades()
                 ->where('exit_time', '<', $cutoffDate)
                 ->sum('pnl');
 
             $startBalance = $this->selectedAccount->initial_balance + $priorPnl;
-
-            // Etiqueta inicial dinámica (ej: "10:00" si son las 10:00 de ayer)
             $startLabel = $cutoffDate->format('H:i');
         } else {
-            // Si es 'all', empezamos desde el origen
             $startBalance = $this->selectedAccount->initial_balance;
             $startLabel = 'Inicio';
         }
 
-        // 3. Obtener solo los trades DENTRO del periodo
+        // 3. Obtener Trades
         $trades = $this->selectedAccount->trades()
             ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
             ->orderBy('exit_time', 'asc')
             ->get();
 
-        // 4. Preparar Arrays
+        // 4. Inicializar Arrays para las 3 Líneas
         $labels = [$startLabel];
         $balanceData = [(float) round($startBalance, 2)];
+        $minEquityData = [(float) round($startBalance, 2)]; // MAE (Suelo)
+        $maxEquityData = [(float) round($startBalance, 2)]; // MFE (Techo)
+
         $runningBalance = $startBalance;
 
         if ($trades->isNotEmpty()) {
-            // 5. Agrupamiento inteligente según Timeframe
-            // Usamos colecciones de Laravel para agrupar, es más limpio
+            // Agrupar trades según timeframe
             $groupedTrades = $trades->groupBy(function ($trade) {
                 return match ($this->selectedTimeframe) {
-                    '1h' => $trade->exit_time->format('H:i'),        // Minuto a minuto
-                    '24h' => $trade->exit_time->format('H:00'),      // Agrupado por horas
-                    '7d' => $trade->exit_time->format('d/m H:00'),   // Día y hora
-                    default => $trade->exit_time->format('d M Y'),   // Por día
+                    '1h' => $trade->exit_time->format('H:i'),
+                    '24h' => $trade->exit_time->format('H:00'),
+                    '7d' => $trade->exit_time->format('d/m H:00'),
+                    default => $trade->exit_time->format('d M'),
                 };
             });
 
             foreach ($groupedTrades as $timeLabel => $group) {
-                // Sumamos el PnL de todos los trades en ese intervalo (ej: en esa hora concreta)
+
                 $intervalPnl = $group->sum('pnl');
 
+                // Inicializamos los extremos con el balance actual antes de cerrar este grupo
+                $currentMinEquity = $runningBalance;
+                $currentMaxEquity = $runningBalance;
+
+                foreach ($group as $trade) {
+                    $priceDiff = abs($trade->exit_price - $trade->entry_price);
+
+                    // Solo calculamos si hubo movimiento y tenemos datos MAE/MFE
+                    if ($priceDiff > 0 && abs($trade->pnl) > 0) {
+
+                        // MATEMÁTICAS: Calculamos cuánto vale 1 punto de precio en dinero real
+                        // Fórmula: PnL Total / Distancia Recorrida
+                        $valuePerPoint = abs($trade->pnl) / $priceDiff;
+
+                        // --- LÓGICA MAE (Riesgo / Miedo) ---
+                        // ¿Cuánto dinero llegué a ir perdiendo?
+                        if ($trade->mae_price) {
+                            $distToMae = abs($trade->entry_price - $trade->mae_price);
+                            $floatingLoss = -1 * ($distToMae * $valuePerPoint);
+
+                            // El balance más bajo posible fue mi saldo actual + la pérdida flotante máxima
+                            $potentialLow = $runningBalance + $floatingLoss;
+                            if ($potentialLow < $currentMinEquity) $currentMinEquity = $potentialLow;
+                        }
+
+                        // --- LÓGICA MFE (Potencial / Avaricia) ---
+                        // ¿Cuánto dinero llegué a ir ganando?
+                        if ($trade->mfe_price) {
+                            $distToMfe = abs($trade->entry_price - $trade->mfe_price);
+                            $floatingProfit = $distToMfe * $valuePerPoint;
+
+                            // El balance más alto posible fue mi saldo actual + la ganancia flotante máxima
+                            $potentialHigh = $runningBalance + $floatingProfit;
+                            if ($potentialHigh > $currentMaxEquity) $currentMaxEquity = $potentialHigh;
+                        }
+                    }
+                }
+
+                // Avanzamos el balance "Real" (Línea Verde)
                 $runningBalance += $intervalPnl;
 
+                // Guardamos los puntos en el gráfico
                 $labels[] = $timeLabel;
                 $balanceData[] = round($runningBalance, 2);
+
+                // Guardamos los extremos (Equity)
+                // Usamos min/max para asegurar que la línea roja no supere a la verde en caso de gaps raros
+                // y que la línea azul no esté por debajo de la verde.
+                $minEquityData[] = round(min($currentMinEquity, $runningBalance), 2);
+                $maxEquityData[] = round(max($currentMaxEquity, $runningBalance), 2);
             }
         } else {
-            // Si no hubo trades en las últimas 24h, añadimos el punto final "Ahora"
-            // para que la gráfica muestre una línea plana en lugar de un solo punto
+            // Línea plana si no hay trades
             $labels[] = now()->format('H:i');
             $balanceData[] = round($startBalance, 2);
+            $minEquityData[] = round($startBalance, 2);
+            $maxEquityData[] = round($startBalance, 2);
         }
 
-        // 6. Asignar a ApexCharts
+        // 6. Empaquetar para ApexCharts
         $this->balanceChartData = [
             'categories' => $labels,
             'series' => [
                 [
-                    'name' => 'Balance',
+                    'name' => 'Max. Potencial (MFE)',
+                    'data' => $maxEquityData
+                ],
+                [
+                    'name' => 'Balance Real',
                     'data' => $balanceData
+                ],
+                [
+                    'name' => 'Min. Riesgo (MAE)',
+                    'data' => $minEquityData
                 ]
             ]
         ];

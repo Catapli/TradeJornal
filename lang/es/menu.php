@@ -8,5 +8,6 @@ return [
     'journal' => 'Diario',
     'calendar' => 'Calendario',
     'trades' => 'Operaciones',
+    'laboratory' => 'Laboratorio',
 
 ];

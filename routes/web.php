@@ -69,6 +69,10 @@ Route::middleware([
         return view('trades.index');
     })->name('trades');
 
+    Route::get('/reports', function () {
+        return view('reports.index');
+    })->name('reports');
+
 
     //? Vista Rols
     // Route::get('/rols', function () {

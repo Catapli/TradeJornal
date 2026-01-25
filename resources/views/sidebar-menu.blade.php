@@ -38,6 +38,10 @@
                                route="trades"
                                icon="fa-solid fa-chart-simple" />
 
+            {{-- ? Reportes --}}
+            <x-sidebar-element name="{{ __('menu.laboratory') }}"
+                               route="reports"
+                               icon="fa-solid fa-flask-vial" />
 
 
 

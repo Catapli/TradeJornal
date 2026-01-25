@@ -15,14 +15,15 @@ return new class extends Migration
             $table->id();
             // No vinculamos a user_id obligatoriamente porque las noticias son globales,
             // pero lo vinculamos al usuario para que cada uno guarde "sus" noticias relevantes.
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->date('date')->index();
             $table->time('time');
             $table->string('currency', 3); // USD, EUR
             $table->string('event'); // "CPI YoY", "Non-Farm Payrolls"
             $table->enum('impact', ['high', 'medium', 'low']); // Rojo, Naranja, Amarillo
             $table->string('actual')->nullable(); // Dato real (opcional)
+            $table->string('previous')->nullable(); // Dato previo (opcional)
             $table->string('forecast')->nullable(); // Previsión (opcional)
+            $table->unique(['date', 'time', 'currency', 'event'], 'unique_event_idx');
             $table->timestamps();
         });
     }
