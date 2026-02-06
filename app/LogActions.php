@@ -3,31 +3,75 @@
 namespace App;
 
 use App\Models\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
 
 trait LogActions
 {
     /**
-     * Inserta un log en la base de datos
-     *
-     * @param int $user_id ID del usuario que realiza la acción
-     * @param int|null $town_id ID del municipio sobre el cual se realiza la acción
-     * @param string $form Nombre del formulario utilizado
-     * @param string $action Nombre de la acción realizada
-     * @param string|null $description Descripción adicional de la acción
+     * Inserta un log de información/acción en la base de datos
      */
     protected function insertLog(
-        int $user_id,
-        int $town_id = null,
-        string $form,
         string $action,
+        string $form = null,
         string $description = null,
+        int $user_id = null,
+        string $type = 'info'
     ) {
         Log::create([
-            'user_id' => $user_id,
-            'town_id' => $town_id,
+            'user_id' => $user_id ?? Auth::id(),
+            'type' => $type,
             'form' => $form,
             'action' => $action,
             'description' => $description,
+            'ip_address' => Request::ip(),
+            'user_agent' => Request::userAgent(),
+            'url' => Request::fullUrl(),
+            'method' => Request::method(),
+        ]);
+    }
+
+    /**
+     * Inserta un log de error capturado en try-catch
+     */
+    protected function logError(
+        \Throwable $exception,
+        string $action,
+        string $form = null,
+        string $description = null,
+        int $user_id = null
+    ) {
+        Log::create([
+            'user_id' => $user_id ?? Auth::id(),
+            'type' => 'error',
+            'form' => $form,
+            'action' => $action,
+            'description' => $description,
+            'exception_message' => $exception->getMessage(),
+            'exception_class' => get_class($exception),
+            'exception_trace' => $exception->getTraceAsString(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'ip_address' => Request::ip(),
+            'user_agent' => Request::userAgent(),
+            'url' => Request::fullUrl(),
+            'method' => Request::method(),
+            'resolved' => false,
+        ]);
+
+        // También reportar a Laravel para que aparezca en logs tradicionales
+        report($exception);
+    }
+
+    /**
+     * Marca un error como resuelto
+     */
+    protected function resolveError(int $logId, string $notes = null)
+    {
+        Log::where('id', $logId)->update([
+            'resolved' => true,
+            'resolved_at' => now(),
+            'resolution_notes' => $notes,
         ]);
     }
 }

@@ -330,6 +330,7 @@ document.addEventListener("alpine:init", () => {
         showLoading: false,
         showModalDetails: false,
         currentView: "list", // 'list' o 'detail'
+        isLoading: false,
 
         init() {
             const self = this;
@@ -394,19 +395,19 @@ document.addEventListener("alpine:init", () => {
                                     from: -1000000000,
                                     to: -0.01,
                                     color: "#F43F5E", // Rojo
-                                    name: "Pérdida",
+                                    name: this.$l("loss"),
                                 },
                                 {
                                     from: 0,
                                     to: 0,
                                     color: "#F3F4F6", // Gris claro (Sin actividad o Breakeven)
-                                    name: "Sin Actividad",
+                                    name: this.$l("not_activity"),
                                 },
                                 {
                                     from: 0.01,
                                     to: 1000000000,
                                     color: "#10B981", // Verde
-                                    name: "Ganancia",
+                                    name: this.$l("profit"),
                                 },
                             ],
                         },
@@ -449,9 +450,11 @@ document.addEventListener("alpine:init", () => {
 
             const chartSeries = isEmpty ? [1] : series;
             const colors = isEmpty ? ["#F3F4F6"] : ["#10B981", "#F43F5E"];
+            console.log();
+            let labelDays = this.$l("days");
             const chartLabels = isEmpty
-                ? ["Sin operaciones"]
-                : ["Ganadas", "Perdidas"];
+                ? [this.$l("not_operations")]
+                : [this.$l("profits"), this.$l("losses")];
 
             const options = {
                 series: chartSeries,
@@ -471,7 +474,7 @@ document.addEventListener("alpine:init", () => {
                     theme: "light",
                     y: {
                         formatter: function (val) {
-                            return val + " días";
+                            return val + labelDays;
                         },
                     },
                 },
@@ -522,7 +525,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "PnL Diario",
+                        name: this.$l("pnl_daily"),
                         data: seriesData,
                     },
                 ],
@@ -559,7 +562,7 @@ document.addEventListener("alpine:init", () => {
                     labels: {
                         style: { colors: "#6b7280" },
                         formatter: function (val) {
-                            return val.toFixed(0) + " €";
+                            return val.toFixed(0) + " $";
                         },
                     },
                 },
@@ -586,7 +589,7 @@ document.addEventListener("alpine:init", () => {
                 this.dailyPnLBarChart.updateOptions({
                     series: [
                         {
-                            name: "PnL Diario", // Mantiene el nombre correcto
+                            name: this.$l("pnl_daily"), // Mantiene el nombre correcto
                             data: seriesData,
                         },
                     ],
@@ -616,11 +619,11 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "Ganancia Media",
+                        name: this.$l("avg_win"),
                         data: [avgWin], // Array de 1 elemento
                     },
                     {
-                        name: "Pérdida Media",
+                        name: this.$l("avg_loss"),
                         data: [avgLoss], // Array de 1 elemento (negativo)
                     },
                 ],
@@ -645,7 +648,7 @@ document.addEventListener("alpine:init", () => {
                     enabled: true, // Mostrar los números dentro de la barra
                     formatter: function (val) {
                         // Quitamos el signo negativo visualmente
-                        return Math.abs(val).toFixed(2) + " €";
+                        return Math.abs(val).toFixed(2) + " $";
                     },
                     style: {
                         fontSize: "12px",
@@ -670,7 +673,7 @@ document.addEventListener("alpine:init", () => {
                     show: false,
                 },
                 xaxis: {
-                    categories: ["Promedio"], // Una sola categoría compartida
+                    categories: [this.$l("avg")], // Una sola categoría compartida
                     labels: {
                         formatter: function (val) {
                             // El eje X también sin negativos
@@ -720,8 +723,8 @@ document.addEventListener("alpine:init", () => {
 
             // Etiquetas para el tooltip
             const chartLabels = isEmpty
-                ? ["Sin datos"]
-                : ["Ganadores", "Perdedores"];
+                ? [this.$l("not_data")]
+                : [this.$l("winners"), this.$l("lossers")];
 
             const options = {
                 series: chartSeries,
@@ -794,7 +797,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "PnL Acumulado",
+                        name: this.$l("acumulative_pnl"),
                         data: seriesData,
                     },
                 ],
@@ -858,7 +861,7 @@ document.addEventListener("alpine:init", () => {
                     colors: [mainColor], // Actualiza Verde/Rojo
                     series: [
                         {
-                            name: "PnL Acumulado", // Evita que salga "series-1"
+                            name: this.$l("acuulative_pnl"), // Evita que salga "series-1"
                             data: seriesData,
                         },
                     ],
@@ -888,7 +891,7 @@ document.addEventListener("alpine:init", () => {
         },
     }));
 
-    Alpine.data("chartViewer", () => {
+    Alpine.data("chartViewer", (initialTab = "image") => {
         let controller = null;
 
         return {
@@ -899,6 +902,9 @@ document.addEventListener("alpine:init", () => {
             showEma: false,
             // 1. NUEVA VARIABLE
             isFullscreen: false,
+
+            // 1. NUEVA VARIABLE DE ESTADO
+            activeTab: initialTab,
 
             init() {
                 this.$nextTick(() => {
@@ -911,6 +917,10 @@ document.addEventListener("alpine:init", () => {
 
                 window.addEventListener("trade-selected", (e) => {
                     this.currentTimeframe = "5m"; // Resetear al cargar nuevo trade
+
+                    // 2. LÓGICA AUTOMÁTICA AL CAMBIAR DE TRADE
+                    // Si viene path, forzamos la pestaña chart, si no, image
+                    this.activeTab = e.detail.path ? "chart" : "image";
                     this.load(
                         e.detail.path,
                         e.detail.entry,

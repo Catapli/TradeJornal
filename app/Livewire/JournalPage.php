@@ -86,7 +86,7 @@ class JournalPage extends Component
                 })->toArray();
             } else {
                 // Si el usuario no ha configurado reglas aún
-                $this->daily_objectives = [['text' => 'Define tus reglas en configuración', 'done' => false]];
+                $this->daily_objectives = [['text' => __('labels.set_tour_rules'), 'done' => false]];
             }
         }
 
@@ -265,7 +265,7 @@ class JournalPage extends Component
         );
 
 
-        $this->showAlert('success', '✅ Diario Actualizado');
+        $this->showAlert('success', __('labels.journal_updated'));
     }
 
     public function showAlert($type, $message)
@@ -337,50 +337,61 @@ class JournalPage extends Component
     {
         // 1. Validar si hay datos mínimos
         if (count($this->dayTrades) === 0 && empty($this->pre_market_mood)) {
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => 'Necesito al menos operaciones o un estado de ánimo para escribir.']);
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.empty_operations_ai_draft')]);
             return;
         }
 
-        // 2. Preparar el Contexto para la IA
-        $mood = $this->pre_market_mood ? ucfirst($this->pre_market_mood) : 'No registrado';
-        $pnl = number_format($this->dayPnL, 2);
+        // // 2. Preparar el Contexto para la IA
+        // $mood = $this->pre_market_mood ? ucfirst($this->pre_market_mood) : __('labels.no_registered');
+        // $pnl = number_format($this->dayPnL, 2);
+        // $totalTrades = count($this->dayTrades);
+
+        // // Resumen de Trades y Errores
+        // $tradesContext = collect($this->dayTrades)->map(function ($t) {
+        //     $mistakes = $t->mistakes->pluck('name')->join(', ');
+        //     $errorStr = $mistakes ? "(Errores: $mistakes)" : __('labels.clean_execution');
+        //     $result = $t->pnl >= 0 ? __('labels.profit') : __('labels.loss');
+        //     return "- {$t->exit_time->format('H:i')}: {$t->tradeAsset->name} ({$t->direction}) | $result {$t->pnl}$ | $errorStr";
+        // })->join("\n");
+
+        // 2. Preparar Contexto de Datos
+        // Usamos las etiquetas traducidas de ai.labels
+        $moodLabel = __('ai.labels.mood');
+        $pnlLabel = __('ai.labels.total_result');
+        $opsLabel = __('ai.labels.total_ops');
+
+        // El valor del mood lo traducimos si es estático, o lo dejamos tal cual
+        $moodValue = $this->pre_market_mood ? ucfirst($this->pre_market_mood) : __('labels.no_registered');
+        $pnlValue = number_format($this->dayPnL, 2);
         $totalTrades = count($this->dayTrades);
 
-        // Resumen de Trades y Errores
+        $dataContext = "
+        - $moodLabel: $moodValue
+        - $pnlLabel: $pnlValue $
+        - $opsLabel: $totalTrades
+    ";
+
+        // 3. Preparar Resumen de Trades (Trade Breakdown)
         $tradesContext = collect($this->dayTrades)->map(function ($t) {
-            $mistakes = $t->mistakes->pluck('name')->join(', ');
-            $errorStr = $mistakes ? "(Errores: $mistakes)" : "(Ejecución Limpia)";
-            $result = $t->pnl >= 0 ? "Ganancia" : "Pérdida";
-            return "- {$t->exit_time->format('H:i')}: {$t->tradeAsset->name} ({$t->direction}) | $result {$t->pnl}$ | $errorStr";
+            // Aseguramos que 'Mistakes' y 'Clean Execution' estén traducidos
+            $mistakesList = $t->mistakes->pluck('name')->join(', ');
+
+            $errorStr = $mistakesList
+                ? "(" . __('ai.labels.mistakes') . ": $mistakesList)"
+                : __('ai.labels.clean_execution');
+
+            // Profit/Loss traducido
+            $resultLabel = $t->pnl >= 0 ? __('ai.labels.profit') : __('ai.labels.loss');
+
+            return "- {$t->exit_time->format('H:i')}: {$t->tradeAsset->name} ({$t->direction}) | $resultLabel {$t->pnl}$ | $errorStr";
         })->join("\n");
 
-        // 3. El Prompt
-        $prompt = "
-            Actúa como un coach de trading profesional y redactor. Escribe la entrada del diario de hoy en PRIMERA PERSONA (como si fueras yo).
-            
-            MIS DATOS DE HOY:
-            - Estado de ánimo inicial: $mood
-            - Resultado total: $pnl $
-            - Total operaciones: $totalTrades
-            
-            DESGLOSE DE OPERACIONES:
-            $tradesContext
-            
-            INSTRUCCIONES DE REDACCIÓN:
-            1. Empieza con una frase resumen de cómo fue la sesión (basado en PnL y Mood).
-            2. Analiza brevemente el comportamiento. Si hubo errores (etiquetados arriba), sé crítico pero constructivo. Si fue limpio, felicítame.
-            3. Si hubo pérdidas grandes o rachas, menciona el aspecto psicológico.
-            4. Termina con una conclusión breve de mejora.
-            5. Usa etiquetas HTML básicas para el formato (usa <strong> para negritas, <em> para cursiva, <br> para saltos de línea, <ul>/<li> para listas). NO uses Markdown.
-            6. Sé conciso, máximo 3 párrafos.
-
-             5. FORMATO TÉCNICO OBLIGATORIO:
-               - Envuelve cada párrafo en etiquetas <p>...</p>.
-               - Usa <strong> para negritas.
-               - Usa <ul><li>...</li></ul> para listas.
-               - NO uses Markdown (nada de ** o ##). Solo HTML limpio.
-               - NO incluyas ```html al principio ni al final.
-        ";
+        // 4. Generar el Prompt Final
+        // Inyectamos las dos partes: datos generales (:context) y lista de trades (:trades)
+        $prompt = __('ai.draft_prompt', [
+            'context' => $dataContext,
+            'trades' => $tradesContext
+        ]);
 
         // 4. Llamada a Gemini
         try {
@@ -410,11 +421,11 @@ class JournalPage extends Component
 
                 // ENVÍO SIMPLE:
                 $this->dispatch('editor-content-updated', $this->content);
-                $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Borrador generado correctamente']);
+                $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.draft_generated_ok')]);
             }
         } catch (\Exception $e) {
             Log::error("Error IA Journal: " . $e->getMessage());
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => 'Error al conectar con la IA']);
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_conect_IA')]);
         }
     }
 

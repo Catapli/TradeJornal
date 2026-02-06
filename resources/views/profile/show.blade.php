@@ -45,6 +45,7 @@
                         </div>
                     </div>
 
+                    {{-- @if (Auth::user()->subscribed('default')) --}}
                     {{-- 2. SYNC TOKEN (Vital para tu Python) --}}
                     <div class="overflow-hidden rounded-xl border border-indigo-100 bg-white shadow-sm">
                         <div class="border-b border-indigo-50 px-6 py-4">
@@ -76,6 +77,8 @@
                             </div>
                         </div>
                     </div>
+                    {{-- @endif --}}
+
 
                 </div>
 

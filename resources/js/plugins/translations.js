@@ -19,4 +19,11 @@ export default function (Alpine) {
             return messages.success?.[key] ?? key;
         };
     });
+
+    Alpine.magic("l", () => {
+        return (key) => {
+            const messages = window.translations ?? {};
+            return messages.labels?.[key] ?? key;
+        };
+    });
 }

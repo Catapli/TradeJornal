@@ -11,7 +11,7 @@
             });
     
             // Fallback de seguridad: por si Livewire ya cargó antes de este script
-            setTimeout(() => { this.initialLoad = false }, 800);
+            setTimeout(() => { this.initialLoad = false }, 200);
         }
     }">
 
@@ -26,7 +26,6 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
             </div>
         </div>
     </div>
@@ -49,8 +48,8 @@
 
         <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
              @click.away="show = false">
-            <h3 class="mb-4 text-lg font-bold text-gray-900">Configurar Objetivos Recurrentes</h3>
-            <p class="mb-4 text-sm text-gray-500">Estas reglas aparecerán automáticamente en cada nuevo día de tu journal.</p>
+            <h3 class="mb-4 text-lg font-bold text-gray-900">{{ __('labels.set_recurring_goals') }}</h3>
+            <p class="mb-4 text-sm text-gray-500">{{ __('labels.explain_recurring_goals') }}</p>
 
             {{-- Lista de Reglas --}}
             <div class="mb-4 max-h-60 space-y-2 overflow-y-auto">
@@ -76,37 +75,59 @@
                 <input class="flex-grow rounded-lg border-gray-300 text-sm focus:ring-indigo-500"
                        type="text"
                        wire:model="newRuleText"
-                       placeholder="Nueva regla (ej: No operar noticias)..."
+                       placeholder="{{ __('labels.placeholder_new_rule') }}"
                        wire:keydown.enter="addMasterRule">
                 <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700"
                         wire:click="addMasterRule">
-                    Añadir
+                    {{ __('labels.add') }}
                 </button>
             </div>
 
             <div class="mt-6 flex justify-end">
                 <button class="text-sm font-bold text-gray-500 hover:text-gray-700"
-                        @click="show = false">Cerrar</button>
+                        @click="show = false">{{ __('labels.close_s') }}</button>
             </div>
         </div>
     </div>
 
     {{-- HEADER FIJO --}}
+    {{-- HEADER FIJO --}}
     <div class="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
         <div class="mx-auto flex max-w-7xl items-center justify-between">
-            <h1 class="flex items-center gap-2 text-xl font-bold capitalize text-gray-900">
-                <i class="fa-solid fa-book-journal-whills text-indigo-600"></i>
-                {{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}
-            </h1>
 
-            <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow-md transition-all hover:bg-indigo-700"
+            {{-- BLOQUE NAVEGACIÓN + TÍTULO --}}
+            <div class="flex items-center gap-4">
+
+                {{-- Botón Día Anterior --}}
+                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
+                        wire:click="prevDay">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+
+                {{-- Título --}}
+                <h1 class="flex select-none items-center gap-2 text-xl font-bold capitalize text-gray-900">
+                    <i class="fa-solid fa-book-journal-whills text-indigo-600"></i>
+                    {{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}
+                </h1>
+
+                {{-- Botón Día Siguiente --}}
+                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
+                        wire:click="nextDay">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+
+
+            {{-- BOTÓN GUARDAR (Tu código original) --}}
+            <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow-md transition-all hover:bg-indigo-700 disabled:opacity-50"
                     wire:click="save"
                     wire:loading.attr="disabled">
-                <span wire:loading.remove>Guardar</span>
+                <span wire:loading.remove>{{ __('labels.save') }}</span>
                 <span wire:loading><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </button>
         </div>
     </div>
+
 
     <div class="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-12">
 
@@ -119,7 +140,7 @@
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2">
                     <i class="fa-solid fa-sun text-orange-400"></i>
-                    <h3 class="text-xs font-bold uppercase text-gray-700">Pre-Market Mood</h3>
+                    <h3 class="text-xs font-bold uppercase text-gray-700">{{ __('labels.premarket_mood') }}</h3>
                 </div>
                 <div class="space-y-4 p-4">
                     <div class="grid grid-cols-4 gap-2">
@@ -133,7 +154,7 @@
                     <textarea class="w-full rounded border-gray-200 bg-gray-50 p-2 text-xs"
                               wire:model.defer="pre_market_notes"
                               rows="2"
-                              placeholder="Notas previas..."></textarea>
+                              placeholder="{{ __('labels.previous_notes') }}"></textarea>
                 </div>
             </div>
 
@@ -141,18 +162,18 @@
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2">
                     <h3 class="text-xs font-bold uppercase text-gray-700">
-                        <i class="fa-solid fa-check-double mr-1 text-emerald-500"></i> Objetivos
+                        <i class="fa-solid fa-check-double mr-1 text-emerald-500"></i> {{ __('labels.objectives') }}
                     </h3>
                     <div class="flex gap-2">
                         {{-- Botón Configurar Plantilla --}}
                         <button class="text-gray-400 hover:text-indigo-600"
                                 wire:click="openRulesManager"
-                                title="Editar Plantilla Global">
+                                title="{{ __('labels.edit_global_template') }}">
                             <i class="fa-solid fa-cog text-xs"></i>
                         </button>
                         {{-- Botón Añadir Manual (para excepciones del día) --}}
                         <button class="text-xs font-bold text-indigo-600 hover:underline"
-                                wire:click="addObjective">+ Add</button>
+                                wire:click="addObjective">{{ __('labels.add') }}</button>
                     </div>
                 </div>
                 <div class="space-y-2 p-4">
@@ -164,7 +185,7 @@
                             <input class="flex-grow border-b border-gray-100 bg-transparent p-1 text-xs focus:border-indigo-300 focus:ring-0"
                                    type="text"
                                    wire:model.defer="daily_objectives.{{ $index }}.text"
-                                   placeholder="Objetivo...">
+                                   placeholder="{{ __('labels.objective...') }}">
                             <button class="text-gray-300 hover:text-red-500"
                                     wire:click="removeObjective({{ $index }})"><i class="fa-solid fa-times text-xs"></i></button>
                         </div>
@@ -186,7 +207,7 @@
 
                 {{-- Días Semana --}}
                 <div class="mb-2 grid grid-cols-7 text-center text-[10px] font-bold text-gray-400">
-                    <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+                    <span>{{ __('labels.m') }}</span><span>{{ __('labels.t') }}</span><span>{{ __('labels.w') }}</span><span>{{ __('labels.tu') }}</span><span>{{ __('labels.f') }}</span><span>{{ __('labels.s') }}</span><span>{{ __('labels.su') }}</span>
                 </div>
 
                 {{-- Grid --}}
@@ -212,7 +233,7 @@
             <div class="grid grid-cols-4 gap-4">
                 {{-- PnL --}}
                 <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">PnL Día</p>
+                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.pnl_day') }}</p>
                     <p class="{{ $dayPnL >= 0 ? 'text-emerald-500' : 'text-rose-500' }} text-xl font-black">
                         {{ $dayPnL >= 0 ? '+' : '' }}{{ number_format($dayPnL, 2) }}$
                     </p>
@@ -220,7 +241,7 @@
 
                 {{-- Trades --}}
                 <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">Trades</p>
+                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.trades') }}</p>
                     <p class="text-xl font-black text-gray-800">{{ count($dayTrades) }}</p>
                 </div>
 
@@ -229,7 +250,7 @@
                     $totalErrors = collect($mistakesSummary)->sum();
                 @endphp
                 <div class="rounded-xl border border-rose-100 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-rose-400">Errores</p>
+                    <p class="text-[10px] font-bold uppercase text-rose-400">{{ __('labels.errors') }}</p>
                     <p class="{{ $totalErrors > 0 ? 'text-rose-600' : 'text-gray-400' }} text-xl font-black">
                         {{ $totalErrors }}
                     </p>
@@ -237,7 +258,7 @@
 
                 {{-- Disciplina --}}
                 <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">Disciplina</p>
+                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.discipline') }}</p>
                     @php $score = number_format($entry->discipline_score, 1) ?? 0; @endphp
                     <span class="{{ $score >= 8 ? 'text-emerald-500' : ($score >= 5 ? 'text-amber-500' : 'text-rose-500') }} text-xl font-black">
                         {{ $score }}
@@ -255,12 +276,12 @@
 
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-list-ul text-gray-400"></i>
-                        <span class="text-xs font-bold uppercase text-gray-700">Desglose de Operaciones</span>
+                        <span class="text-xs font-bold uppercase text-gray-700">{{ __('labels.breakdown_operations') }}</span>
                     </div>
 
                     <div class="flex items-center gap-3">
                         <span class="text-[10px] font-medium text-gray-400">
-                            {{ count($dayTrades) }} registros
+                            {{ count($dayTrades) }} {{ __('labels.registers') }}
                         </span>
                         {{-- Flecha que rota --}}
                         <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
@@ -293,7 +314,7 @@
                                             {{-- Simbolo y Dirección --}}
                                             <div class="flex items-center gap-2">
                                                 <span class="text-sm font-bold text-gray-800">
-                                                    {{ $trade->tradeAsset->name ?? 'Unknown' }}
+                                                    {{ $trade->tradeAsset->name ?? __('labels.unknown') }}
                                                 </span>
                                                 <span class="{{ $trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded px-1.5 text-[9px] font-black uppercase">
                                                     {{ $trade->direction }}
@@ -319,7 +340,7 @@
                                             {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }}$
                                         </span>
                                         <span class="absolute bottom-1 right-4 text-[10px] font-bold text-indigo-500 opacity-0 transition-opacity group-hover:opacity-100">
-                                            Ver <i class="fa-solid fa-arrow-right ml-0.5"></i>
+                                            {{ __('labels.saw') }} <i class="fa-solid fa-arrow-right ml-0.5"></i>
                                         </span>
                                     </div>
                                 </div>
@@ -328,7 +349,7 @@
                     @else
                         <div class="flex h-32 flex-col items-center justify-center text-center text-gray-400">
                             <i class="fa-solid fa-box-open mb-2 text-2xl opacity-20"></i>
-                            <p class="text-xs italic">Sin actividad en este día.</p>
+                            <p class="text-xs italic">{{ __('labels.no_activity_for_today') }}</p>
                         </div>
                     @endif
                 </div>
@@ -344,7 +365,7 @@
                 <div class="flex items-center justify-between gap-2 rounded-t-xl border-b border-gray-100 bg-gray-50 px-4 py-2">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-pen-nib text-indigo-500"></i>
-                        <span class="text-xs font-bold uppercase text-gray-700">Bitácora de Sesión</span>
+                        <span class="text-xs font-bold uppercase text-gray-700">{{ __('labels.session_log') }}</span>
                     </div>
 
                     <button class="group flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1 text-[10px] font-bold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
@@ -353,12 +374,12 @@
                         <span class="flex items-center gap-1"
                               wire:loading.remove
                               wire:target="generateAiDraft">
-                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Auto-Redactar
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> {{ __('labels.auto_write') }}
                         </span>
                         <span class="flex items-center gap-1"
                               wire:loading
                               wire:target="generateAiDraft">
-                            <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i> Escribiendo...
+                            <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i> {{ __('labels.writting') }}
                         </span>
                     </button>
                 </div>

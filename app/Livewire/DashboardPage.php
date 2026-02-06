@@ -11,10 +11,16 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use App\Services\TradingRulesService; // <--- Importamos el servicio
+use App\WithAiLimits;
 
 class DashboardPage extends Component
 {
+    use WithFileUploads; // <--- IMPORTANTE: Usar el Trait
+    use WithAiLimits; // <--- 2. Usar el Trait
     // ? Variables Nuevas
     public $selectedAccounts = []; // Aquí se guardarán los IDs (ej: [1, 5, 8])
     public $availableAccounts = [];
@@ -25,6 +31,7 @@ class DashboardPage extends Component
     public $avgPnLChartData = []; // Variable para el gráfico
     public $dailyWinLossData = []; // Diario Ganancias Perdidas
     public $pnlTotal = 0;
+    public $pnlTotal_perc = 0;
     // Estado del Calendario
     public $calendarDate; // Fecha de referencia (ej: 2026-01-01)
     public $calendarGrid = []; // Array con los datos para la vista
@@ -50,8 +57,21 @@ class DashboardPage extends Component
     public $journalMood = null;
     public $tags = [];
 
+    // NUEVO: Propiedad para editar la nota
+    public $notes = '';
+    public $isSavingNotes = false;
+    public $planStatus = null;
+
     // 1. Añade esto a las propiedades públicas
     public $heatmapData = [];
+
+    public $recentNotes = []; // <--- NUEVA PROPIEDAD
+
+    // NUEVO: Propiedad para la subida de imagen temporal
+    public $uploadedScreenshot;
+
+    // NUEVO: Variable primitiva para controlar la vista de la imagen
+    public $currentScreenshot = null;
 
     public function mount()
     {
@@ -118,6 +138,15 @@ class DashboardPage extends Component
             'count_losses' => (int)$losses  // 👈 Nuevo: Para la pastilla roja
         ];
 
+        // --- NUEVO: Cargar últimas 5 notas ---
+        $this->recentNotes = $this->getTradesQuery()
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '') // Que no estén vacías
+            ->with('tradeAsset') // Cargar el activo para mostrar el nombre
+            ->orderBy('exit_time', 'desc')
+            ->take(4) // Top 4 para que cuadre en diseño
+            ->get();
+
         // ------------------------------------------------------
         // 1. CÁLCULO DE PNL TOTAL (Optimizado usando Accounts)
         // ------------------------------------------------------
@@ -143,6 +172,7 @@ class DashboardPage extends Component
 
         // Reutilizamos $query que ya tiene los filtros de cuenta, usuario y status 'burned' aplicados.
         $this->pnlTotal = $query->sum('pnl');
+        $this->pnlTotal_perc = $query->sum('pnl_percentage');
 
 
         // ------------------------------------------------------
@@ -206,6 +236,12 @@ class DashboardPage extends Component
 
         // 7. Calculo del MAPA DE CALOR TEMPORAL
         $this->calculateHeatmap();
+
+        // --- 5. PLAN DIARIO (WIDGET OBJETIVOS) ---
+        // Instanciamos el servicio manualmente para no depender de inyección en métodos que no son render/mount
+        $rulesService = app(TradingRulesService::class);
+        $this->planStatus = $rulesService->checkDashboardStatus($this->selectedAccounts);
+        // dd($this->planStatus);
     }
 
     public function getRecentTradesProperty()
@@ -240,7 +276,7 @@ class DashboardPage extends Component
 
         // Inicializamos la estructura para ApexCharts (5 días x 24 horas)
         // ApexCharts Heatmap espera: [{ name: 'Lunes', data: [{x: '00:00', y: 50}, ...] }]
-        $days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        $days = [__('labels.monday'), __('labels.tuesday'), __('labels.wednesday'), __('labels.thursday'), __('labels.friday')];
         $chartData = [];
 
         foreach ($days as $index => $dayName) {
@@ -289,7 +325,7 @@ class DashboardPage extends Component
         // Punto de partida (Opcional, para que el gráfico nazca en 0)
         // Si tienes trades muy antiguos, quizás prefieras no poner esto, 
         // pero el usuario pidió "empezando por 0".
-        $labels[] = 'Inicio';
+        $labels[] = __('labels.start_without_flag');
         $data[] = 0;
 
         $runningTotal = 0;
@@ -344,7 +380,7 @@ class DashboardPage extends Component
 
         // Agrupamos por día para obtener el PnL diario
         $trades = $query->whereBetween('exit_time', [$startOfCalendar, $endOfCalendar])
-            ->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl')
+            ->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl, SUM(pnl_percentage) as daily_percent')
             ->groupByRaw('DATE(exit_time)')
             ->get()
             ->keyBy('date'); // Indexamos por fecha para búsqueda rápida
@@ -367,7 +403,7 @@ class DashboardPage extends Component
             // Nota: En la DB la fecha puede venir como '2026-01-13' (string)
             $dayData = $trades->get($dayString);
             $pnl = $dayData ? $dayData->daily_pnl : null;
-
+            $percentage = $dayData ? $dayData->daily_percent : null;
             // Datos del Journal (Buscamos por objeto Carbon o String según tu cast)
             // Al usar keyBy('date') en Eloquent con cast 'date', la clave suele ser string Y-m-d 00:00:00
             // Para asegurar, buscamos flexiblemente:
@@ -379,6 +415,7 @@ class DashboardPage extends Component
                 'day' => $currentDay->format('d'),
                 'date' => $dayString,
                 'pnl' => $pnl,
+                'pnl_percentage' => $percentage,
                 // NUEVOS DATOS PARA LA VISTA
                 'journal_mood' => $journalData ? $journalData->mood : null,
                 'has_notes' => $journalData && !empty($journalData->content),
@@ -427,7 +464,7 @@ class DashboardPage extends Component
 
         // 2. Validación: ¿Hay operaciones?
         if (empty($this->dayTrades) || count($this->dayTrades) == 0) {
-            $this->aiAnalysis = "No hay operaciones en este día para analizar.";
+            $this->aiAnalysis = __('labels.not_operations_to_analyze');
             $this->isAnalyzing = false;
             return;
         }
@@ -455,7 +492,7 @@ class DashboardPage extends Component
                     $extraInfo = "| MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}";
                 }
 
-                return "- [{$hora}] {$simbolo} ({$tipo}) | Lotes: {$trade->size} | PnL: {$trade->pnl} {$extraInfo}";
+                return "- [{$hora}] {$simbolo} ({$tipo}) | " . __('labels.lots') . " {$trade->size} | PnL: {$trade->pnl} {$extraInfo}";
             })->join("\n");
 
         Log::info($tradesText);
@@ -508,11 +545,11 @@ class DashboardPage extends Component
                 $this->aiAnalysis = $response->json()['candidates'][0]['content']['parts'][0]['text'];
             } else {
                 Log::error('Error Gemini API', ['body' => $response->body()]);
-                $this->aiAnalysis = "⚠️ El Coach IA no está disponible en este momento (Error API).";
+                $this->aiAnalysis = __("labels.coach_IA_not_available");
             }
         } catch (\Exception $e) {
             Log::error('Excepción Gemini', ['message' => $e->getMessage()]);
-            $this->aiAnalysis = "⚠️ Ocurrió un error técnico al contactar con la IA.";
+            $this->aiAnalysis = __("labels.coach_IA_error");
         }
 
         $this->isAnalyzing = false;
@@ -552,8 +589,13 @@ class DashboardPage extends Component
     {
         // Cargamos el trade con todas sus relaciones necesarias para el detalle
         // (Incluimos 'account' y 'asset' por si acaso no estaban cargadas antes)
+        $this->notes = ''; // Resetear notas
+        $this->uploadedScreenshot = null; // Resetear input de archivo
         $this->selectedTrade = Trade::with(['account', 'tradeAsset'])->find($tradeId);
         Log::info('Trade seleccionado' . $this->selectedTrade->screenshot);
+        // Cargar la nota existente
+        $this->notes = $this->selectedTrade->notes;
+        $this->currentScreenshot = $this->selectedTrade->screenshot;
         // 2. DISPARAR EVENTO PARA EL GRÁFICO (Esto es lo nuevo)
         // Enviamos la ruta directamente al navegador
         // $this->dispatch('trade-selected', path: $this->selectedTrade->chart_data_path);
@@ -565,6 +607,68 @@ class DashboardPage extends Component
             direction: $this->selectedTrade->direction
         );
     }
+
+    /**
+     * NUEVO: Se ejecuta automáticamente cuando 'uploadedScreenshot' cambia
+     * (es decir, cuando el usuario suelta el archivo en el input).
+     */
+    public function updatedUploadedScreenshot()
+    {
+        $this->validate([
+            'uploadedScreenshot' => 'image|max:10240', // 10MB
+        ]);
+
+        if ($this->selectedTrade) {
+            // 1. Guardar archivo físico
+            $path = $this->uploadedScreenshot->store('screenshots', 'public');
+
+            // 2. Limpieza de archivo anterior
+            if ($this->selectedTrade->screenshot && Storage::disk('public')->exists($this->selectedTrade->screenshot)) {
+                Storage::disk('public')->delete($this->selectedTrade->screenshot);
+            }
+
+            // 3. Actualizar Base de Datos (Esto ya lo hacías bien)
+            $this->selectedTrade->update([
+                'screenshot' => $path
+            ]);
+
+            // ---------------------------------------------------------
+            // EL CAMBIO CLAVE:
+            // En lugar de refresh(), recargamos el objeto COMPLETO desde cero.
+            // Esto obliga a PHP a traer el dato fresco y las relaciones.
+            // ---------------------------------------------------------
+            $this->selectedTrade = Trade::with(['account', 'tradeAsset', 'mistakes'])
+                ->find($this->selectedTrade->id);
+            // EL FIX: Actualizamos la variable primitiva manualmente
+            $this->currentScreenshot = $path;
+
+            // 4. Limpiar el input temporal
+            $this->reset('uploadedScreenshot');
+
+            // 5. Opcional: Forzar un evento de navegador para asegurar que Alpine se entere
+            $this->dispatch('screenshot-updated');
+        }
+    }
+
+    // NUEVO: Función para guardar notas
+    public function saveNotes()
+    {
+        if ($this->selectedTrade) {
+            $this->isSavingNotes = true;
+
+            $this->selectedTrade->update([
+                'notes' => $this->notes
+            ]);
+
+            // Despachar evento para actualizar dashboard si es necesario
+            $this->dispatch('trade-updated');
+
+            // Simular un pequeño delay para feedback visual
+            usleep(200000);
+            $this->isSavingNotes = false;
+        }
+    }
+
 
     public function analyzeIndividualTrade()
     {
@@ -585,34 +689,20 @@ class DashboardPage extends Component
             - Eficiencia: MAE (Contra): {$trade->mae_price} | MFE (Favor): {$trade->mfe_price}
         ";
 
-        $prompt = "
-            Realiza una auditoría técnica y psicológica de esta operación de trading.
-            Sé estricto, objetivo y profesional.
-            
-            DATOS Y CONTEXTO:
-            $contextoDatos
-            
-            INSTRUCCIONES DE ANÁLISIS (Usa estos criterios):
-            1. ANÁLISIS DE ESTRUCTURA (Visual):
-               - Si hay imagen: ¿La entrada respeta Soportes/Resistencias, Order Blocks o Tendencia?
-               - ¿Fue una entrada precisa ('Sniper') o persecución del precio (FOMO)?
-            2. EFICIENCIA DE EJECUCIÓN (Datos MAE/MFE):
-               - MAE vs PnL: ¿Soportó mucho drawdown para ganar poco? (Riesgo/Beneficio invertido).
-               - MFE vs Salida: ¿Dejó mucho dinero en la mesa por miedo (cierre prematuro)?
-            3. PSICOLOGÍA IMPLÍCITA:
-               - Basado en duración y resultado: ¿Planificado o Impulsivo?
+        // 2. Preparar los DATOS (Traducimos también las etiquetas: Activo, Tipo, etc.)
+        // Usamos __('ai.labels.x') para que la data también esté en el idioma correcto
+        $contextoDatos = "
+        " . __('ai.labels.asset') . ": {$trade->tradeAsset->name}
+        " . __('ai.labels.type') . ": " . strtoupper($trade->direction) . "
+        " . __('ai.labels.entry') . ": {$trade->entry_price} | " . __('ai.labels.exit') . ": {$trade->exit_price}
+        " . __('ai.labels.result') . ": {$trade->pnl} (Lots: {$trade->size})
+        " . __('ai.labels.duration') . ": {$trade->duration_minutes} min
+        " . __('ai.labels.efficiency') . ": MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}
+    ";
 
-            REGLAS DE FORMATO:
-            - NO escribas introducciones, saludos ni frases dramáticas tipo 'Escucha bien'.
-            - Empieza DIRECTAMENTE con el primer punto del formato.
-
-            FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
-            - **🎯 Calidad de Entrada:** [Mala/Regular/Excelente] + Explicación técnica breve.
-            - **🧠 Gestión (Miedo/Codicia):** Análisis basado en MAE/MFE y salida.
-            - **⚖️ Veredicto Final:** Conclusión directa sobre si la ejecución fue profesional o amateur.
-            - **💡 Consejo de Mejora:** Una acción táctica concreta para aplicar en la siguiente operación similar.
-            - **🏆 Nota de Ejecución:** [0/10] (Puntúa la técnica, no el dinero ganado).
-        ";
+        // 3. Obtener el PROMPT traducido e inyectarle el contexto
+        // Laravel sustituirá el marcador ':context' que pusimos en el archivo php por la variable $contextoDatos
+        $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
         // 3. Preparar el Payload para Gemini
         $parts = [
             ['text' => $prompt]
@@ -667,6 +757,32 @@ class DashboardPage extends Component
         }
 
         $this->isAnalyzingTrade = false;
+    }
+
+    public function openTradeFromNotes($tradeId)
+    {
+        // 1. Obtenemos los IDs de la lista de NOTAS recientes
+        // (Asegúrate de usar la misma query que usas para pintar la lista visual)
+        $ids = collect($this->recentNotes)->pluck('id')->toArray();
+
+        $this->dispatch(
+            'open-trade-detail',
+            tradeId: $tradeId,
+            tradeIds: $ids
+        );
+    }
+
+    public function openTradeFromTable($tradeId)
+    {
+        // 1. Obtenemos los IDs de la lista de TRADES recientes (la tabla grande)
+        $ids = $this->recentTrades->pluck('id')->toArray();
+
+        // 2. Disparamos el evento con el contexto "Tabla"
+        $this->dispatch(
+            'open-trade-detail',
+            tradeId: $tradeId,
+            tradeIds: $ids
+        );
     }
 
 

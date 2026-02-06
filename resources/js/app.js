@@ -32,5 +32,35 @@ import "./dashboard/dashboard.js";
 import "./journal/journal.js";
 import "./trades/trades.js";
 import "./economic/economic.js";
+import "./playbook/playbook.js";
+import "./session/session.js";
+import "./session_history/session_history.js";
+import "./propfirms/propfirms.js";
+
+document.addEventListener("alpine:init", () => {
+    // Store Global de Preferencias
+    Alpine.store("viewMode", {
+        mode: localStorage.getItem("tf_view_mode") || "currency", // 'currency' o 'percentage'
+
+        toggle() {
+            this.mode = this.mode === "currency" ? "percentage" : "currency";
+            localStorage.setItem("tf_view_mode", this.mode);
+        },
+
+        format(amount, percent) {
+            // Helper para añadir el + si es positivo (el - sale solo)
+            const formatNumber = (num, symbol) => {
+                const n = Number(num);
+                const sign = n >= 0 ? "+" : "";
+                return sign + n.toFixed(2) + " " + symbol;
+            };
+
+            if (this.mode === "percentage") {
+                return formatNumber(percent, "%");
+            }
+            return formatNumber(amount, "$");
+        },
+    });
+});
 
 Alpine.plugin(translations);

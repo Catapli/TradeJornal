@@ -1,4 +1,4 @@
-@props(['objective'])
+@props(['objective', 'currency' => '$'])
 
 @php
     // 1. CONFIGURACIÓN VISUAL
@@ -86,10 +86,10 @@
     <div class="relative z-10 mt-5 flex items-baseline gap-1">
         @if ($objective['unit'] === 'money')
             <span class="text-2xl font-black text-gray-900">
-                {{ number_format($objective['current_value'], 2) }}€
+                {{ number_format($objective['current_value'], 2) }} . {{ $currency }}
             </span>
             <span class="text-xs font-semibold text-gray-400">
-                / {{ number_format($objective['target_value'], 0) }} €
+                / {{ number_format($objective['target_value'], 0) }} {{ $currency }}
             </span>
         @elseif($objective['unit'] === 'days')
             <span class="text-2xl font-black text-gray-900">
@@ -119,7 +119,7 @@
             {{-- Texto de ayuda para reglas de pérdida --}}
             @if ($isLossRule && $objective['status'] !== 'failed')
                 <p class="mt-1 text-right text-[10px] text-gray-400">
-                    Te quedan <span class="font-bold text-gray-600">{{ number_format($objective['target_value'] - $objective['current_value'], 2) }} €</span>
+                    Te quedan <span class="font-bold text-gray-600">{{ number_format($objective['target_value'] - $objective['current_value'], 2) }} {{ $currency }}</span>
                 </p>
             @endif
         </div>

@@ -34,8 +34,6 @@ Route::controller(SocialiteController::class)->group(function () {
 });
 
 
-// ? Rutas protegidas por si es admin
-// Route::middleware('is_admin')->group(function () {
 
 
 
@@ -73,6 +71,30 @@ Route::middleware([
         return view('reports.index');
     })->name('reports');
 
+    Route::get('/playbook', function () {
+        return view('playbook.index');
+    })->name('playbook');
+
+    Route::get('/session', function () {
+        return view('session.index');
+    })->name('session');
+
+    Route::get('/session-history', function () {
+        return view('session-history.index');
+    })->name('session-history');
+
+    Route::get('/pricing', function () {
+        return view('pricing.index');
+    })->name('pricing');
+
+    Route::get('/checkout/success', function () {
+        return redirect()->route('dashboard')->with('status', '¡Pago realizado con éxito! Bienvenido a Pro 🚀');
+    })->name('checkout.success'); // <--- IMPORTANTE: Este es el nombre que busca Laravel
+
+    Route::get('/checkout/cancel', function () {
+        return redirect()->route('pricing')->with('error', 'El proceso de pago fue cancelado.');
+    })->name('checkout.cancel');  // <--- Y este también
+
 
     //? Vista Rols
     // Route::get('/rols', function () {
@@ -106,6 +128,19 @@ Route::middleware([
         ->middleware('auth')
         ->name('journal.upload');
 });
+
+// Grupo protegido por Autenticación Y SuperAdmin
+Route::middleware(['auth', 'superadmin'])->group(function () {
+
+    Route::get('/admin/prop-firms', function () {
+        return view('admin.propfirm.index');
+    })->name('manage-prop-frim');
+
+    Route::get('/admin/logs', function () {
+        return view('admin.logs.index');
+    })->name('manage-logs');
+});
+
 
 Route::get('/health', function () {
     return response('ok', 200);

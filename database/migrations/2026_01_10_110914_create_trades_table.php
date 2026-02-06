@@ -16,7 +16,8 @@ return new class extends Migration
             $table->foreignId('account_id')->constrained()->onDelete('cascade');
             $table->foreignId('trade_asset_id')->constrained()->onDelete('cascade');
             $table->foreignId('strategy_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('ticket')->unique(); // ID único broker
+            $table->foreignId('trading_session_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('ticket')->nullable()->unique(); // ID único broker
             $table->enum('direction', ['long', 'short']);
             $table->decimal('entry_price', 12, 5);
             $table->decimal('exit_price', 12, 5);
@@ -24,19 +25,27 @@ return new class extends Migration
             $table->decimal('pnl', 10, 2);
             $table->unsignedBigInteger('duration_minutes');
             $table->timestamp('entry_time');
-            $table->timestamp('exit_time')->nullable();
+            $table->timestamp('exit_time');
             $table->text('notes')->nullable();
+            $table->json('checklist_data')->nullable();
+            // Emoción específica del trade
+            $table->string('mood')->nullable();
+
             $table->string('screenshot')->nullable();
             $table->text('ai_analysis')->nullable();
             $table->string('chart_data_path')->nullable();
+            $table->decimal("pnl_percentage", 8, 4)->nullable();
+            $table->string('position_id')->nullable();
+            $table->json('executions_data')->nullable();
+
             // MAE: Maximum Adverse Excursion (El peor precio/pérdida máxima latente)
-            $table->decimal('mae_price', 16, 8)->nullable()->after('pnl');
+            $table->decimal('mae_price', 16, 8)->nullable();
 
             // MFE: Maximum Favorable Excursion (El mejor precio/ganancia máxima latente)
-            $table->decimal('mfe_price', 16, 8)->nullable()->after('mae_price');
+            $table->decimal('mfe_price', 16, 8)->nullable();
 
 
-            $table->index(['account_id']);
+            $table->index(['account_id', 'position_id']);
             $table->index('entry_time');
             $table->index(['exit_time', 'id']);
             $table->timestamps();

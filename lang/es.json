@@ -17,5 +17,24 @@
     "titles": {
         "create_account": "Crear Cuenta",
         "edit_account": "Editar Cuenta"
+    },
+
+    "labels": {
+        "loss": "Pérdida",
+        "not_activity": "Sin Actividad",
+        "profit": "Ganancia",
+        "not_operations": "Sin Operaciones",
+        "profits": "Ganadas",
+        "losses": "Perdidas",
+        "days": " días",
+        "pnl_daily": "PnL Diario",
+        "avg_win": "Ganancia Media",
+        "avg_loss": "Pérdida Media",
+        "avg": "Promedio",
+        "not_data": "Sin datos",
+        "winners": "Ganadores",
+        "lossers": "Perdedores",
+        "acumulative_pnl": "PnL Acumulado",
+        "order_active": "Orden / Activo"
     }
 }

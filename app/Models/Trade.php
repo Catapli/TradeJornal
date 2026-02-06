@@ -27,6 +27,7 @@ class Trade extends Model
         'reward_amount' => 'decimal:2',
         'entry_time' => 'datetime',
         'exit_time' => 'datetime',
+        'executions_data' => 'array',
     ];
 
     public function account(): BelongsTo
@@ -48,5 +49,10 @@ class Trade extends Model
     {
         // Asumiendo que ya creaste el modelo Mistake y la tabla pivote trade_mistake
         return $this->belongsToMany(\App\Models\Mistake::class, 'trade_mistake');
+    }
+
+    public function violations()
+    {
+        return $this->hasMany(TradeViolation::class);
     }
 }

@@ -17,16 +17,17 @@ class Log extends Model
         $guarded = ['id'];
     //
 
-    public function user(): BelongsTo
+    protected $casts = [
+        'resolved'    => 'boolean',
+        'resolved_at' => 'datetime',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
+    ];
+
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    public function town(): BelongsTo
-    {
-        return $this->belongsTo(Town::class);
-    }
-
 
     protected function createdAt(): Attribute
     {

@@ -35,7 +35,7 @@
                     <div class="flex-shrink-0 border-b border-gray-100 bg-white px-4 pb-4 pt-5 sm:p-6">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-xl font-bold leading-6 text-gray-900">Resumen del Día</h3>
+                                <h3 class="text-xl font-bold leading-6 text-gray-900"> {{ __('labels.summary_day') }}</h3>
                                 <p class="mt-1 text-sm text-gray-500">
                                     {{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('l, d \d\e F \d\e Y') }}
                                 </p>
@@ -55,48 +55,51 @@
                             <div class="flex flex-col space-y-6 lg:col-span-2">
 
                                 {{-- A. SECCIÓN COACH IA --}}
-                                <div class="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
-                                    <div class="flex flex-col gap-4">
-                                        <div class="flex items-center justify-between">
-                                            <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
-                                                <i class="fa-solid fa-robot text-indigo-600"></i> Análisis Inteligente
-                                            </h4>
-                                            @if (!$aiAnalysis)
-                                                <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
-                                                        wire:click="analyzeDayWithAi"
-                                                        wire:loading.attr="disabled">
-                                                    <span class="flex items-center gap-2"
-                                                          wire:loading.remove
-                                                          wire:target="analyzeDayWithAi">
-                                                        <span>Analizar Día</span> <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                                    </span>
-                                                    <span class="flex items-center gap-2"
-                                                          wire:loading
-                                                          wire:target="analyzeDayWithAi">
-                                                        <i class="fa-solid fa-circle-notch fa-spin"></i> Analizando...
-                                                    </span>
-                                                </button>
+                                @if (Auth::user()->subscribed('default'))
+                                    <div class="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
+                                        <div class="flex flex-col gap-4">
+                                            <div class="flex items-center justify-between">
+                                                <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
+                                                    <i class="fa-solid fa-robot text-indigo-600"></i> {{ __('labels.intelligent_analysis') }}
+                                                </h4>
+                                                @if (!$aiAnalysis)
+                                                    <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+                                                            wire:click="analyzeDayWithAi"
+                                                            wire:loading.attr="disabled">
+                                                        <span class="flex items-center gap-2"
+                                                              wire:loading.remove
+                                                              wire:target="analyzeDayWithAi">
+                                                            <span>{{ __('labels.analyse_day') }}</span> <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                                        </span>
+                                                        <span class="flex items-center gap-2"
+                                                              wire:loading
+                                                              wire:target="analyzeDayWithAi">
+                                                            <i class="fa-solid fa-circle-notch fa-spin"></i> {{ __('labels.analyzing') }}
+                                                        </span>
+                                                    </button>
+                                                @endif
+                                            </div>
+
+                                            {{-- Loading Skeleton --}}
+                                            <div class="animate-pulse space-y-2"
+                                                 wire:loading
+                                                 wire:target="analyzeDayWithAi">
+                                                <div class="h-4 w-3/4 rounded bg-indigo-50"></div>
+                                                <div class="h-4 w-1/2 rounded bg-indigo-50"></div>
+                                            </div>
+
+                                            {{-- Resultado IA --}}
+                                            @if ($aiAnalysis)
+                                                <div class="relative rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+                                                    <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                                                            wire:click="$set('aiAnalysis', null)"><i class="fa-solid fa-times"></i></button>
+                                                    <div class="prose prose-sm max-w-none text-gray-800">{!! Str::markdown($aiAnalysis) !!}</div>
+                                                </div>
                                             @endif
                                         </div>
-
-                                        {{-- Loading Skeleton --}}
-                                        <div class="animate-pulse space-y-2"
-                                             wire:loading
-                                             wire:target="analyzeDayWithAi">
-                                            <div class="h-4 w-3/4 rounded bg-indigo-50"></div>
-                                            <div class="h-4 w-1/2 rounded bg-indigo-50"></div>
-                                        </div>
-
-                                        {{-- Resultado IA --}}
-                                        @if ($aiAnalysis)
-                                            <div class="relative rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
-                                                <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
-                                                        wire:click="$set('aiAnalysis', null)"><i class="fa-solid fa-times"></i></button>
-                                                <div class="prose prose-sm max-w-none text-gray-800">{!! Str::markdown($aiAnalysis) !!}</div>
-                                            </div>
-                                        @endif
                                     </div>
-                                </div>
+                                @endif
+
 
                                 {{-- B. TABLA DE OPERACIONES (Tu código original) --}}
                                 <div class="flex flex-grow flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -106,7 +109,7 @@
                                          wire:loading.flex
                                          wire:target="openDayDetails">
                                         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-                                        <p class="mt-2 text-sm text-gray-500">Cargando...</p>
+                                        <p class="mt-2 text-sm text-gray-500"> {{ __('labels.loading') }}</p>
                                     </div>
 
                                     {{-- Tabla --}}
@@ -114,20 +117,21 @@
                                          wire:loading.remove
                                          wire:target="openDayDetails">
                                         @if (count($dayTrades) > 0)
-                                            <table class="min-w-full divide-y divide-gray-200">
+                                            <table class="h-full min-w-full divide-y divide-gray-200">
                                                 <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
                                                     <tr>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Hora</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Símbolo</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tipo</th>
-                                                        <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Ejecución</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lotes</th>
-                                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Resultado</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.hour') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.symbol') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.type') }}</th>
+                                                        <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.execution') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.lots') }}</th>
+                                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.result') }}</th>
                                                         <th class="px-4 py-3"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-200 bg-white">
                                                     @foreach ($dayTrades as $trade)
+                                                        {{-- @dd($dayTrades) --}}
                                                         {{-- COPIAR AQUÍ TU TR DENTRO DEL FOREACH EXACTAMENTE COMO LO TENÍAS --}}
                                                         <tr class="group cursor-pointer transition hover:bg-indigo-50"
                                                             @click="currentView = 'detail'; $wire.selectTrade({{ $trade->id }})">
@@ -142,55 +146,58 @@
                                                                     {{ strtoupper($trade->direction) }}
                                                                 </span>
                                                             </td>
-                                                            {{-- BARRA MAE/MFE (Zella Scale) CON TOOLTIPS --}}
+                                                            {{-- BARRA MAE/MFE CON CÁLCULOS CORREGIDOS --}}
                                                             <td class="px-2 py-3 align-middle">
                                                                 @if ($trade->mae_price && $trade->mfe_price)
                                                                     @php
-                                                                        // 1. Cálculos de Distancia (Puntos)
+                                                                        // 1. Distancias Absolutas
                                                                         $distMae = abs($trade->entry_price - $trade->mae_price);
                                                                         $distMfe = abs($trade->entry_price - $trade->mfe_price);
-                                                                        $totalRange = $distMae + $distMfe;
-                                                                        if ($totalRange == 0) {
-                                                                            $totalRange = 0.00001;
-                                                                        }
+                                                                        $distReal = abs($trade->entry_price - $trade->exit_price);
 
-                                                                        // 2. Porcentajes Visuales
+                                                                        // 2. Rango Visual
+                                                                        $totalRange = $distMae + $distMfe;
+                                                                        $totalRange = $totalRange > 0 ? $totalRange : 0.00001;
+
                                                                         $pctRed = ($distMae / $totalRange) * 100;
                                                                         $pctGreen = ($distMfe / $totalRange) * 100;
 
                                                                         // 3. Posición Marcador
-                                                                        $distExit = abs($trade->entry_price - $trade->exit_price);
-                                                                        $isProfit = ($trade->direction == 'long' && $trade->exit_price >= $trade->entry_price) || ($trade->direction == 'short' && $trade->exit_price <= $trade->entry_price);
+                                                                        $isBetterThanEntry = $trade->direction == 'long' ? $trade->exit_price >= $trade->entry_price : $trade->exit_price <= $trade->entry_price;
 
-                                                                        if ($isProfit) {
-                                                                            $markerPos = $pctRed + ($distExit / $totalRange) * 100;
+                                                                        if ($isBetterThanEntry) {
+                                                                            $markerPos = $pctRed + ($distReal / $totalRange) * 100;
                                                                         } else {
-                                                                            $markerPos = $pctRed - ($distExit / $totalRange) * 100;
+                                                                            $markerPos = $pctRed - ($distReal / $totalRange) * 100;
                                                                         }
                                                                         $markerPos = max(0, min(100, $markerPos));
 
-                                                                        // 4. CÁLCULO MONETARIO (Estimación basada en PnL Real)
-                                                                        // Calculamos cuánto vale cada punto de movimiento en dinero para este trade concreto
-                                                                        $priceDiff = $trade->exit_price - $trade->entry_price;
-                                                                        if (abs($priceDiff) < 0.0000001) {
-                                                                            $priceDiff = 0.0000001;
-                                                                        } // Evitar div por cero
+                                                                        // 4. CÁLCULO MONETARIO INTELIGENTE
+                                                                        $maeMoney = 0;
+                                                                        $mfeMoney = 0;
 
-                                                                        // Valor por punto = PnL Total / Distancia Recorrida
-                                                                        $valuePerPoint = $trade->pnl / $priceDiff;
+                                                                        // Umbral de fiabilidad: 2 pips (0.0002) aprox.
+                                                                        // Si el precio se movió MENOS que esto, el PnL es mayormente comisiones/swap
+                                                                        // y no sirve para calcular el valor del punto matemáticamente.
+                                                                        if ($distReal > 0.0002) {
+                                                                            // Cálculo exacto basado en lo que pasó
+                                                                            $valuePerPoint = abs($trade->pnl) / $distReal;
+                                                                        } else {
+                                                                            // FALLBACK: Estimación basada en Lotes (Size)
+                                                                            // Asumimos estándar Forex (100k unidades).
+                                                                            // Si operas Índices/Crypto esto será una aproximación, pero mucho mejor que 0 o Infinito.
+                                                                            $valuePerPoint = $trade->size * 100000;
+                                                                        }
 
-                                                                        // Dinero en MAE (Siempre negativo visualmente para el tooltip)
-                                                                        // Fórmula: (Precio MAE - Precio Entrada) * Valor Punto
-                                                                        $maeMoney = abs(($trade->mae_price - $trade->entry_price) * $valuePerPoint) * -1;
-
-                                                                        // Dinero en MFE (Siempre positivo visualmente)
-                                                                        $mfeMoney = abs(($trade->mfe_price - $trade->entry_price) * $valuePerPoint);
+                                                                        // Aplicamos el valor del punto a las distancias MAE/MFE
+                                                                        $maeMoney = $distMae * $valuePerPoint;
+                                                                        $mfeMoney = $distMfe * $valuePerPoint;
                                                                     @endphp
 
                                                                     {{-- CONTENEDOR PRINCIPAL --}}
-                                                                    <div class="relative mx-auto flex h-4 w-32 select-none items-center">
+                                                                    <div class="group/bar relative mx-auto flex h-4 w-32 select-none items-center">
 
-                                                                        {{-- A. CAPA VISUAL (Colores - Con Overflow Hidden) --}}
+                                                                        {{-- A. CAPA VISUAL (Colores) --}}
                                                                         <div class="pointer-events-none absolute inset-x-0 flex h-1.5 overflow-hidden rounded-full">
                                                                             <div class="h-full bg-rose-400"
                                                                                  style="width: {{ $pctRed }}%"></div>
@@ -199,36 +206,31 @@
                                                                                  style="width: {{ $pctGreen }}%"></div>
                                                                         </div>
 
-                                                                        {{-- B. CAPA INTERACTIVA (Invisible - Sin Overflow para permitir Tooltips) --}}
+                                                                        {{-- B. TOOLTIPS INTERACTIVOS --}}
                                                                         <div class="absolute inset-0 flex h-full w-full items-center">
-
-                                                                            {{-- ZONA ROJA (Hover) --}}
+                                                                            {{-- ZONA ROJA --}}
                                                                             <div class="group/red relative h-4 cursor-help"
                                                                                  style="width: {{ $pctRed }}%">
-                                                                                {{-- Tooltip Rojo --}}
                                                                                 <div
                                                                                      class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-rose-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/red:block">
-                                                                                    Máx. Riesgo: {{ number_format($maeMoney, 2) }} €
-                                                                                    {{-- Triangulito abajo --}}
+                                                                                    {{ __('labels.max_risk') }}: {{ number_format($maeMoney, 2) }} $
                                                                                     <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-900"></div>
                                                                                 </div>
                                                                             </div>
 
-                                                                            {{-- ZONA VERDE (Hover) --}}
+                                                                            {{-- ZONA VERDE --}}
                                                                             <div class="group/green relative h-4 cursor-help"
                                                                                  style="width: {{ $pctGreen }}%">
-                                                                                {{-- Tooltip Verde --}}
                                                                                 <div
                                                                                      class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/green:block">
-                                                                                    Máx. Potencial: +{{ number_format($mfeMoney, 2) }} €
-                                                                                    {{-- Triangulito abajo --}}
+                                                                                    {{ __('labels.max_potencial') }}: +{{ number_format($mfeMoney, 2) }} $
                                                                                     <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-emerald-900"></div>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
 
-                                                                        {{-- C. MARCADOR DE SALIDA (Encima de todo) --}}
-                                                                        <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm"
+                                                                        {{-- C. MARCADOR DE SALIDA --}}
+                                                                        <div class="pointer-events-none absolute z-20 h-2.5 w-1 rounded-full bg-gray-900 shadow-sm ring-1 ring-white"
                                                                              style="left: {{ $markerPos }}%; transform: translateX(-50%);">
                                                                         </div>
 
@@ -238,9 +240,21 @@
                                                                 @endif
                                                             </td>
                                                             <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600">{{ $trade->size }}</td>
-                                                            <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
-                                                                {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                                                                {{-- Contenedor del PnL --}}
+                                                                <div class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono font-black"
+                                                                     {{-- x-data vacío para inicializar el ámbito si no lo hereda --}}
+                                                                     x-data>
+                                                                    <span x-text="$store.viewMode.format({{ $trade->pnl }}, {{ $trade->pnl_percentage ?? 0 }})">
+                                                                        {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                                                    </span>
+                                                                </div>
+
+
                                                             </td>
+                                                            {{-- <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
+                                                                {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                                            </td> --}}
                                                             <td class="px-4 py-3 text-right text-gray-300">
                                                                 <i class="fa-solid fa-chevron-right group-hover:text-indigo-600"></i>
                                                             </td>
@@ -248,20 +262,52 @@
                                                     @endforeach
                                                 </tbody>
                                                 <tfoot class="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 shadow-sm">
+                                                    @php
+                                                        $count = $dayTrades->count();
+                                                        // Lógica de colores para el contador: <3 verde, <6 naranja, >=6 rojo
+                                                        $countColor = $count < 3 ? 'text-emerald-600' : ($count < 6 ? 'text-orange-500' : 'text-rose-600');
+
+                                                        $totalPnl = $dayTrades->sum('pnl');
+                                                        $totalPnlPct = $dayTrades->avg('pnl_percentage') ?? 0;
+                                                    @endphp
                                                     <tr>
+                                                        {{-- 1. Título de Operaciones (Colspan 3 para ocupar Hour, Symbol, Type) --}}
                                                         <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
-                                                            colspan="5">Total:</td>
-                                                        <td class="{{ $dayTrades->sum('pnl') >= 0 ? 'text-emerald-600' : 'text-rose-600' }} px-4 py-3 text-right text-base font-black"
-                                                            colspan="2">
-                                                            {{ $dayTrades->sum('pnl') >= 0 ? '+' : '' }}{{ number_format($dayTrades->sum('pnl'), 2) }} $
+                                                            colspan="3">
+                                                            {{ __('labels.total_trades') }}
                                                         </td>
+
+                                                        {{-- 2. El Contador (Ocupa la columna de Execution) --}}
+                                                        <td class="px-4 py-3 text-center">
+                                                            <span class="{{ $countColor }} font-mono font-black">
+                                                                {{ $count }}
+                                                            </span>
+                                                        </td>
+
+                                                        {{-- 3. Título Total PnL (Ocupa la columna de Lots) --}}
+                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500">
+                                                            {{ __('labels.total') }}
+                                                        </td>
+
+                                                        {{-- 4. El PnL acumulado (Ocupa la columna de Result) --}}
+                                                        <td class="whitespace-nowrap px-4 py-3 text-right">
+                                                            <div class="{{ $totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono font-black"
+                                                                 x-data>
+                                                                <span x-text="$store.viewMode.format({{ $totalPnl }}, {{ $totalPnlPct }})">
+                                                                    {{ $totalPnl >= 0 ? '+' : '' }}{{ number_format($totalPnl, 2) }} $
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {{-- 5. Columna final vacía (Para alinear con la flecha de la derecha) --}}
+                                                        <td class="px-4 py-3"></td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
                                         @else
                                             <div class="py-12 text-center">
                                                 <i class="fa-solid fa-box-open mb-3 text-4xl text-gray-300"></i>
-                                                <h3 class="text-gray-500">Sin operaciones</h3>
+                                                <h3 class="text-gray-500">{{ __('labels.without_operations') }}</h3>
                                             </div>
                                         @endif
                                     </div>
@@ -297,7 +343,7 @@
                             <div class="mr-3 rounded-full bg-gray-100 p-2 transition group-hover:bg-indigo-100">
                                 <i class="fa-solid fa-arrow-left text-sm"></i>
                             </div>
-                            Volver al listado
+                            {{ __('labels.back_to_list') }}
                         </button>
                         <button class="text-gray-400 hover:text-gray-500"
                                 @click="closeDayModal"><i class="fa-solid fa-times"></i></button>
@@ -328,7 +374,7 @@
                                 {{-- Info Cabecera --}}
                                 <div class="mb-4 flex items-end justify-between">
                                     <div>
-                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ticket #{{ $selectedTrade->ticket }}</span>
+                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400"> {{ __('labels.ticket_') }} . {{ $selectedTrade->ticket }}</span>
                                         <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
                                             {{ $selectedTrade->tradeAsset->name ?? 'N/A' }}
                                             <span class="{{ $selectedTrade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
@@ -337,7 +383,7 @@
                                         </h2>
                                     </div>
                                     <div class="text-right">
-                                        <span class="block text-sm font-medium text-gray-500">Resultado Neto</span>
+                                        <span class="block text-sm font-medium text-gray-500"> {{ __('labels.net_result') }}</span>
                                         <span class="{{ $selectedTrade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-4xl font-black">
                                             {{ $selectedTrade->pnl >= 0 ? '+' : '' }}{{ number_format($selectedTrade->pnl, 2) }} $
                                         </span>
@@ -355,56 +401,74 @@
                                     {{-- COLUMNA DATOS (Tu código original intacto) --}}
                                     <div class="space-y-6 lg:col-span-1">
                                         <div class="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-                                            <h4 class="mb-4 text-xs font-bold uppercase text-gray-400">Datos de Ejecución</h4>
+                                            <h4 class="mb-4 text-xs font-bold uppercase text-gray-400">{{ __('labels.execution_data') }}</h4>
                                             <dl class="space-y-4 text-sm">
                                                 <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Precio Entrada</dt>
-                                                    <dd class="font-mono font-bold text-gray-900">{{ $selectedTrade->entry_price }}</dd>
+                                                    <dt class="text-gray-500">{{ __('labels.entry_exit') }}</dt>
+                                                    <dd class="font-mono font-bold text-gray-900">{{ $selectedTrade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400"></i> {{ $selectedTrade->exit_price }}</dd>
                                                 </div>
                                                 <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Precio Salida</dt>
-                                                    <dd class="font-mono font-bold text-gray-900">{{ $selectedTrade->exit_price }}</dd>
+                                                    <dt class="text-gray-500">{{ __('labels.timetable') }}</dt>
+                                                    <dd class="text-right font-mono font-bold text-gray-900">
+                                                        {{ \Carbon\Carbon::parse($selectedTrade->entry_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('H:i') }}
+                                                        <span class="block text-[10px] font-normal text-gray-400">{{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('d M Y') }}</span>
+                                                    </dd>
                                                 </div>
                                                 <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Hora Entrada</dt>
-                                                    <dd class="font-mono font-bold text-gray-900"> {{ \Carbon\Carbon::parse($selectedTrade->entry_time)->format('d-m-Y H:i') }}</dd>
-                                                </div>
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Hora Salida</dt>
-                                                    <dd class="font-mono font-bold text-gray-900">{{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('d-m-Y H:i') }}</dd>
-                                                </div>
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Volumen</dt>
-                                                    <dd class="font-bold text-gray-900">{{ $selectedTrade->size }} lotes</dd>
-                                                </div>
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">Duración</dt>
-                                                    <dd class="font-medium text-gray-900">{{ $selectedTrade->duration_minutes }} min</dd>
+                                                    <dt class="text-gray-500">{{ __('labels.volume') }}</dt>
+                                                    <dd class="font-bold text-gray-900">{{ $selectedTrade->size }} {{ __('labels.lots') }}</dd>
                                                 </div>
 
+                                                {{-- BARRA MAE/MFE --}}
                                                 <div class="flex justify-between">
-                                                    <dt class="text-gray-500">Score</dt>
-                                                    <dd class="font-medium text-gray-900">
+                                                    <dt class="text-gray-500">{{ __('labels.execution') }}</dt>
+                                                    <dd class="w-32 font-medium text-gray-900">
                                                         @if ($selectedTrade->mae_price && $selectedTrade->mfe_price)
                                                             @php
-                                                                $distMae = abs($selectedTrade->entry_price - $selectedTrade->mae_price);
-                                                                $distMfe = abs($selectedTrade->entry_price - $selectedTrade->mfe_price);
-                                                                $totalRange = $distMae + $distMfe ?: 0.00001;
+                                                                // 1. Distancias Absolutas
+                                                                $distMae = abs($trade->entry_price - $trade->mae_price);
+                                                                $distMfe = abs($trade->entry_price - $trade->mfe_price);
+                                                                $distReal = abs($trade->entry_price - $trade->exit_price);
+
+                                                                // 2. Rango Visual
+                                                                $totalRange = $distMae + $distMfe;
+                                                                $totalRange = $totalRange > 0 ? $totalRange : 0.00001;
+
                                                                 $pctRed = ($distMae / $totalRange) * 100;
                                                                 $pctGreen = ($distMfe / $totalRange) * 100;
-                                                                $distExit = abs($selectedTrade->entry_price - $selectedTrade->exit_price);
-                                                                $isProfit =
-                                                                    ($selectedTrade->direction == 'long' && $selectedTrade->exit_price >= $selectedTrade->entry_price) ||
-                                                                    ($selectedTrade->direction == 'short' && $selectedTrade->exit_price <= $selectedTrade->entry_price);
-                                                                $markerPos = $isProfit ? $pctRed + ($distExit / $totalRange) * 100 : $pctRed - ($distExit / $totalRange) * 100;
+
+                                                                // 3. Posición Marcador
+                                                                $isBetterThanEntry = $trade->direction == 'long' ? $trade->exit_price >= $trade->entry_price : $trade->exit_price <= $trade->entry_price;
+
+                                                                if ($isBetterThanEntry) {
+                                                                    $markerPos = $pctRed + ($distReal / $totalRange) * 100;
+                                                                } else {
+                                                                    $markerPos = $pctRed - ($distReal / $totalRange) * 100;
+                                                                }
                                                                 $markerPos = max(0, min(100, $markerPos));
 
-                                                                $priceDiff = abs($selectedTrade->exit_price - $selectedTrade->entry_price) ?: 0.0000001;
-                                                                $valuePerPoint = $selectedTrade->pnl / $priceDiff;
-                                                                $maeMoney = abs(($selectedTrade->mae_price - $selectedTrade->entry_price) * $valuePerPoint) * -1;
-                                                                $mfeMoney = abs(($selectedTrade->mfe_price - $selectedTrade->entry_price) * $valuePerPoint);
+                                                                // 4. CÁLCULO MONETARIO INTELIGENTE
+                                                                $maeMoney = 0;
+                                                                $mfeMoney = 0;
+
+                                                                // Umbral de fiabilidad: 2 pips (0.0002) aprox.
+                                                                // Si el precio se movió MENOS que esto, el PnL es mayormente comisiones/swap
+                                                                // y no sirve para calcular el valor del punto matemáticamente.
+                                                                if ($distReal > 0.0002) {
+                                                                    // Cálculo exacto basado en lo que pasó
+                                                                    $valuePerPoint = abs($trade->pnl) / $distReal;
+                                                                } else {
+                                                                    // FALLBACK: Estimación basada en Lotes (Size)
+                                                                    // Asumimos estándar Forex (100k unidades).
+                                                                    // Si operas Índices/Crypto esto será una aproximación, pero mucho mejor que 0 o Infinito.
+                                                                    $valuePerPoint = $trade->size * 100000;
+                                                                }
+
+                                                                // Aplicamos el valor del punto a las distancias MAE/MFE
+                                                                $maeMoney = $distMae * $valuePerPoint;
+                                                                $mfeMoney = $distMfe * $valuePerPoint;
                                                             @endphp
-                                                            <div class="relative mx-auto flex h-4 w-32 select-none items-center">
+                                                            <div class="group/bar relative mx-auto flex h-4 w-32 select-none items-center">
                                                                 <div class="pointer-events-none absolute inset-x-0 flex h-1.5 overflow-hidden rounded-full">
                                                                     <div class="h-full bg-rose-400"
                                                                          style="width: {{ $pctRed }}%"></div>
@@ -413,243 +477,337 @@
                                                                          style="width: {{ $pctGreen }}%"></div>
                                                                 </div>
                                                                 <div class="absolute inset-0 flex h-full w-full items-center">
-                                                                    <div class="group/red relative h-4 cursor-help"
+                                                                    <div class="group/red relative h-4 w-full cursor-help"
                                                                          style="width: {{ $pctRed }}%">
                                                                         <div
                                                                              class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-rose-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/red:block">
-                                                                            Máx. Riesgo: {{ number_format($maeMoney, 2) }} €
-                                                                            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-900"></div>
+                                                                            {{ __('labels.max_risk') }} {{ number_format($maeMoney, 0) }} $
                                                                         </div>
                                                                     </div>
-                                                                    <div class="group/green relative h-4 cursor-help"
+                                                                    <div class="group/green relative h-4 w-full cursor-help"
                                                                          style="width: {{ $pctGreen }}%">
                                                                         <div
                                                                              class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/green:block">
-                                                                            Máx. Potencial: +{{ number_format($mfeMoney, 2) }} €
-                                                                            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-emerald-900"></div>
+                                                                            {{ __('labels.max_potencial') }} +{{ number_format($mfeMoney, 0) }} $
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm"
+                                                                <div class="pointer-events-none absolute z-20 h-2.5 w-1 rounded-full bg-gray-900 shadow-sm ring-1 ring-white"
                                                                      style="left: {{ $markerPos }}%; transform: translateX(-50%);"></div>
                                                             </div>
                                                         @else
-                                                            <span class="block text-center text-xs text-gray-300">-</span>
+                                                            <span class="text-xs text-gray-300">-</span>
                                                         @endif
                                                     </dd>
-
                                                 </div>
-
                                             </dl>
                                         </div>
 
-                                        <div class="rounded-2xl border border-yellow-100 bg-yellow-50 p-5">
-                                            <h4 class="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-yellow-700">
-                                                <i class="fa-regular fa-note-sticky"></i> Notas
-                                            </h4>
-                                            <p class="text-sm italic leading-relaxed text-yellow-900">
-                                                {{ $selectedTrade->notes ?: 'No se registraron notas para esta operación.' }}
-                                            </p>
+                                        <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm transition-all focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2">
+                                            <div class="mb-2 flex items-center justify-between">
+                                                <h4 class="flex items-center gap-2 text-xs font-bold uppercase text-yellow-700">
+                                                    <i class="fa-regular fa-note-sticky"></i> {{ __('labels.session_notes') }}
+                                                </h4>
+
+                                                {{-- Indicador de Guardado --}}
+                                                <div class="text-xs font-medium text-yellow-600 transition-opacity duration-500"
+                                                     x-data="{ saved: false }"
+                                                     x-init="@this.on('trade-updated', () => {
+                                                         saved = true;
+                                                         setTimeout(() => saved = false, 2000)
+                                                     })">
+                                                    <span x-show="saved"
+                                                          x-transition><i class="fa-solid fa-check"></i> {{ __('labels.saved') }}</span>
+                                                    <span wire:loading
+                                                          wire:target="saveNotes"><i class="fa-solid fa-circle-notch fa-spin"></i> {{ __('labels.saving') }}</span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Textarea con Auto-Guardado al perder el foco (blur) --}}
+                                            <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 placeholder-yellow-800/50 focus:ring-0"
+                                                      wire:model="notes"
+                                                      wire:blur="saveNotes"
+                                                      rows="4"
+                                                      placeholder="{{ __('labels.placeholder_notes') }}"></textarea>
                                         </div>
                                     </div>
 
-                                    {{-- COLUMNA DERECHA: GRÁFICO + IA --}}
+                                    {{-- COLUMNA GRÁFICO + IA --}}
                                     <div class="space-y-6 lg:col-span-2">
 
-                                        {{-- 1. CONTENEDOR DEL GRÁFICO (Híbrido: TradingView + Fallback Imagen) --}}
-                                        <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                             x-data="chartViewer()"
-                                             :class="isFullscreen
-                                                 ?
-                                                 'fixed inset-0 z-[60] h-screen w-screen bg-gray-900' :
-                                                 'relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg'"
-                                             {{-- ESCUCHADOR DE EVENTO: Espera a que el backend diga "Ya tengo los datos" --}}
-                                             x-init="$nextTick(() => {
-                                                 // Escuchar eventos DESPUÉS de estar listo
-                                                 window.addEventListener('trade-selected', (e) => load(e.detail.path));
-                                             
-                                                 // Cargar datos iniciales si existen
-                                                 @if($selectedTrade?->chart_data_path)
-                                                 load(
-                                                     '{{ $selectedTrade->chart_data_path }}',
-                                                     {{ $selectedTrade->entry_price ?? 0 }},
-                                                     {{ $selectedTrade->exit_price ?? 0 }},
-                                                     '{{ $selectedTrade->direction ?? '' }}'
-                                                 );
-                                                 @endif
-                                             })"
-                                             wire:ignore>
+                                        <template x-if="!isLoading">
+                                            {{-- 
+        1. Usamos 'data-*' para pasar valores de PHP a JS sin errores de sintaxis.
+        2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
+    --}}
+                                            <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
+                                                 data-path="{{ $selectedTrade?->chart_data_path }}"
+                                                 data-entry="{{ $selectedTrade?->entry_price }}"
+                                                 data-exit="{{ $selectedTrade?->exit_price }}"
+                                                 data-dir="{{ $selectedTrade?->direction }}"
+                                                 x-data="chartViewer('{{ $selectedTrade?->chart_data_path ? 'chart' : 'image' }}')"
+                                                 {{-- DATOS SEGUROS (PHP -> HTML) --}}
+                                                 {{-- EVENTO NATIVO (Se encarga de escuchar cambios si el modal no se recarga) --}}
+                                                 @trade-selected.window="load($event.detail.path, $event.detail.entry, $event.detail.exit, $event.detail.direction)"
+                                                 {{-- INICIALIZACIÓN (Solo el retardo y la carga inicial) --}}
+                                                 x-init="setTimeout(() => {
+                                                     // Leemos los atributos data- definidos arriba
+                                                     // Esto ocurre 100ms después de crearse el HTML para asegurar que el gráfico tenga ancho
+                                                     if ($el.dataset.path) {
+                                                         load(
+                                                             $el.dataset.path,
+                                                             $el.dataset.entry,
+                                                             $el.dataset.exit,
+                                                             $el.dataset.dir
+                                                         );
+                                                     }
+                                                 }, 100);">
 
-                                            {{-- BARRA DE HERRAMIENTAS --}}
-                                            <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
-                                                 x-show="hasData"
-                                                 x-transition>
+                                                {{-- BARRA DE HERRAMIENTAS (Sin cambios) --}}
+                                                <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
+                                                     wire:ignore>
+                                                    @if ($selectedTrade?->chart_data_path)
+                                                        <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
+                                                            <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 transition-all hover:text-white"
+                                                                    @click="changeTimeframe(tf)"
+                                                                    :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
+                                                                    x-text="tf.toUpperCase()"></button>
+                                                        </template>
+                                                        <div class="mx-1 h-3 w-px bg-gray-600"></div>
+                                                        {{-- BOTÓN VOLUMEN --}}
+                                                        <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                                @click="toggleVol()"
+                                                                :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                                title="{{ __('labels.show_hide_volume') }}">
 
-                                                {{-- Botones de Timeframe --}}
-                                                <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
-                                                    <button class="rounded px-3 py-1 text-xs font-bold transition-all"
-                                                            @click="changeTimeframe(tf)"
-                                                            :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700'"
-                                                            x-text="tf.toUpperCase()">
-                                                    </button>
-                                                </template>
+                                                            {{-- Icono de barras (FontAwesome o SVG manual) --}}
+                                                            <i class="fa-solid fa-chart-column"></i>
+                                                            <span>VOL</span>
+                                                        </button>
+                                                        {{-- BOTÓN EMA --}}
+                                                        <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                                @click="toggleEma()"
+                                                                :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                                title="{{ __('labels.show_hide_ema') }}">
 
-                                                {{-- SEPARADOR VERTICAL --}}
-                                                <div class="mx-1 h-4 w-px bg-gray-600"></div>
+                                                            {{-- Icono de línea --}}
+                                                            <i class="fa-solid fa-wave-square"></i>
+                                                            <span>EMA 50</span>
+                                                        </button>
 
-                                                {{-- BOTÓN VOLUMEN --}}
-                                                <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                        @click="toggleVol()"
-                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
-                                                        title="Mostrar/Ocultar Volumen">
-
-                                                    {{-- Icono de barras (FontAwesome o SVG manual) --}}
-                                                    <i class="fa-solid fa-chart-column"></i>
-                                                    <span>VOL</span>
-                                                </button>
-
-                                                {{-- BOTÓN EMA --}}
-                                                <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                        @click="toggleEma()"
-                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
-                                                        title="Mostrar/Ocultar EMA 50">
-
-                                                    {{-- Icono de línea --}}
-                                                    <i class="fa-solid fa-wave-square"></i>
-                                                    <span>EMA 50</span>
-                                                </button>
-                                                {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
-                                                <div class="flex-grow"></div>
-
-                                                {{-- BOTÓN PANTALLA COMPLETA --}}
-                                                <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
-                                                        @click="toggleFullscreen()"
-                                                        :title="isFullscreen ? 'Salir de Pantalla Completa' : 'Pantalla Completa'">
-
-                                                    {{-- Icono Cambiante --}}
-                                                    <template x-if="!isFullscreen">
-                                                        <i class="fa-solid fa-expand"></i>
-                                                    </template>
-                                                    <template x-if="isFullscreen">
-                                                        <i class="fa-solid fa-compress"></i>
-                                                    </template>
-                                                </button>
-
-                                            </div>
-
-
-
-                                            {{-- El Div donde se pinta el gráfico JS --}}
-                                            <div id="firstContainer"
-                                                 class="h-full w-full"
-                                                 x-ref="chartContainer"></div>
-
-                                            {{-- Overlay de Carga (Controlado por Alpine 'loading') --}}
-                                            <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90"
-                                                 x-show="loading"
-                                                 x-transition>
-                                                <i class="fa-solid fa-circle-notch fa-spin mb-2 text-2xl text-indigo-500"></i>
-                                                <span class="text-xs font-medium text-gray-400">Cargando mercado...</span>
-                                            </div>
-
-                                            {{-- Fallback: Se muestra si el JS dice 'hasData = false' --}}
-                                            <div class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-900"
-                                                 x-show="!loading && !hasData"
-                                                 style="display: none;">
-
-                                                @if ($selectedTrade->screenshot_path)
-                                                    {{-- Si hay imagen estática, la usamos de fondo --}}
-                                                    <img class="absolute inset-0 h-full w-full object-contain opacity-60"
-                                                         src="{{ Storage::url($selectedTrade->screenshot_path) }}"
-                                                         alt="Chart Snapshot">
-
-                                                    {{-- Botón para abrir la imagen --}}
-                                                    <a class="relative z-30 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
-                                                       href="{{ Storage::url($selectedTrade->screenshot_path) }}"
-                                                       target="_blank">
-                                                        <i class="fa-solid fa-image mr-2"></i> Ver Imagen Original
-                                                    </a>
-                                                @else
-                                                    <i class="fa-solid fa-chart-line mb-3 text-5xl text-gray-700 opacity-50"></i>
-                                                    <p class="text-sm font-medium text-gray-500">Gráfico interactivo no disponible</p>
-                                                @endif
-                                            </div>
-                                        </div>
-
-                                        {{-- 2. ZONA ANÁLISIS IA INDIVIDUAL --}}
-                                        <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
-
-                                            {{-- Decoración fondo --}}
-                                            <div class="absolute right-0 top-0 -mr-2 -mt-2 h-16 w-16 rounded-full bg-indigo-200 opacity-20 blur-xl"></div>
-
-                                            <div class="relative z-10 mb-4 flex items-start justify-between">
-                                                <div>
-                                                    <h4 class="flex items-center gap-2 text-sm font-bold text-indigo-900">
-                                                        <i class="fa-solid fa-brain text-indigo-600"></i> Análisis del Mentor
-                                                    </h4>
-                                                    @if (!$selectedTrade->ai_analysis)
-                                                        <p class="mt-1 text-xs text-indigo-600">
-                                                            Analiza estructura, tendencia y ejecución combinando gráfico y datos.
-                                                        </p>
+                                                        {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
+                                                        <div class="flex-grow"></div>
                                                     @endif
+                                                    {{-- BOTÓN PANTALLA COMPLETA --}}
+                                                    {{-- LADO DERECHO: TOGGLE VISTA (Siempre visible) --}}
+                                                    <div class="flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm">
+                                                        {{-- Botón Ver Gráfico --}}
+                                                        @if ($selectedTrade?->chart_data_path)
+                                                            <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
+                                                                    @click="activeTab = 'chart'"
+                                                                    :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                                <i class="fa-solid fa-chart-line"></i>
+                                                                <span class="hidden sm:inline">Chart</span>
+                                                            </button>
+                                                        @endif
+
+                                                        {{-- Botón Ver Captura --}}
+                                                        <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
+                                                                @click="activeTab = 'image'"
+                                                                :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                            <i class="fa-solid fa-image"></i>
+                                                            <span class="hidden sm:inline">Screenshot</span>
+                                                        </button>
+
+                                                        <div class="mx-1 h-3 w-px bg-gray-600"></div>
+
+                                                        <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
+                                                                @click="toggleFullscreen()"
+                                                                :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
+
+                                                            {{-- Icono Cambiante --}}
+                                                            <template x-if="!isFullscreen">
+                                                                <i class="fa-solid fa-expand"></i>
+                                                            </template>
+                                                            <template x-if="isFullscreen">
+                                                                <i class="fa-solid fa-compress"></i>
+                                                            </template>
+                                                        </button>
+                                                    </div>
+
                                                 </div>
 
-                                                {{-- Botón Analizar --}}
-                                                @if (!$selectedTrade->ai_analysis)
-                                                    <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                                            wire:click="analyzeIndividualTrade"
-                                                            wire:loading.attr="disabled">
+                                                {{-- CONTENEDOR GRÁFICO --}}
+                                                <div id="firstContainer"
+                                                     class="h-full w-full bg-gray-900"
+                                                     wire:ignore
+                                                     x-show="activeTab === 'chart'"
+                                                     x-ref="chartContainer"></div>
 
-                                                        <span wire:loading.remove
-                                                              wire:target="analyzeIndividualTrade">
-                                                            Analizar Trade
-                                                        </span>
+                                                {{-- 2. CONTENEDOR IMAGEN / UPLOAD --}}
+                                                <div class="absolute inset-0 z-10 flex h-full w-full flex-col items-center justify-center bg-gray-900"
+                                                     x-show="activeTab === 'image'"
+                                                     x-transition:enter="transition ease-out duration-200"
+                                                     x-transition:enter-start="opacity-0 scale-95"
+                                                     x-transition:enter-end="opacity-100 scale-100"
+                                                     style="display: none;">
 
-                                                        <span class="flex items-center gap-2"
-                                                              wire:loading
-                                                              wire:target="analyzeIndividualTrade">
-                                                            <svg class="h-3 w-3 animate-spin text-white"
-                                                                 viewBox="0 0 24 24">
-                                                                <circle class="opacity-25"
-                                                                        cx="12"
-                                                                        cy="12"
-                                                                        r="10"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="4"></circle>
-                                                                <path class="opacity-75"
-                                                                      fill="currentColor"
-                                                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                            </svg>
-                                                            Pensando...
-                                                        </span>
-                                                    </button>
+                                                    {{-- 
+       IMPORTANTE: Esta wire:key cambia cuando se sube la foto.
+       Esto obliga a Livewire a repintar todo el bloque sí o sí.
+    --}}
+                                                    <div class="h-full w-full"
+                                                         wire:key="media-box-{{ $selectedTrade->id }}-{{ $currentScreenshot ? 'img' : 'drop' }}">
+
+                                                        @if ($currentScreenshot)
+                                                            {{-- CASO A: YA HAY IMAGEN --}}
+                                                            <div class="group relative h-full w-full">
+                                                                {{-- Añadimos un timestamp a la URL para evitar caché del navegador si cambias la imagen --}}
+                                                                <img class="h-full w-full object-contain"
+                                                                     src="{{ Storage::url($currentScreenshot) }}?t={{ time() }}"
+                                                                     alt="Trade Screenshot">
+
+                                                                {{-- Overlay para cambiar imagen --}}
+                                                                <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                                                                     x-show="!isFullscreen">
+                                                                    <label class="cursor-pointer rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20">
+                                                                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> {{ __('labels.change_image') }}
+                                                                        {{-- IMPORTANTE: wire:model.live --}}
+                                                                        <input class="hidden"
+                                                                               type="file"
+                                                                               wire:model.live="uploadedScreenshot"
+                                                                               accept="image/*">
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            {{-- CASO B: NO HAY IMAGEN (DROPZONE) --}}
+                                                            <div class="flex h-full w-full flex-col items-center justify-center p-8 text-center"
+                                                                 x-data="{ isDropping: false }"
+                                                                 @dragover.prevent="isDropping = true"
+                                                                 @dragleave.prevent="isDropping = false"
+                                                                 {{-- Evento JS Manual --}}
+                                                                 @drop.prevent="isDropping = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }))">
+
+                                                                {{-- IMPORTANTE: wire:model.live --}}
+                                                                <input class="hidden"
+                                                                       type="file"
+                                                                       x-ref="fileInput"
+                                                                       wire:model.live="uploadedScreenshot"
+                                                                       accept="image/*">
+
+                                                                <label class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-all"
+                                                                       :class="isDropping ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-indigo-500 hover:bg-gray-800'"
+                                                                       @click="$refs.fileInput.click()">
+
+                                                                    <div wire:loading.remove
+                                                                         wire:target="uploadedScreenshot">
+                                                                        <div class="mb-4 rounded-full bg-gray-800 p-4 text-indigo-500 shadow-lg transition-transform group-hover:scale-110">
+                                                                            <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                                                                        </div>
+                                                                        <h3 class="mb-1 text-lg font-bold text-white">{{ __('labels.upload_screenshot') }}</h3>
+                                                                        <p class="text-xs text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
+                                                                    </div>
+
+                                                                    <div class="text-center"
+                                                                         wire:loading
+                                                                         wire:target="uploadedScreenshot">
+                                                                        <i class="fa-solid fa-circle-notch fa-spin mb-3 text-3xl text-indigo-500"></i>
+                                                                        <p class="text-sm font-bold text-white">{{ __('labels.uploading') }}...</p>
+                                                                    </div>
+                                                                </label>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                {{-- LOADING OVERLAY --}}
+                                                <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90"
+                                                     x-show="loading"
+                                                     x-transition>
+                                                    <i class="fa-solid fa-circle-notch fa-spin mb-2 text-2xl text-indigo-500"></i>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        {{-- IA --}}
+                                        @if (Auth::user()->subscribed('default'))
+                                            <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
+                                                <div class="relative z-10 mb-4 flex items-start justify-between">
+                                                    <div>
+                                                        <h4 class="flex items-center gap-2 text-sm font-bold text-indigo-900">
+                                                            <i class="fa-solid fa-brain text-indigo-600"></i> {{ __('labels.mentor_analyze') }}
+                                                        </h4>
+                                                        {{-- CONTADOR VISUAL --}}
+                                                        <p class="mt-1 text-[10px] font-medium text-gray-500">
+                                                            Usos diarios:
+                                                            <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                                                {{ $this->getAiCreditsLeft() }} / 10
+                                                            </span>
+                                                        </p>
+                                                        @if (!$selectedTrade->ai_analysis)
+                                                            <p class="mt-1 text-xs text-indigo-600">
+                                                                {{ __('labels.explain_analyze_mentor') }}
+                                                            </p>
+                                                        @endif
+                                                    </div>
+
+
+                                                    @if (!$selectedTrade->ai_analysis)
+                                                        <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                wire:click="analyzeIndividualTrade"
+                                                                wire:loading.attr="disabled">
+                                                            <span wire:loading.remove
+                                                                  wire:target="analyzeIndividualTrade">
+                                                                {{ $this->getAiCreditsLeft() > 0 ? __('labels.analyze_trade') : 'Límite alcanzado' }}
+                                                            </span>
+                                                            <span class="flex items-center gap-2"
+                                                                  wire:loading
+                                                                  wire:target="analyzeIndividualTrade">
+                                                                <svg class="h-3 w-3 animate-spin text-white"
+                                                                     viewBox="0 0 24 24">
+                                                                    <circle class="opacity-25"
+                                                                            cx="12"
+                                                                            cy="12"
+                                                                            r="10"
+                                                                            stroke="currentColor"
+                                                                            stroke-width="4"></circle>
+                                                                    <path class="opacity-75"
+                                                                          fill="currentColor"
+                                                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                {{ __('labels.thinking') }}
+                                                            </span>
+                                                        </button>
+                                                    @endif
+
+
+
+                                                </div>
+
+                                                <div class="w-full animate-pulse space-y-2"
+                                                     wire:loading
+                                                     wire:target="analyzeIndividualTrade">
+                                                    <div class="h-3 w-full rounded bg-indigo-200"></div>
+                                                    <div class="h-3 w-5/6 rounded bg-indigo-200"></div>
+                                                    <div class="h-3 w-4/6 rounded bg-indigo-200"></div>
+                                                </div>
+
+
+                                                @if ($selectedTrade->ai_analysis)
+                                                    <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800">
+                                                        {!! Str::markdown($selectedTrade->ai_analysis) !!}
+                                                    </div>
+                                                    <div class="mt-2 text-right">
+                                                        <button class="text-[10px] text-indigo-400 underline hover:text-indigo-600"
+                                                                wire:click="analyzeIndividualTrade">
+                                                            {{ __('labels.regenerate_analyze') }}
+                                                        </button>
+                                                    </div>
                                                 @endif
                                             </div>
 
-                                            {{-- Skeleton Loader IA --}}
-                                            <div class="w-full animate-pulse space-y-2"
-                                                 wire:loading
-                                                 wire:target="analyzeIndividualTrade">
-                                                <div class="h-3 w-full rounded bg-indigo-200"></div>
-                                                <div class="h-3 w-5/6 rounded bg-indigo-200"></div>
-                                                <div class="h-3 w-4/6 rounded bg-indigo-200"></div>
-                                            </div>
+                                        @endif
 
-                                            {{-- Texto Real --}}
-                                            @if ($selectedTrade->ai_analysis)
-                                                <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800">
-                                                    {!! Str::markdown($selectedTrade->ai_analysis) !!}
-                                                </div>
-
-                                                <div class="mt-2 text-right">
-                                                    <button class="text-[10px] text-indigo-400 underline hover:text-indigo-600"
-                                                            wire:click="analyzeIndividualTrade">
-                                                        Regenerar análisis
-                                                    </button>
-                                                </div>
-                                            @endif
-
-                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -686,7 +844,7 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
             </div>
         </div>
     </div>
@@ -704,23 +862,189 @@
         <x-loader></x-loader>
     </div>
 
-    <header class="relative top-0 z-10 col-span-12 mt-[50px] flex w-auto justify-between bg-white pb-2 pr-3 shadow">
-        <div class="flex min-h-11 max-w-7xl items-center space-x-1.5 px-4 py-1 sm:px-6 lg:px-8">
-            <i class="fas fa-chart-bar text-xl text-black"></i>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                {{ __('Dashboard') }}
-            </h2>
+    <header class="relative top-0 z-10 col-span-12 mt-[55px] flex w-auto justify-between bg-white px-6 py-2 shadow">
+        <div>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-2xl text-indigo-600"></i>
+                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.dashboard') }}</h1>
+            </div>
+            <p class="text-sm text-gray-500">{{ __('menu.resume_dashboard') }}</p>
         </div>
-        <livewire:ai-daily-tip :selected-accounts="$selectedAccounts" />
+        @if (Auth::user()->subscribed('default'))
+            <livewire:ai-daily-tip :selected-accounts="$selectedAccounts" />
+        @endif
 
         <x-input-multiselect wire:model="selectedAccounts"
                              :options="$availableAccounts"
-                             placeholder="Selecciona las cuentas..."
+                             placeholder="{{ __('labels.select_accounts') }}"
                              icono='<i class="fa-solid fa-users-viewfinder"></i>' />
     </header>
 
 
     <div class="col-span-12 grid grid-cols-12 gap-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
+        {{-- WIDGET: FLASH DE LECCIONES (Notas Recientes) --}}
+        @if ($recentNotes)
+            <div class="col-span-9 flex h-full flex-col overflow-hidden">
+
+                {{-- Header --}}
+                <div class="flex items-center gap-2 pb-2">
+                    <div class="rounded-lg bg-yellow-100 p-1.5 text-yellow-600">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">{{ __('labels.last_notes') }}</h3>
+                </div>
+                {{-- Cuerpo: Scroll Horizontal --}}
+                <div class="flex flex-row gap-4 overflow-x-auto"> {{-- pb-6 da espacio para la barra de scroll si aparece --}}
+                    @forelse($recentNotes as $noteTrade)
+                        {{-- Tarjeta: Ancho fijo y flex-shrink-0 para que no se aplasten --}}
+                        <div class="bg--gray-50 group relative flex min-w-[250px] max-w-[250px] flex-shrink-0 cursor-pointer flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:border-yellow-200 hover:bg-yellow-50 hover:shadow-sm"
+                             wire:click="openTradeFromNotes({{ $noteTrade->id }})">
+
+                            <div>
+                                <div class="mb-2 flex items-start justify-between">
+                                    <span class="flex items-center gap-1 text-xs font-bold text-gray-900">
+                                        {{ $noteTrade->tradeAsset->name ?? $noteTrade->symbol }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-400">{{ $noteTrade->exit_time->diffForHumans(null, true, true) }}</span>
+                                </div>
+
+                                {{-- Badge Resultado --}}
+                                <div class="mb-2">
+                                    <span class="{{ $noteTrade->pnl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded px-1.5 py-0.5 text-[10px] font-bold">
+                                        {{ $noteTrade->pnl >= 0 ? 'WIN' : 'LOSS' }}
+                                    </span>
+                                </div>
+
+                                <p class="line-clamp-3 text-xs italic leading-relaxed text-gray-600">
+                                    "{{ $noteTrade->notes }}"
+                                </p>
+                            </div>
+
+                            {{-- Decoración opcional al hacer hover --}}
+                            <div class="mt-2 text-right opacity-0 transition-opacity group-hover:opacity-100">
+                                <i class="fa-solid fa-arrow-right text-xs text-yellow-600"></i>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="flex w-full flex-col items-center justify-center py-8 text-center text-gray-400">
+                            <i class="fa-regular fa-clipboard mb-2 text-2xl opacity-50"></i>
+                            <p class="text-xs">{{ __('labels.not_notes') }}</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        @endif
+
+        {{-- 3. PLAN DIARIO (Cuarto de pantalla - NUEVO) --}}
+        <div class="col-span-3 flex flex-col justify-center rounded-3xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-3">
+
+            <div class="mb-4 flex items-center gap-2">
+                <div class="rounded-lg bg-indigo-100 p-1.5 text-indigo-600"><i class="fa-solid fa-crosshairs"></i></div>
+                <h3 class="text-sm font-bold text-gray-800">Objetivo Diario</h3>
+            </div>
+
+            @if ($planStatus)
+                <div class="space-y-4">
+                    {{-- 1. META (PnL Target) --}}
+                    @if ($planStatus['pnl']['target'])
+                        <div class="space-y-2">
+                            <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
+                                <span class="italic text-gray-500">Profit Target</span>
+                                <span class="font-mono text-xs text-emerald-600">{{ number_format($planStatus['pnl']['target'], 0) }} $</span>
+                            </div>
+
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                                <div class="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all duration-700 ease-out"
+                                     style="width: {{ $planStatus['pnl']['progress'] }}%"></div>
+                            </div>
+
+                            <div class="mt-1 flex items-center justify-between">
+                                <span class="text-[9px] font-bold uppercase text-gray-400">{{ number_format($planStatus['pnl']['progress'], 0) }}%</span>
+                                <div class="{{ $planStatus['pnl']['current'] >= 0 ? 'text-emerald-600' : 'text-rose-500' }} font-mono text-xs font-black">
+                                    {{ $planStatus['pnl']['current'] >= 0 ? '+' : '' }}{{ number_format($planStatus['pnl']['current'], 2) }} $
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- 2. LÍMITE DE PÉRDIDA (Drawdown) --}}
+                    @if ($planStatus['pnl']['limit'])
+                        @php
+                            $limitPnl = abs($planStatus['pnl']['limit']);
+                            $currentLoss = $planStatus['pnl']['current'] < 0 ? abs($planStatus['pnl']['current']) : 0;
+                            $pctLoss = min(100, ($currentLoss / $limitPnl) * 100);
+                            $isOverLoss = $pctLoss >= 100;
+                        @endphp
+                        <div class="space-y-2">
+                            <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
+                                <span class="italic text-gray-500">Max Loss Limit</span>
+                                <span class="font-mono text-xs text-rose-500">{{ number_format($planStatus['pnl']['limit'], 0) }} $</span>
+                            </div>
+
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                                <div class="{{ $isOverLoss ? 'bg-rose-600 animate-pulse' : 'bg-rose-400' }} h-full transition-all duration-500"
+                                     style="width: {{ $pctLoss }}%"></div>
+                            </div>
+
+                            @if ($isOverLoss)
+                                <div class="mt-1 flex animate-bounce items-center justify-center gap-1">
+                                    <span class="text-[10px]">⛔</span>
+                                    <p class="text-[10px] font-black uppercase tracking-tighter text-rose-600">STOP: Risk Reached</p>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    {{-- 3. LÍMITE DE OPERACIONES (Daily Plan) --}}
+                    @if (isset($planStatus['trades']['limit']) && $planStatus['trades']['limit'] > 0)
+                        @php
+                            $limitTrades = (int) $planStatus['trades']['limit'];
+                            $currentTrades = (int) $planStatus['trades']['current'];
+                            $pctTrades = min(100, ($currentTrades / $limitTrades) * 100);
+                            $isFull = $currentTrades >= $limitTrades;
+                            $isWarning = $currentTrades == $limitTrades - 1;
+                        @endphp
+
+                        <div class="space-y-2">
+                            <div class="flex items-end justify-between">
+                                <div class="text-[10px] font-bold uppercase italic tracking-wider text-gray-500">Daily Plan</div>
+                                <div class="{{ $isFull ? 'text-rose-600' : ($isWarning ? 'text-orange-500' : 'text-emerald-500') }} font-mono text-[10px] font-bold">
+                                    {{ number_format($pctTrades, 0) }}%
+                                </div>
+                            </div>
+
+                            <div class="relative h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                                <div class="{{ $isFull ? 'bg-rose-600 animate-pulse' : ($isWarning ? 'bg-orange-400' : 'bg-emerald-400') }} h-full transition-all duration-500"
+                                     style="width: {{ $pctTrades }}%">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <p class="font-mono text-[11px] font-black text-gray-700">
+                                    {{ $currentTrades }} <span class="font-normal italic text-gray-400">/ {{ $limitTrades }} ops</span>
+                                </p>
+
+                                @if ($isFull)
+                                    <p class="flex items-center gap-1 text-[9px] font-black uppercase text-rose-600">
+                                        <span class="inline-flex h-1.5 w-1.5 animate-ping rounded-full bg-rose-600 opacity-75"></span>
+                                        {{ __('labels.limit_reached') }}
+                                    </p>
+                                @elseif($isWarning)
+                                    <p class="text-[9px] font-bold uppercase italic text-orange-500">⚠️ Last Bullet</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @else
+                <div class="py-4 text-center">
+                    <p class="mb-2 text-xs text-gray-400">Sin reglas configuradas.</p>
+                    <a class="text-xs font-bold text-indigo-600 hover:underline"
+                       href="{{ route('cuentas') }}">Configurar en Cuentas</a>
+                </div>
+            @endif
+        </div>
+
 
         {{-- GRID DE STATS --}}
         <div class="col-span-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -733,11 +1057,13 @@
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">Ganancia PNL</h3>
+                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.win_pnl') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
                         <div class="text-3xl font-black text-gray-900">
-                            <span class="@if ($pnlTotal > 0) text-green-700   @else  text-red-700 @endif">{{ number_format($pnlTotal, 2) }} $</span>
+                            <span class="{{ $pnlTotal >= 0 ? 'text-emerald-600' : 'text-rose-600' }}"
+                                  x-text="$store.viewMode.format({{ $pnlTotal }}, {{ $pnlTotal_perc ?? 0 }})"></span>
+                            {{-- <span class="@if ($pnlTotal > 0) text-green-700   @else  text-red-700 @endif">{{ number_format($pnlTotal, 2) }} $</span> --}}
 
                         </div>
                     </div>
@@ -755,7 +1081,7 @@
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">Trade Win %</h3>
+                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.trade_winrate') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
                         <div class="text-3xl font-black text-gray-900"
@@ -817,7 +1143,7 @@
                         <div class="mb-1 flex items-center gap-1">
                             <h3 class="text-sm font-medium text-gray-500">Avg R:R</h3>
                             <i class="fa-regular fa-circle-question text-xs text-gray-400"
-                               title="Ratio Riesgo Beneficio"></i>
+                               title="{{ __('labels.title_r_r') }}"></i>
                         </div>
                         <div class="text-3xl font-black text-gray-900"
                              x-text="ratio">
@@ -843,13 +1169,13 @@
                             {{-- Texto Verde (Alineado a la izq) --}}
                             <div class="text-emerald-600"
                                  x-text="new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(win)">
-                                0 €
+                                0 $
                             </div>
 
                             {{-- Texto Rojo (Alineado a la der) --}}
                             <div class="text-rose-500"
                                  x-text="'-' + new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(loss)">
-                                0 €
+                                0 $
                             </div>
                         </div>
 
@@ -867,7 +1193,7 @@
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">Daily Win %</h3>
+                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.daily_winrate') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
                         <div class="text-3xl font-black text-gray-900"
@@ -915,7 +1241,7 @@
         <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
              wire:ignore>
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">Curva de Rendimiento Acumulado</h3>
+                <h3 class="text-lg font-bold text-gray-800">{{ __('labels.cumulative_yield_curve') }}</h3>
 
             </div>
 
@@ -928,11 +1254,11 @@
         <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
              wire:ignore>
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">PnL Diario Neto</h3>
+                <h3 class="text-lg font-bold text-gray-800">{{ __('labels.pnl_day_clean') }}</h3>
                 {{-- Leyenda Simple --}}
                 <div class="flex gap-3 text-xs font-medium">
-                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Profit</div>
-                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span> Loss</div>
+                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> {{ __('labels.profit') }}</div>
+                    <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span>{{ __('labels.loss') }}</div>
                 </div>
             </div>
 
@@ -946,14 +1272,14 @@
              wire:ignore>
             <div class="mb-4 flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Mapa de Calor Operativo</h3>
-                    <p class="text-xs text-gray-500">Rendimiento acumulado por Hora y Día</p>
+                    <h3 class="text-lg font-bold text-gray-800">{{ __('labels.heatmap') }}</h3>
+                    <p class="text-xs text-gray-500">{{ __('labels.cumulative_yield_hour') }}</p>
                 </div>
-                {{-- Leyenda visual simple --}}
+                Leyenda visual simple
                 <div class="flex items-center gap-2 text-xs">
-                    <span class="rounded bg-rose-500 px-2 py-1 text-white">Pérdida</span>
-                    <span class="rounded bg-gray-100 px-2 py-1 text-gray-500">Neutro</span>
-                    <span class="rounded bg-emerald-500 px-2 py-1 text-white">Ganancia</span>
+                    <span class="rounded bg-rose-500 px-2 py-1 text-white">{{ __('labels.loss') }}</span>
+                    <span class="rounded bg-gray-100 px-2 py-1 text-gray-500">{{ __('labels.neutral') }}</span>
+                    <span class="rounded bg-emerald-500 px-2 py-1 text-white">{{ __('labels.profit') }}</span>
                 </div>
             </div>
 
@@ -967,7 +1293,7 @@
             {{-- Cabecera de la Tarjeta --}}
             <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                 <h3 class="text-lg font-bold text-gray-800">
-                    Operaciones Recientes
+                    {{ __('labels.recent_operations') }}
                 </h3>
 
                 {{-- Indicador de carga sutil --}}
@@ -984,19 +1310,19 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
                                 scope="col">
-                                Fecha
+                                {{ __('labels.date') }}
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
                                 scope="col">
-                                Activo
+                                {{ __('labels.active') }}
                             </th>
                             <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-400"
                                 scope="col">
-                                Tipo
+                                {{ __('labels.type') }}
                             </th>
                             <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-400"
                                 scope="col">
-                                P&L
+                                {{ __('labels.PnL') }}
                             </th>
                         </tr>
                     </thead>
@@ -1010,14 +1336,28 @@
                             2. currentView = 'detail': Fuerza la vista de detalle directo
                             3. $wire.selectTrade(...): Carga los datos del trade en el backend
                         --}}
-                                wire:click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
+                                wire:click="openTradeFromTable({{ $trade->id }})">
 
 
                                 {{-- 1. Fecha Cierre --}}
-                                <td class="whitespace-nowrap px-6 py-4">
+                                <td class="flex whitespace-nowrap px-6 py-4">
                                     <span class="text-sm font-bold text-gray-900">
                                         {{ \Carbon\Carbon::parse($trade->exit_time)->format('d-m-Y H:i') }}
                                     </span>
+                                    {{-- NUEVO: ICONO DE NOTA CON TOOLTIP --}}
+                                    @if ($trade->notes)
+                                        <div class="group relative ml-1"
+                                             @click.stop> {{-- click.stop evita abrir el modal si solo quieres ver el tooltip --}}
+                                            <i class="fa-solid fa-note-sticky cursor-help text-yellow-400 hover:text-yellow-600"></i>
+
+                                            {{-- Tooltip Flotante --}}
+                                            <div class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden w-48 -translate-x-1/2 rounded-lg bg-gray-900 p-2 text-xs text-white shadow-xl group-hover:block">
+                                                <p class="line-clamp-3 italic">"{{ $trade->notes }}"</p>
+                                                {{-- Flechita del tooltip --}}
+                                                <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </td>
 
                                 {{-- 2. Símbolo (Ej: EURUSD) --}}
@@ -1025,24 +1365,29 @@
                                     <span class="text-sm font-bold text-gray-900">
                                         {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
                                     </span>
+
                                 </td>
 
                                 {{-- 3. Tipo (Badge) --}}
                                 <td class="whitespace-nowrap px-6 py-4 text-center">
                                     @if ($trade->direction == 'long')
                                         <span class="inline-flex items-center rounded-md bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                                            LONG <i class="fa-solid fa-arrow-trend-up ml-1"></i>
+                                            {{ __('labels.long') }} <i class="fa-solid fa-arrow-trend-up ml-1"></i>
                                         </span>
                                     @else
                                         <span class="inline-flex items-center rounded-md bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                                            SHORT <i class="fa-solid fa-arrow-trend-down ml-1"></i>
+                                            {{ __('labels.short') }} <i class="fa-solid fa-arrow-trend-down ml-1"></i>
                                         </span>
                                     @endif
                                 </td>
 
                                 {{-- 4. PNL --}}
-                                <td class="whitespace-nowrap px-6 py-4 text-right">
-                                    <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm font-black">
+                                <td class="whitespace-nowrap px-6 py-4 text-right"
+                                    x-data>
+                                    <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm font-black"
+                                          x-text="$store.viewMode.format({{ $trade->pnl }}, {{ $trade->pnl_percentage ?? 0 }})">
+
+                                        {{-- Fallback visual (lo que se ve antes de que cargue Alpine) --}}
                                         {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
                                     </span>
                                 </td>
@@ -1056,8 +1401,8 @@
                                         <div class="mb-3 rounded-full bg-gray-100 p-4">
                                             <i class="fa-solid fa-chart-simple text-2xl text-gray-300"></i>
                                         </div>
-                                        <p class="text-sm font-medium">No hay operaciones recientes</p>
-                                        <p class="mt-1 text-xs text-gray-400">Tus nuevos trades aparecerán aquí</p>
+                                        <p class="text-sm font-medium">{{ __('labels.not_recent_operations') }}</p>
+                                        <p class="mt-1 text-xs text-gray-400">{{ __('labels.new_operations_appear_here') }}</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1069,8 +1414,8 @@
             {{-- Footer opcional --}}
             <div class="border-t border-gray-100 bg-gray-50 px-6 py-3 text-right">
                 <a class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800"
-                   href="{{ route('journal') }}">
-                    Ver diario completo <i class="fa-solid fa-arrow-right ml-1"></i>
+                   href="{{ route('trades') }}">
+                    {{ __('labels.view_register_complete') }} <i class="fa-solid fa-arrow-right ml-1"></i>
                 </a>
             </div>
         </div>
@@ -1081,7 +1426,7 @@
             {{-- HEADER: Título y Navegación --}}
             <div class="mb-6 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-800">
-                    Calendario de Rendimiento
+                    {{ __('labels.performance_schedule') }}
                 </h3>
 
                 <div class="flex items-center gap-4">
@@ -1106,7 +1451,7 @@
 
                 {{-- Cabecera Días Semana --}}
                 <div class="mb-2 grid grid-cols-7 text-center">
-                    @foreach (['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as $day)
+                    @foreach ([__('labels.mon'), __('labels.tue'), __('labels.wed'), __('labels.thu'), __('labels.fri'), __('labels.sat'), __('labels.sun')] as $day)
                         <div class="py-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                             {{ $day }}
                         </div>
@@ -1144,6 +1489,7 @@
 
                             // MAPA DE EMOJIS (Solo para visualizar)
                             $emojis = ['fire' => '🔥', 'happy' => '🙂', 'neutral' => '😐', 'sad' => '😡'];
+
                         @endphp
 
                         <div class="{{ $bgColor }} {{ $borderColor }} {{ $opacity }} {{ $todayClass }} {{ $cursorClass }} relative flex h-24 flex-col justify-between rounded-xl border p-2 transition-all hover:shadow-md"
@@ -1171,12 +1517,22 @@
                                 </div>
                             </div>
 
-                            {{-- Tu PnL original --}}
+                            {{-- Tu PnL (Adaptado a $ / %) --}}
                             @if (!is_null($day['pnl']))
-                                <div class="flex flex-col items-end">
-                                    <span class="{{ $textColor }} text-sm font-black">
-                                        {{ $day['pnl'] > 0 ? '+' : '' }}{{ number_format($day['pnl'], 2) }}€
+                                <div class="flex flex-col items-end"
+                                     x-data> {{-- x-data es vital aquí --}}
+
+                                    {{-- 
+            El color ($textColor) sirve igual para $ y %, 
+            así que lo dejamos calculado por PHP para ahorrar JS 
+        --}}
+                                    <span class="{{ $textColor }} text-sm font-black"
+                                          x-text="$store.viewMode.format({{ $day['pnl'] }}, {{ $day['pnl_percentage'] ?? 0 }})">
+
+                                        {{-- Fallback PHP (Lo que se ve al cargar) --}}
+                                        {{ $day['pnl'] > 0 ? '+' : '' }}{{ number_format($day['pnl'], 2) }} $
                                     </span>
+
                                 </div>
                             @endif
 

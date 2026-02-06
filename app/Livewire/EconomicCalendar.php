@@ -101,31 +101,6 @@ class EconomicCalendar extends Component
         return $currenciesToCheck->unique()->values()->toArray();
     }
 
-    public function addEvent()
-    {
-        $this->validate([
-            'newEvent' => 'required|min:3',
-            'newTime' => 'required',
-        ]);
-
-        EconomicEvent::create([
-            'user_id' => Auth::id(),
-            'date' => $this->date,
-            'time' => $this->newTime,
-            'currency' => $this->newCurrency,
-            'event' => $this->newEvent,
-            'impact' => $this->newImpact,
-        ]);
-
-        $this->newEvent = ''; // Limpiar input
-        $this->loadEvents();
-    }
-
-    public function deleteEvent($id)
-    {
-        EconomicEvent::where('id', $id)->where('user_id', Auth::id())->delete();
-        $this->loadEvents();
-    }
 
     // Método "Fake" para simular importación automática (Útil para demos)
     // En el futuro aquí conectarías una API real como Financial Modeling Prep

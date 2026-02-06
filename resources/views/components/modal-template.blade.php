@@ -72,19 +72,6 @@
             <div class="flex-1">
                 <p class="mt-1 text-sm leading-relaxed text-slate-600"
                    x-text="bodyAlert"></p>
-
-                <!-- Botón de acción (Opcional, si typeButton no está vacío) -->
-                <template x-if="typeButton !== ''">
-                    <button class="mt-3 text-sm font-bold uppercase tracking-wider transition-colors hover:underline"
-                            @click="{{ $show }} = false; $wire.call(typeButton)"
-                            :class="{
-                                'text-emerald-700': typeAlert === 'success',
-                                'text-red-700': typeAlert === 'error',
-                                'text-amber-700': typeAlert === 'warn'
-                            }">
-                        Confirmar
-                    </button>
-                </template>
             </div>
 
             <!-- Botón Cerrar -->

@@ -41,6 +41,10 @@ return [
     ],
     'firebase' => [
         'key_path' => public_path(env('FIREBASE_CREDENTIALS'))
-    ]
+    ],
+    'stripe' => [
+        'monthly' => env('STRIPE_PRICE_MONTHLY'),
+        'yearly' => env('STRIPE_PRICE_YEARLY'),
+    ],
 
 ];

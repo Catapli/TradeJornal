@@ -1,5 +1,6 @@
 {{-- CONTENEDOR PRINCIPAL: Solo lógica de dashboard --}}
-<div x-data="dashboardLogic()">
+<div class="min-h-screen bg-gray-50 p-6"
+     x-data="dashboardLogic()">
 
     {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
     <div x-data="{
@@ -11,7 +12,7 @@
             });
     
             // Fallback de seguridad: por si Livewire ya cargó antes de este script
-            setTimeout(() => { this.initialLoad = false }, 800);
+            setTimeout(() => { this.initialLoad = false }, 200);
         }
     }">
 
@@ -26,7 +27,7 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
             </div>
         </div>
     </div>
@@ -39,9 +40,9 @@
 
     {{-- 👇 EL MODAL DE CONFIRMACIÓN (Al final) --}}
     <x-modal-confirmation show="showDeleteModal"
-                          title="¿Eliminar Cuenta?"
-                          text="Se perderá todo el historial de trades y estadísticas. Esta acción no se puede deshacer."
-                          confirmText="Sí, borrar definitivamente"
+                          title="{{ __('labels.¿delete_account?') }}"
+                          text="{{ __('labels.lost_history_account') }}"
+                          confirmText="{{ __('labels.confirm_delete') }}"
                           {{-- Escuchamos el evento que dispara el botón del componente --}}
                           @confirm-action="executeDelete()" />
 
@@ -149,7 +150,7 @@
                 <legend class="font-google font-bold">{{ __('labels.sync_options') }}</legend>
                 <div class="col-span-12 grid grid-cols-12">
                     <div class="col-span-6">
-                        <span>Habilitar Sincronización</span>
+                        <span>{{ __('labels.enable_sync') }}</span>
                     </div>
                     <div class="col-span-6">
 
@@ -173,7 +174,6 @@
                                 icono="<i class='fa-solid fa-terminal'></i>">
                     <x-slot name="options">
                         <option value="">{{ __('labels.select_platform') }}</option>
-                        <option value="mt4">MetaTrader 4</option>
                         <option value="mt5">MetaTrader 5</option>
                         <option value="cTrader">cTrader</option>
                     </x-slot>
@@ -211,11 +211,116 @@
 
     </x-modals.modal-account>
 
+    {{-- MODAL DE REGLAS (TRADING PLAN) --}}
+    @if ($showRulesModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm"
+             x-transition.opacity>
+
+            <div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+
+                {{-- Header --}}
+                <div class="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Reglas Operativas</h3>
+                        <p class="text-xs text-gray-500">Define los límites para esta estrategia.</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600"
+                            wire:click="closeRulesModal">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                {{-- Body --}}
+                <div class="space-y-5 p-6">
+
+                    {{-- 1. Límites Porcentuales --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-rose-500">Límite Pérdida Diario (%)</label>
+                            <div class="relative">
+                                <input class="w-full rounded-lg border-rose-200 pr-6 text-sm focus:border-rose-500 focus:ring-rose-500"
+                                       type="number"
+                                       step="0.1"
+                                       max="100"
+                                       wire:model="rules_max_loss_percent"
+                                       placeholder="Ej: 2.5">
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <span class="text-xs text-gray-500">%</span>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-[10px] text-gray-400">Porcentaje del balance.</p>
+                        </div>
+
+                        <div>
+                            <label class="mb-1 block text-xs font-bold text-emerald-600">Meta Ganancia Diaria (%)</label>
+                            <div class="relative">
+                                <input class="w-full rounded-lg border-emerald-200 pr-6 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                       type="number"
+                                       step="0.1"
+                                       wire:model="rules_profit_target_percent"
+                                       placeholder="Ej: 1.0">
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <span class="text-xs text-gray-500">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- 2. Operativa --}}
+                    <div>
+                        <label class="mb-1 block text-xs font-bold text-gray-500">Máx. Trades Diarios</label>
+                        <input class="w-full rounded-lg border-gray-300 text-sm focus:ring-indigo-500"
+                               type="number"
+                               wire:model="rules_max_trades"
+                               placeholder="Ej: 3">
+                    </div>
+
+                    {{-- 3. Horario --}}
+                    <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                        <label class="mb-2 block text-xs font-bold uppercase text-gray-500">Horario Permitido</label>
+                        <div class="flex items-center gap-2">
+                            <input class="w-full rounded-lg border-gray-300 text-sm"
+                                   type="time"
+                                   wire:model="rules_start_time">
+                            <span class="text-gray-400">-</span>
+                            <input class="w-full rounded-lg border-gray-300 text-sm"
+                                   type="time"
+                                   wire:model="rules_end_time">
+                        </div>
+                    </div>
+
+                </div>
+
+                {{-- Footer --}}
+                <div class="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
+                    <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700"
+                            wire:click="closeRulesModal">Cancelar</button>
+                    <button class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700"
+                            wire:click="saveRules">
+                        Guardar Reglas
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    @endif
+
+    {{-- HEADER --}}
+    <div class="flex flex-col gap-4 p-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-wallet text-2xl text-indigo-600"></i>
+                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.accounts') }}</h1>
+            </div>
+            <p class="text-sm text-gray-500">{{ __('menu.resume_accounts') }}</p>
+        </div>
+    </div>
+
+
 
     <div class="grid grid-cols-12 p-2">
 
         {{-- ? Selector de cuenta --}}
-        <div class="hover:shadow-3xl col-span-12 m-2 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
+        <div class="hover:shadow-3xl col-span-12 mb-2 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
             <div class="min-w-0 flex-1">
                 <div class="mb-3 flex items-center justify-between">
                     <span class="bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-xl font-black text-gray-900 text-transparent">Cuenta</span>
@@ -228,17 +333,17 @@
 
                         <!-- Forzamos que el span no se rompa y esté alineado a la derecha -->
                         <span class="mb-1 whitespace-nowrap text-xs">
-                            Ultima Sincronizacion @if ($selectedAccount?->last_sync)
+                            {{ __('labels.last_sync') }} @if ($selectedAccount?->last_sync)
                                 {{ Carbon\Carbon::parse($selectedAccount?->last_sync)->format('H:i d/m/Y') }}
                             @else
-                                Nunca
+                                {{ __('labels.never') }}
                             @endif
                         </span>
-                        <livewire:sync-token-modal />
+                        {{-- <livewire:sync-token-modal /> --}}
                         <div class="flex items-center"> <!-- Quitamos clases que puedan estorbar y aseguramos flex -->
 
                             {{-- En header cuenta seleccionada --}}
-                            @if ($selectedAccount?->mt5_login)
+                            {{--                            @if ($selectedAccount?->mt5_login)
 
                                 @if ($isSyncing)
                                     <div wire:poll.2s="checkSyncStatus"></div>
@@ -249,10 +354,10 @@
                                         wire:loading.attr="disabled"
                                         {{ $isSyncing ? 'disabled' : '' }}>
 
-                                    {{-- Spinner (mientras carga red o Job) --}}
+                                    {{~~ Spinner (mientras carga red o Job) ~~}}
                                     <svg class="h-4 w-4 animate-spin"
                                          wire:loading
-                                         {{-- También mostramos si isSyncing es true aunque no haya carga de red activa --}}
+                                         {{~~ También mostramos si isSyncing es true aunque no haya carga de red activa ~~}}
                                          @if ($isSyncing) style="display: block" @endif
                                          fill="none"
                                          stroke="currentColor"
@@ -264,12 +369,12 @@
                                     </svg>
 
                                     <span>
-                                        <span wire:loading>Enviando...</span>
+                                        <span wire:loading>{{ __('labels.sending') }}</span>
                                         <span wire:loading.remove>
                                             @if ($isSyncing)
-                                                ⏳ Sincronizando...
+                                                {{ __('labels.syncronizing') }}
                                             @else
-                                                🔄 Sync MT5
+                                                {{ __('labels.sync') }}
                                             @endif
                                         </span>
                                     </span>
@@ -277,16 +382,16 @@
                             @else
                                 <button class="ml-2 rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
                                         disabled>
-                                    ⚙️ Configurar MT5
+                                    {{ __('labels.configure_platform') }}
                                 </button>
-                            @endif
+                            @endif --}}
 
                             {{-- Badge de Estado --}}
                             <div class="flex items-center space-x-2 rounded-xl border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-xs font-bold text-emerald-800">
                                 <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
                                 <span class="whitespace-nowrap">
                                     {{ $selectedAccount?->status_formatted ?? '---' }} •
-                                    {{ $selectedAccount?->initial_balance ? '€' . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0€' }}
+                                    {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
                                 </span>
                             </div>
                         </div>
@@ -347,7 +452,16 @@
                                     <i class="fa-solid fa-xmark text-red-500"></i>
                                     {{ __('labels.delete_account') }}
                                 </button>
+
+                                {{-- BOTÓN REGLAS (NUEVO) --}}
+                                <button class="rounded-md p-1.5 text-gray-400 transition hover:bg-white hover:text-indigo-600 hover:shadow-sm"
+                                        wire:click="openRules({{ $selectedAccount->id }})"
+                                        title="Configurar Reglas y Objetivos">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </button>
                             @endif
+
+
                         </div>
 
                     </div>
@@ -359,7 +473,7 @@
         </div>
 
         {{-- ? Grafico y timeframe --}}
-        <div class="hover:shadow-3xl col-span-12 m-1 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300 xl:col-span-8">
+        <div class="hover:shadow-3xl col-span-12 mb-2 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300 xl:col-span-8">
 
             <div class="col-span-12">
                 <!-- Botones Timeframe con Alpine compartido -->
@@ -401,9 +515,9 @@
                 <div class="flex flex-col text-center">
                     <span> {{ __('labels.profit_account') }}</span>
                     @if ($totalProfitLoss > 0)
-                        <span>{{ number_format($totalProfitLoss, 2) }} € </span>
+                        <span>{{ number_format($totalProfitLoss, 2) }} {{ $currency }} </span>
                     @else
-                        <span>0€</span>
+                        <span>0 {{ $currency }}</span>
                     @endif
                 </div>
                 <div class="flex flex-col text-center">
@@ -419,8 +533,6 @@
             <div class="col-span-12 h-auto max-h-96 min-h-96 w-full bg-white p-5 sm:rounded-lg"
                  wire:ignore
                  x-show="!showLoadingGrafic">
-                {{-- <canvas x-show="!showLoadingGrafic"
-                        x-ref="canvas"></canvas> --}}
 
                 <!-- CAMBIO AQUÍ: Usamos un div y cambiamos la referencia a 'chart' -->
                 <div class="h-full min-h-[350px] w-full"
@@ -452,7 +564,7 @@
                     </div>
 
                     <div>
-                        {{ $selectedAccount?->initial_balance ? '€' . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0€' }}
+                        {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
                     </div>
                 </div>
                 <div class="col-span-12 flex items-center justify-between">
@@ -480,7 +592,7 @@
                                 {{ number_format($profitPercentage, 2) }}%
                             </span>
                         @endif
-                        <span>{{ $selectedAccount?->current_balance ? '€' . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0€' }}</span>
+                        <span>{{ $selectedAccount?->current_balance ? $currency . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0' . $currency }}</span>
                     </div>
 
                 </div>
@@ -560,26 +672,26 @@
             <x-card-statistics class="col-span-6 xl:col-span-3"
                                label="{{ __('labels.bigger_profit_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $maxWin }} €"
+                               key="{{ $maxWin }} {{ $currency }}"
                                tooltip="{{ __('labels.tlp_bigger_profit_trade') }}" />
 
             <x-card-statistics class="col-span-6 xl:col-span-3"
                                label="{{ __('labels.avg_profit_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $avgWinTrade }} €"
+                               key="{{ $avgWinTrade }} {{ $currency }}"
                                tooltip="{{ __('labels.tlp_avg_profit_trade') }}" />
 
             <x-card-statistics class="col-span-6 xl:col-span-3"
                                label="{{ __('labels.losser_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $maxLoss }} €"
+                               key="{{ $maxLoss }} {{ $currency }}"
                                tooltip="{{ __('labels.tlp_losser_trade') }}" />
 
             <x-card-statistics class="col-span-6 xl:col-span-3"
                                align="right"
                                label="{{ __('labels.avg_losser_trade') }}"
                                icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $avgLossTrade }} €"
+                               key="{{ $avgLossTrade }} {{ $currency }}"
                                tooltip="{{ __('labels.tlp_avg_losser_trade') }}" />
 
             <x-card-statistics class="col-span-6 xl:col-span-3"
@@ -612,7 +724,7 @@
 
             <div class="mb-5 flex items-center justify-between">
                 <div class="flex items-center">
-                    <h3 class="font-google text-lg font-bold text-gray-800">Objetivos de la Fase</h3>
+                    <h3 class="font-google text-lg font-bold text-gray-800">{{ __('labels.phase_objectives') }}</h3>
                     <p class="text-sm text-gray-500">
                         {{ $selectedAccount->program_level->program->name ?? '' }}
                         <span class="mx-1 text-gray-300">|</span>
@@ -628,7 +740,8 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {{-- Llamamos al Accessor del Modelo Account --}}
                 @foreach ($selectedAccount->objectives_progress as $obj)
-                    <x-card-objectives :objective="$obj" />
+                    <x-card-objectives :objective="$obj"
+                                       :currency="$currency" />
                 @endforeach
             </div>
 
@@ -643,8 +756,8 @@
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-gray-900">Histórico de la Cuenta</h3>
-                        <p class="text-xs text-gray-500">Registro completo de operaciones cerradas</p>
+                        <h3 class="text-lg font-bold text-gray-900">{{ __('labels.account_historic') }}</h3>
+                        <p class="text-xs text-gray-500">{{ __('labels.register_complete') }}</p>
                     </div>
                 </div>
 
@@ -661,15 +774,15 @@
                     <thead class="bg-gray-50 text-xs font-bold uppercase tracking-wider text-gray-400">
                         <tr>
                             <th class="px-6 py-4 text-left"
-                                scope="col">Orden / Activo</th>
+                                scope="col">{{ __('labels.order_active') }}</th>
                             <th class="px-6 py-4 text-left"
-                                scope="col">Tiempo (In / Out)</th>
+                                scope="col">{{ __('labels.time_in_out') }}</th>
                             <th class="px-6 py-4 text-center"
-                                scope="col">Volumen</th>
+                                scope="col">{{ __('labels.volume') }}</th>
                             <th class="px-6 py-4 text-left"
-                                scope="col">Precios (In / Out)</th>
+                                scope="col">{{ __('labels.prices_in_out') }}</th>
                             <th class="px-6 py-4 text-right"
-                                scope="col">Beneficio</th>
+                                scope="col">{{ __('labels.profit') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
@@ -684,12 +797,12 @@
                                         {{-- Badge Tipo --}}
                                         <div class="flex-shrink-0">
                                             @if (in_array(strtoupper($trade->direction), ['BUY', 'LONG']))
-                                                <span class="inline-flex h-8 w-12 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-xs font-black text-emerald-600 shadow-sm">
-                                                    BUY
+                                                <span class="inline-flex h-8 w-14 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-xs font-black text-emerald-600 shadow-sm">
+                                                    {{ __('labels.long') }}
                                                 </span>
                                             @else
-                                                <span class="inline-flex h-8 w-12 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-xs font-black text-rose-600 shadow-sm">
-                                                    SELL
+                                                <span class="inline-flex h-8 w-14 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-xs font-black text-rose-600 shadow-sm">
+                                                    {{ __('labels.short') }}
                                                 </span>
                                             @endif
                                         </div>
@@ -711,14 +824,14 @@
                                     <div class="flex flex-col gap-1.5">
                                         {{-- Entrada --}}
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="w-10 font-medium text-gray-400">Abrir:</span>
+                                            <span class="w-10 font-medium text-gray-400">{{ __('labels.open') }}</span>
                                             <span class="font-mono text-gray-600">
                                                 {{ \Carbon\Carbon::parse($trade->entry_time)->format('d M H:i') }}
                                             </span>
                                         </div>
                                         {{-- Salida --}}
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="w-10 font-medium text-gray-400">Cerrar:</span>
+                                            <span class="w-10 font-medium text-gray-400">{{ __('labels.close') }}</span>
                                             <span class="font-mono font-bold text-gray-900">
                                                 {{ \Carbon\Carbon::parse($trade->exit_time)->format('d M H:i') }}
                                             </span>
@@ -738,14 +851,14 @@
                                     <div class="flex flex-col gap-1.5">
                                         {{-- Entrada --}}
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="w-10 font-medium text-gray-400">In:</span>
+                                            <span class="w-10 font-medium text-gray-400">{{ __('labels.in') }}</span>
                                             <span class="font-mono text-gray-600">
                                                 {{ number_format($trade->entry_price, 5) }}
                                             </span>
                                         </div>
                                         {{-- Salida --}}
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="w-10 font-medium text-gray-400">Out:</span>
+                                            <span class="w-10 font-medium text-gray-400">{{ __('labels.out') }}</span>
                                             <span class="font-mono font-bold text-gray-900">
                                                 {{ number_format($trade->exit_price, 5) }}
                                             </span>
@@ -753,15 +866,26 @@
                                     </div>
                                 </td>
 
+                                {{-- 4. PNL --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-right"
+                                    x-data>
+                                    <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm font-black"
+                                          x-text="$store.viewMode.format({{ $trade->pnl }}, {{ $trade->pnl_percentage ?? 0 }})">
+
+                                        {{-- Fallback visual (lo que se ve antes de que cargue Alpine) --}}
+                                        {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
+                                    </span>
+                                </td>
+
                                 {{-- COLUMNA 5: PNL --}}
-                                <td class="whitespace-nowrap px-6 py-4 text-right">
+                                {{-- <td class="whitespace-nowrap px-6 py-4 text-right">
                                     <div class="flex flex-col items-end">
                                         <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono text-base font-black">
                                             {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
                                         </span>
-                                        {{-- Opcional: Mostrar % o pips debajo si lo tuvieras --}}
+                                        {{~~ Opcional: Mostrar % o pips debajo si lo tuvieras ~~}}
                                     </div>
-                                </td>
+                                </td> --}}
                             </tr>
                         @empty
                             <tr>
@@ -771,7 +895,7 @@
                                         <div class="mb-3 rounded-full bg-gray-50 p-4">
                                             <i class="fa-solid fa-scroll text-2xl text-gray-300"></i>
                                         </div>
-                                        <p>No hay historial disponible para esta cuenta.</p>
+                                        <p>{{ __('labels.not_history') }}</p>
                                     </div>
                                 </td>
                             </tr>

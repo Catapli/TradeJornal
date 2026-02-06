@@ -5,12 +5,51 @@
          currencies: @entangle('filterCurrency').live
      }">
 
+    {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
+    <div x-data="{
+        initialLoad: true,
+        init() {
+            // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
+            document.addEventListener('livewire:initialized', () => {
+                this.initialLoad = false;
+            });
+    
+            // Fallback de seguridad: por si Livewire ya cargó antes de este script
+            setTimeout(() => { this.initialLoad = false }, 200);
+        }
+    }">
+
+        {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
+        {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+             x-show="initialLoad"
+             x-transition:leave="transition ease-in duration-500"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+
+            {{-- Aquí tu componente loader --}}
+            <div class="flex flex-col items-center">
+                <x-loader />
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading') }}</span>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- LOADER PARA ACCIONES PESADAS --}}
+    <div wire:loading
+         wire:target='resetFilters'>
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
+            <x-loader></x-loader>
+        </div>
+    </div>
+
     {{-- HEADER (Sin cambios, funciona bien con Livewire) --}}
-    <div class="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div class="sticky top-0 z-10 mt-[55px] w-auto border-b border-gray-200 bg-white px-4 py-2 shadow">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <h1 class="hidden items-center gap-2 text-xl font-bold text-gray-900 md:flex">
-                    <i class="fa-solid fa-calendar-days text-indigo-600"></i> Calendario
+                    <i class="fa-solid fa-calendar-days text-indigo-600"></i> {{ __('menu.calendar') }}
                 </h1>
 
                 <div class="flex items-center rounded-lg bg-gray-100 p-1">
@@ -24,7 +63,7 @@
                     <button class="rounded-md p-2 text-gray-500 hover:bg-white hover:shadow-sm"
                             wire:click="nextDay"><i class="fa-solid fa-chevron-right"></i></button>
                     <button class="ml-2 rounded bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-100"
-                            wire:click="setToday">HOY</button>
+                            wire:click="setToday">{{ __('labels.today') }}</button>
                 </div>
             </div>
 
@@ -32,7 +71,7 @@
                     wire:click="syncWithApi"
                     wire:loading.attr="disabled">
                 <span wire:loading.remove
-                      wire:target="syncWithApi"><i class="fa-solid fa-cloud-arrow-down"></i> Sync</span>
+                      wire:target="syncWithApi"><i class="fa-solid fa-cloud-arrow-down"></i> {{ __('labels.sync') }}</span>
                 <span wire:loading
                       wire:target="syncWithApi"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </button>
@@ -46,7 +85,7 @@
 
             {{-- 1. FILTRO IMPACTO --}}
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h3 class="mb-3 text-xs font-bold uppercase text-gray-500">Impacto</h3>
+                <h3 class="mb-3 text-xs font-bold uppercase text-gray-500">{{ __('labels.impact') }}</h3>
 
                 {{-- Opción Cualquiera: Modifica la variable Alpine INSTANTÁNEAMENTE --}}
                 <div class="mb-2 flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-50"
@@ -59,7 +98,7 @@
                     </div>
                     {{-- Clase dinámica basada en JS, no en PHP --}}
                     <span class="text-sm"
-                          :class="impacts.length === 0 ? 'font-bold text-indigo-700' : 'text-gray-600'">Cualquiera</span>
+                          :class="impacts.length === 0 ? 'font-bold text-indigo-700' : 'text-gray-600'">{{ __('labels.anyone_s') }}</span>
                 </div>
 
                 <div class="space-y-1">
@@ -84,7 +123,7 @@
 
             {{-- 2. FILTRO DIVISAS --}}
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h3 class="mb-3 text-xs font-bold uppercase text-gray-500">Divisas</h3>
+                <h3 class="mb-3 text-xs font-bold uppercase text-gray-500">{{ __('labels.currencies') }}</h3>
 
                 <div class="mb-2 flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-50"
                      @click="currencies = []">
@@ -95,7 +134,7 @@
                            x-show="currencies.length === 0"></i>
                     </div>
                     <span class="text-sm"
-                          :class="currencies.length === 0 ? 'font-bold text-indigo-700' : 'text-gray-600'">Todas</span>
+                          :class="currencies.length === 0 ? 'font-bold text-indigo-700' : 'text-gray-600'">{{ __('labels.all') }}</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-1">
@@ -126,13 +165,13 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-bold uppercase text-gray-500">Hora</th>
-                            <th class="px-6 py-3 text-center text-xs font-bold uppercase text-gray-500">Divisa</th>
-                            <th class="px-6 py-3 text-center text-xs font-bold uppercase text-gray-500">Impacto</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold uppercase text-gray-500">Evento</th>
-                            <th class="px-6 py-3 text-right text-xs font-bold uppercase text-gray-500">Actual</th>
-                            <th class="hidden px-6 py-3 text-right text-xs font-bold uppercase text-gray-500 sm:table-cell">Prev.</th>
-                            <th class="hidden px-6 py-3 text-right text-xs font-bold uppercase text-gray-500 sm:table-cell">Ant.</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.hour') }}</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold uppercase text-gray-500">{{ __('labels.currency') }}</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold uppercase text-gray-500">{{ __('labels.impact') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.event') }}</th>
+                            <th class="px-6 py-3 text-right text-xs font-bold uppercase text-gray-500">{{ __('labels.actual') }}</th>
+                            <th class="hidden px-6 py-3 text-right text-xs font-bold uppercase text-gray-500 sm:table-cell">{{ __('labels.prev') }}</th>
+                            <th class="hidden px-6 py-3 text-right text-xs font-bold uppercase text-gray-500 sm:table-cell">{{ __('labels.ant') }}</th>
                         </tr>
                     </thead>
                     <tbody class="relative bg-white">
@@ -147,7 +186,7 @@
                                         <div class="absolute -top-3 left-0 right-0 flex w-full items-center">
                                             <div class="h-px flex-grow bg-rose-500"></div>
                                             <div class="animate-pulse rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                                                AHORA {{ substr($now, 0, 5) }}
+                                                {{ __('labels.now') }} {{ substr($now, 0, 5) }}
                                             </div>
                                             <div class="h-px flex-grow bg-rose-500"></div>
                                         </div>
@@ -188,7 +227,7 @@
                             <tr>
                                 <td class="px-6 py-12 text-center italic text-gray-400"
                                     colspan="7">
-                                    No hay eventos con estos filtros.
+                                    {{ __('labels.not_events_with_filter') }}
                                 </td>
                             </tr>
                         @endforelse
@@ -200,7 +239,7 @@
                                     colspan="7">
                                     <div class="absolute -top-3 left-0 right-0 flex w-full items-center">
                                         <div class="h-px flex-grow bg-rose-500"></div>
-                                        <div class="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">FIN DEL DÍA</div>
+                                        <div class="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">{{ __('labels.end_day') }}</div>
                                         <div class="h-px flex-grow bg-rose-500"></div>
                                     </div>
                                 </td>

@@ -13,6 +13,7 @@ use App\Models\Log;
 use App\Models\ProgramLevel;
 use App\Models\ProgramObjective;
 use App\Models\Reason;
+use App\Models\Role;
 use App\Models\Strategy;
 use App\Models\Town;
 use App\Models\Trade;
@@ -34,6 +35,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call([PropFirmsSeeder::class, MistakesSeeder::class]);
 
+        Role::create(['name' => 'superadmin', 'label' => 'Super Administrador']);
+        Role::create(['name' => 'admin', 'label' => 'Administrador']);
+        Role::create(['name' => 'user', 'label' => 'Usuario']);
 
         //! DATOS PRODUCCION
         //* USUARIO ADMIN
@@ -41,7 +45,9 @@ class DatabaseSeeder extends Seeder
             'name' => 'Jordi',
             'email' => 'jordi@gmail.com',
             'google_id' => '',
-            'sync_token' => Str::random(32)
+            'sync_token' => Str::random(32),
+            'is_superadmin' => true,
+            "role_id" => 1,
         ]);
 
         //? DATOS FALSOS

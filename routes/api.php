@@ -27,3 +27,5 @@ use Illuminate\Support\Facades\Route;
 // Route::post('send-notification', [NotificationController::class, 'sendPushNotification']);
 
 Route::post('/mt5-sync', [App\Http\Controllers\Mt5SyncController::class, 'sync']);
+
+Route::post('/mt5-reset', [App\Http\Controllers\Mt5SyncController::class, 'resetSync']);

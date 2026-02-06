@@ -2,26 +2,30 @@
 
 namespace App\Http\Middleware;
 
+use App\AuthActions;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class IsAdmin
 {
+    use AuthActions; // <--- Usamos el Trait aquí
+
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() == null) {
-            return redirect('/login');
+        // 1. Verificamos si hay usuario logueado
+        if (! $request->user()) {
+            return redirect()->route('login');
         }
 
-        // if ($request->user()->is_admin != true) {
-        //     return redirect('/dashboard');
-        // }
+        // 2. Usamos tu función del Trait para verificar
+        if (! $this->isSuperAdmin($request->user())) {
+            abort(403, 'ACCESO DENEGADO: Se requieren permisos de Super Administrador.');
+        }
+
         return $next($request);
     }
 }

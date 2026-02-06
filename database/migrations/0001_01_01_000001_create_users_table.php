@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('fcm_token', 250)->nullable();
             $table->boolean('is_superadmin')->default(false);
             $table->string('sync_token')->nullable()->unique();
+            $table->foreignId('role_id')->constrained()->onDelete('cascade');
             $table->rememberToken();
             $table->timestamps();
         });

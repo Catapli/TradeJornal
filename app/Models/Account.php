@@ -26,6 +26,12 @@ class Account extends Model
         return $this->belongsTo(ProgramLevel::class, 'program_level_id');
     }
 
+    // Añadir esta relación en ambos modelos
+    public function tradingPlan()
+    {
+        return $this->hasOne(TradingPlan::class);
+    }
+
 
     // ← ACCESSOR STATUS FORMATEADO
     public function getStatusFormattedAttribute(): string

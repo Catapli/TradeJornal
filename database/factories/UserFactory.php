@@ -34,7 +34,8 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'remember_token' => Str::random(10),
-            'sync_token' => Str::random(32)
+            'sync_token' => Str::random(32),
+            "role_id" => 3,
         ];
     }
 

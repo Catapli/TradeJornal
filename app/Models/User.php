@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Billable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
@@ -19,6 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens;
+    use Billable; // <--- Añade esto
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasTeams;
@@ -96,6 +98,6 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->role?->name === 'superadmin';
+        return $this->is_superadmin === true;
     }
 }

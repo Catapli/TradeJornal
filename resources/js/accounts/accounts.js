@@ -9,7 +9,6 @@ document.addEventListener("alpine:init", () => {
         showModal: false, // Control del modal
         labelTitleModal: "",
         typeButton: "", // Tipo de Boton para los modals
-        tableHistory: null,
         showDeleteModal: false, // Variable para mostrar el modal
         accountToDeleteId: null, // ID temporal
 
@@ -35,26 +34,12 @@ document.addEventListener("alpine:init", () => {
             window.addEventListener("account-change", (e) => {
                 // ... tu lógica de timeframe ...
                 this.timeframe = e.detail.timeframe;
-                console.log("Prueba");
-
-                // 👇 RECARGAR DATATABLE
-                if (this.tableHistory) {
-                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
-                    this.tableHistory.ajax.reload();
-                }
             });
 
             // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
             window.addEventListener("account-updated", (e) => {
                 // ... tu lógica de timeframe ...
                 this.timeframe = e.detail.timeframe;
-                console.log("Prueba");
-
-                // 👇 RECARGAR DATATABLE
-                if (this.tableHistory) {
-                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
-                    this.tableHistory.ajax.reload();
-                }
 
                 this.showModal = false; // Cerramos modal si está abierto
 
@@ -69,12 +54,6 @@ document.addEventListener("alpine:init", () => {
                 // ... tu lógica de timeframe ...
                 this.timeframe = e.detail.timeframe;
 
-                // 👇 RECARGAR DATATABLE
-                if (this.tableHistory) {
-                    // reload(null, false) recarga los datos manteniendo la paginación actual (opcional)
-                    this.tableHistory.ajax.reload();
-                }
-
                 this.showModal = false; // Cerramos modal si está abierto
 
                 this.triggerAlert(
@@ -82,170 +61,6 @@ document.addEventListener("alpine:init", () => {
                     "success",
                 );
             });
-
-            if (!$.fn.DataTable.isDataTable("#table_history")) {
-                self.tableHistory = $("#table_history").DataTable({
-                    ajax: {
-                        url: "/trades/data",
-                        data: function (d) {
-                            let id = self.$wire.selectedAccountId;
-                            d.id = id;
-                        },
-                    },
-                    // Ordenamos por fecha de entrada descendente por defecto
-                    order: [[1, "desc"]],
-                    lengthChange: false,
-                    searching: false,
-
-                    columnDefs: [
-                        {
-                            targets: "_all", // Aplica a todas las columnas
-                            className: "dt-left", // Usa 'dt-left' si no usas Bootstrap
-                        },
-                    ],
-
-                    // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE
-                    columns: [
-                        // COLUMNA 1: ID Orden / Activo / Tipo
-                        // COLUMNA 1: ID Orden / Activo / Tipo
-                        {
-                            data: "ticket",
-                            name: "ticket",
-                            title: "Orden / Activo",
-                            render: function (data, type, row) {
-                                // Lógica de colores (igual que antes)
-                                let isBuy =
-                                    row.direction === "buy" ||
-                                    row.type === "BUY" ||
-                                    row.direction === "long";
-                                let badgeClass = isBuy
-                                    ? "bg-[#00800061] text-[#0eb90e] border-emerald-700"
-                                    : "bg-[#7f101061] text-[#eb0b0b] border-red-700";
-                                let label = isBuy ? "Buy" : "Sell";
-
-                                return `
-            <!-- Contenedor Flex Fila: Alinea Badge (Izq) y Textos (Der) -->
-            <div class="flex items-center gap-3">
-                
-                <!-- 1. BADGE IZQUIERDA (Centrado verticalmente gracias a items-center del padre) -->
-                <div class="flex-shrink-0">
-                    <span class="text-sm px-2 py-1 rounded border ${badgeClass} font-bold uppercase tracking-wider">
-                        ${label}
-                    </span>
-                </div>
-
-                <!-- 2. TEXTOS DERECHA (Apilados verticalmente) -->
-                <div class="flex flex-col items-start gap-0.5">
-                    
-                    <!-- Ticket ID + Copiar -->
-                    <div class="font-bold text-white text-sm flex items-center gap-2">
-                        ${data}
-                    </div>
-
-                    <!-- Símbolo (Debajo del ID) -->
-                    <span class="text-xs font-medium text-gray-400">
-                        ${row.symbol}
-                    </span>
-                </div>
-            </div>
-        `;
-                            },
-                        },
-
-                        // COLUMNA 2: Tiempo (Abrir / Cerrar)
-                        {
-                            data: "entry_time",
-                            name: "entry_time",
-                            title: "Tiempo",
-                            render: function (data, type, row) {
-                                return `
-                    <div class="flex flex-col text-sm gap-1">
-                        <div class="flex justify-start gap-2">
-                            <span class="text-gray-300 ">Abrir:</span>
-                            <span class="text-white font-mono ">${data}</span>
-                        </div>
-                        <div class="flex justify-start gap-2">
-                            <span class="text-gray-300 ">Cerrar:</span>
-                            <span class="text-white font-mono ">${row.exit_time}</span>
-                        </div>
-                    </div>
-                `;
-                            },
-                        },
-
-                        // COLUMNA 3: Lotes
-                        {
-                            data: "size",
-                            name: "size",
-                            title: "Lotes",
-                            class: "text-left font-bold text-white", // Centrado y negrita
-                            render: function (data) {
-                                return data; // Simple
-                            },
-                        },
-
-                        // COLUMNA 4: Precio (Abrir / Cerrar)
-                        {
-                            data: "entry_price",
-                            name: "entry_price",
-                            title: "Precio",
-                            render: function (data, type, row) {
-                                return `
-                    <div class="flex flex-col text-sm gap-1">
-                        <div class="flex gap-2">
-                            <span class="text-gray-300 w-10 ">Abrir:</span>
-                            <span class="text-white font-mono font-bold ">${data}</span>
-                        </div>
-                        <div class="flex gap-2">
-                            <span class="text-gray-300 w-10 ">Cerrar:</span>
-                            <span class="text-white font-mono font-bold ">${row.exit_price}</span>
-                        </div>
-                    </div>
-                `;
-                            },
-                        },
-
-                        // COLUMNA 5: Beneficios (PnL)
-                        {
-                            data: "pnl",
-                            name: "pnl",
-                            title: "Beneficio",
-                            class: "text-right", // Alineado a la derecha
-                            render: function (data, type, row) {
-                                let val = parseFloat(data);
-
-                                // Determinar color
-                                let colorClass =
-                                    val >= 0
-                                        ? "text-emerald-400"
-                                        : "text-red-400";
-
-                                // Formatear a 2 decimales (ej: "10.50" o "-5.20")
-                                let formatted = val.toFixed(2);
-
-                                // Si es mayor que 0, le pegamos el "+" delante.
-                                // Si es negativo, ya trae el "-" incluido en 'formatted'.
-                                // Si es 0, se queda como "0.00"
-                                let textWithSign =
-                                    val > 0 ? "+" + formatted : formatted;
-
-                                return `
-            <span class="font-bold text-base font-mono ${colorClass}">
-                ${textWithSign}
-            </span>
-        `;
-                            },
-                        },
-                    ],
-                    // Estilos generales de la tabla para modo oscuro
-                    createdRow: function (row, data, dataIndex) {
-                        // Añadir clases a la fila (borde inferior, fondo oscuro, hover)
-                        $(row).addClass(
-                            "border-b border-gray-700 hover:bg-gray-800 transition-colors",
-                        );
-                    },
-                });
-            }
         },
 
         triggerAlert(message, type = "error") {
@@ -264,7 +79,6 @@ document.addEventListener("alpine:init", () => {
 
         // 2. EJECUTAR BORRADO (Llamado desde el botón rojo del modal)
         executeDelete() {
-            console.log("Prueba");
             if (this.accountToDeleteId) {
                 this.$wire.deleteAccount(this.accountToDeleteId);
                 this.showDeleteModal = false;
@@ -287,35 +101,6 @@ document.addEventListener("alpine:init", () => {
             this.labelTitleModal = this.$t("edit_account");
         },
 
-        // initChart() {
-        //     const canvas = this.$refs.canvas;
-        //     if (!canvas) return;
-
-        //     this.showLoadingGrafic = false;
-
-        //     // Usamos nextTick para asegurar que el DOM está listo
-        //     this.$nextTick(() => {
-        //         if (window.balanceChart) window.balanceChart.destroy();
-
-        //         const ctx = canvas.getContext("2d");
-        //         // Accedemos a los datos de Livewire de forma segura
-        //         const labels = this.$wire.balanceChartData?.labels || [];
-        //         const datasets = this.$wire.balanceChartData?.datasets || [];
-
-        //         if (!labels.length) return;
-
-        //         window.balanceChart = new Chart(ctx, {
-        //             type: "line",
-        //             data: { labels, datasets },
-        //             options: {
-        //                 responsive: true,
-        //                 maintainAspectRatio: false,
-        //                 interaction: { intersect: false, mode: "index" },
-        //                 // Tus opciones de chart...
-        //             },
-        //         });
-        //     });
-        // },
         initChart() {
             const chartEl = this.$refs.chart;
             if (!chartEl) return;
@@ -329,6 +114,7 @@ document.addEventListener("alpine:init", () => {
                 const categories =
                     this.$wire.balanceChartData?.categories || [];
                 const seriesData = this.$wire.balanceChartData?.series || [];
+                const currency = this.$wire.currency || "$";
 
                 // Si no hay datos, salimos (o podrías mostrar un div de "Sin datos")
                 if (!categories.length) return;
@@ -381,7 +167,7 @@ document.addEventListener("alpine:init", () => {
                     yaxis: {
                         labels: {
                             style: { colors: "#9ca3af", fontSize: "12px" },
-                            formatter: (val) => val.toFixed(2) + " €",
+                            formatter: (val) => val.toFixed(2) + currency,
                         },
                     },
 
@@ -398,7 +184,7 @@ document.addEventListener("alpine:init", () => {
                         intersect: false,
                         y: {
                             formatter: function (val) {
-                                return val.toFixed(2) + " €";
+                                return val.toFixed(2) + currency;
                             },
                         },
                     },
@@ -472,11 +258,6 @@ document.addEventListener("alpine:init", () => {
         },
 
         init() {
-            console.log(
-                "✅ Alpine Selector Iniciado. Empresas:",
-                this.allFirms,
-            );
-
             // 3. Watchers (Solo sincronizamos cuando el usuario CAMBIA algo)
             this.$watch("selectedFirmId", (value) => {
                 if (this.isLoading) return; // <--- STOP SI CARGAMOS DATOS
@@ -592,7 +373,6 @@ document.addEventListener("alpine:init", () => {
         syncToLivewire() {
             // 4. Protección contra fallos de $wire
             if (typeof this.$wire === "undefined") {
-                console.warn("Livewire no está listo todavía.");
                 return;
             }
 
@@ -660,7 +440,6 @@ document.addEventListener("alpine:init", () => {
             }
 
             if (this.syncronize) {
-                console.log("Sincronizando cuenta con el servidor...");
                 if (
                     this.$wire.form.platformBroker === null ||
                     this.$wire.form.platformBroker === ""

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\MoneyHelper;
 use App\Jobs\SyncAccountTrades;
 use App\Jobs\SyncMt5Account;
 use App\Livewire\Forms\AccountForm;
@@ -64,12 +65,17 @@ class AccountPage extends Component
     public AccountForm $form;
     public $propFirmsData = [];
 
+    public $showRulesModal = false;
+    public $editingAccountId = null;
 
+    // Campos del plan
+    public $rules_max_loss_percent;
+    public $rules_profit_target_percent;
+    public $rules_max_trades;
+    public $rules_start_time;
+    public $rules_end_time;
 
-
-
-
-
+    public $currency;
 
 
     public $timeframes = [  // ← ASEGÚRATE de tener esto
@@ -95,8 +101,49 @@ class AccountPage extends Component
             ->get() // Obtenemos colección
             ->toArray(); // Convertimos a Array para pasarlo al JS
 
+        $this->changeCurrency();
 
         $this->updateData();
+    }
+
+    public function openRules($accountId)
+    {
+        $this->editingAccountId = $accountId;
+        $account = Account::with('tradingPlan')->findOrFail($accountId);
+        $plan = $account->tradingPlan;
+
+        $this->rules_max_loss_percent = $plan?->max_daily_loss_percent;
+        $this->rules_profit_target_percent = $plan?->daily_profit_target_percent;
+        $this->rules_max_trades = $plan?->max_daily_trades;
+        $this->rules_start_time = $plan?->start_time; // Formato H:i
+        $this->rules_end_time = $plan?->end_time;
+
+        $this->showRulesModal = true;
+    }
+
+    public function closeRulesModal()
+    {
+        $this->showRulesModal = false;
+        $this->reset(['rules_max_loss_percent', 'rules_profit_target_percent', 'rules_max_trades', 'rules_start_time', 'rules_end_time', 'editingAccountId']);
+    }
+
+    public function saveRules()
+    {
+        $account = Account::find($this->editingAccountId);
+
+        $data = [
+            'max_daily_loss_percent' => $this->rules_max_loss_percent === '' ? null : $this->rules_max_loss_percent,
+            'daily_profit_target_percent' => $this->rules_profit_target_percent === '' ? null : $this->rules_profit_target_percent,
+            'max_daily_trades' => $this->rules_max_trades === '' ? null : $this->rules_max_trades,
+            'start_time' => $this->rules_start_time === '' ? null : $this->rules_start_time,
+            'end_time' => $this->rules_end_time === '' ? null : $this->rules_end_time,
+            'is_active' => true
+        ];
+
+        $account->tradingPlan()->updateOrCreate([], $data);
+
+        $this->showRulesModal = false;
+        $this->dispatch('notify', 'Plan de la cuenta actualizado.');
     }
 
     // Propiedad Computada para los trades
@@ -121,21 +168,27 @@ class AccountPage extends Component
         $this->updateData();
         // Verificamos si la cuenta se ha quemado tras la sincronización
         if ($this->selectedAccount->status === 'burned') {
-            $this->showAlert('error', '🚨 CUENTA QUEMADA: El balance ha llegado a 0. La cuenta se ha marcado como perdida.');
+            $this->showAlert('error', __('labels.account_burned'));
             $this->isSyncing = false;
 
             // Opcional: Refrescar la lista de cuentas para que desaparezca o se vea el status
             $user = Auth::user();
             $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->get();
             $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+            $this->changeCurrency();
             $this->updateData();
             return;
         }
 
         $this->dispatch('timeframe-updated', timeframe: $this->selectedTimeframe);
-        $this->showAlert('success', '✅ Sincronización finalizada correctamente.');
-        // session()->flash('message', "✅ Sincronización finalizada correctamente.");
+        $this->showAlert('success', __('labels.sync_complete_ok'));
         Log::info("Livewire: Lógica post-sync ejecutada.");
+    }
+
+    private function changeCurrency()
+    {
+        $isoCode = $this->selectedAccount ? $this->selectedAccount->currency : 'USD';
+        $this->currency = MoneyHelper::getSymbol($isoCode);
     }
 
 
@@ -146,13 +199,6 @@ class AccountPage extends Component
         $this->loadBalanceChart(); // ← Recarga gráfico filtrado
         $this->dispatch('timeframe-updated', timeframe: $timeframe);
     }
-
-    // public function refreshData()
-    // {
-    //     $this->updateData();  // Tu método existente
-    //     $this->isSyncing = false;
-    //     session()->flash('message', '✅ Sync completado');
-    // }
 
     /**
      * Esta función es llamada automáticamente por wire:poll cada X segundos
@@ -178,7 +224,7 @@ class AccountPage extends Component
             $this->isSyncing = false;
 
             if ($this->selectedAccount->sync_error) {
-                $this->showAlert('error', '🚫 Sync falló: ' . 'No se ha podido establecer conexión con el Servidor');
+                $this->showAlert('error', __('labels.error_sync') . __('labels.error_sync_text'));
                 $this->updateData();
                 return;
             }
@@ -220,6 +266,7 @@ class AccountPage extends Component
     public function changeAccount($accountId)
     {
         $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
+        $this->changeCurrency();
         $this->updateData();
         $this->resetPage();
         $this->dispatch('timeframe-updated', timeframe: 'all');
@@ -511,15 +558,15 @@ class AccountPage extends Component
             'categories' => $labels,
             'series' => [
                 [
-                    'name' => 'Max. Potencial (MFE)',
+                    'name' => __('labels.max_potencial'),
                     'data' => $maxEquityData
                 ],
                 [
-                    'name' => 'Balance Real',
+                    'name' => __('labels.balance_real'),
                     'data' => $balanceData
                 ],
                 [
-                    'name' => 'Min. Riesgo (MAE)',
+                    'name' => __('labels.min_risk'),
                     'data' => $minEquityData
                 ]
             ]
@@ -557,7 +604,7 @@ class AccountPage extends Component
 
         if (!$objective) {
             // Seguridad por si el Seeder falló o faltan datos
-            throw new \Exception("No se encontraron las reglas (Objetivos) para la Fase $initialPhase de este nivel.");
+            throw new \Exception(__('labels.objectives_not_found'));
         }
 
         // 4. Crear la cuenta
@@ -592,6 +639,7 @@ class AccountPage extends Component
         $user = Auth::user();
         $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
         $this->selectedAccount = $account; // ← Array[0]
+        $this->changeCurrency();
         $this->dispatch('account-created');
         $this->updateData();
     }
@@ -658,7 +706,7 @@ class AccountPage extends Component
 
         if (!$objective) {
             // Seguridad por si el Seeder falló o faltan datos
-            throw new \Exception("No se encontraron las reglas (Objetivos) para la Fase $initialPhase de este nivel.");
+            throw new \Exception(__('labels.objectives_not_found'));
         }
 
         // ... update ...
@@ -696,7 +744,7 @@ class AccountPage extends Component
         $account = Account::where('id', $id)->where('user_id', Auth::id())->first();
 
         if (!$account) {
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => 'Cuenta no encontrada.']);
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.account_not_found')]);
             return;
         }
 
@@ -719,10 +767,11 @@ class AccountPage extends Component
         $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
         $this->selectedAccount = $this->accounts->first(); // ← Array[0]
         $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
+        $this->changeCurrency();
 
         $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
         $this->dispatch('account-updated', timeframe: 'all'); // Recargar tabla y charts
-        $this->dispatch('show-alert', ['type' => 'success', 'message' => 'Cuenta eliminada correctamente.']);
+        $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_deleted')]);
     }
 
 

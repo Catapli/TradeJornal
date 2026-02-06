@@ -14,8 +14,6 @@ use Illuminate\Support\Str;
 
 class Mt5SyncController extends Controller
 {
-    //
-
     public function sync(Request $request)
     {
         $data = $request->validate([
@@ -41,10 +39,8 @@ class Mt5SyncController extends Controller
         }
 
         // 2. BUSCAR CUENTA
-        // Nota: Asegúrate de que en la BD la columna sea 'mt5_login' o 'login' según tu migración.
-        // A veces se guarda como int y llega como string, pero Laravel suele manejarlo bien.
         $account = $user->accounts()
-            ->where('mt5_login', $data['account_login']) // Asegúrate que esta columna existe en la tabla accounts
+            ->where('mt5_login', $data['account_login'])
             ->first();
 
         if (!$account) {
@@ -60,26 +56,8 @@ class Mt5SyncController extends Controller
                 ['name' => $tradeData['trade_asset_symbol']]
             );
 
-
-            Log::info("Mostrando JSON Sync. Datos recibidos:", [
-                'json' => $tradeData['chart_data']
-            ]);
-
-            // 1. GESTIÓN DE IMAGEN (Decodificar Base64)
-            $screenshotPath = null;
-            if (!empty($tradeData['screenshot'])) {
-                try {
-                    $imageContent = base64_decode($tradeData['screenshot']);
-                    // Nombre: accounts/1/trades/123456_random.png
-                    $fileName = 'accounts/' . $account->id . '/trades/' . $tradeData['ticket'] . '_' . Str::random(6) . '.png';
-
-                    // Guardar en disco 'public'
-                    Storage::disk('public')->put($fileName, $imageContent);
-                    $screenshotPath = $fileName;
-                } catch (\Exception $e) {
-                    Log::error("Error guardando imagen trade {$tradeData['ticket']}: " . $e->getMessage());
-                }
-            }
+            // LOGICA DE IMAGEN ELIMINADA AQUÍ --
+            // El usuario subirá su propia imagen manualmente desde el modal más adelante.
 
             // 1. GUARDAR JSON (Datos para TradingView Web)
             $chartDataPath = null;
@@ -96,74 +74,102 @@ class Mt5SyncController extends Controller
                 }
             }
 
+            // Evitamos división por cero
+            $accountBalance = $account->initial_balance > 0 ? $account->initial_balance : 1;
+            $percentage = ($tradeData['pnl'] / $accountBalance) * 100;
 
+
+            // 2. GUARDADO
+            // Usamos 'position_id' como clave única del trade completo
             $trade = Trade::updateOrCreate(
                 [
                     'account_id' => $account->id,
-                    'ticket' => $tradeData['ticket']
+                    'position_id' => $tradeData['position_id']
                 ],
                 [
+                    // Mantenemos el ticket original de entrada como referencia visual
+                    'ticket' => $tradeData['ticket'],
+
                     'trade_asset_id' => $asset->id,
                     'direction' => $tradeData['direction'],
                     'entry_price' => $tradeData['entry_price'],
-                    'exit_price' => $tradeData['exit_price'],
-                    'size' => $tradeData['size'],
-                    'pnl' => $tradeData['pnl'],
+                    'exit_price' => $tradeData['exit_price'], // Precio promedio
+                    'size' => $tradeData['size'], // Volumen total acumulado
+                    'pnl' => $tradeData['pnl'], // PnL total acumulado
+                    'pnl_percentage' => $percentage,
+
                     'duration_minutes' => $tradeData['duration_minutes'],
                     'entry_time' => $tradeData['entry_time'],
-                    'exit_time' => $tradeData['exit_time'],
-                    'notes' => $tradeData['notes'] ?? '',
-                    // NUEVOS CAMPOS
-                    'mae_price' => $tradeData['mae_price'] ?? null, // El precio más bajo/alto en contra
-                    'mfe_price' => $tradeData['mfe_price'] ?? null, // El precio más alto/bajo a favor
+                    'exit_time' => $tradeData['exit_time'], // Se actualiza a la última salida
+
+                    'mae_price' => $tradeData['mae_price'] ?? null,
+                    'mfe_price' => $tradeData['mfe_price'] ?? null,
+
+                    // GUARDAMOS EL HISTORIAL DE PARCIALES
+                    'executions_data' => $tradeData['executions_data'] ?? [],
+
+                    'chart_data_path' => $chartDataPath ?? null, // Solo si viene nuevo
                 ]
             );
+            // $trade = Trade::updateOrCreate(
+            //     [
+            //         'account_id' => $account->id,
+            //         'ticket' => $tradeData['ticket']
+            //     ],
+            //     [
+            //         'trade_asset_id' => $asset->id,
+            //         'direction' => $tradeData['direction'],
+            //         'entry_price' => $tradeData['entry_price'],
+            //         'exit_price' => $tradeData['exit_price'],
+            //         'size' => $tradeData['size'],
+            //         'pnl' => $tradeData['pnl'],
+            //         'duration_minutes' => $tradeData['duration_minutes'],
+            //         'entry_time' => $tradeData['entry_time'],
+            //         'exit_time' => $tradeData['exit_time'],
+            //         'notes' => $tradeData['notes'] ?? '',
+            //         "pnl_percentage" => $percentage,
+            //         // NUEVOS CAMPOS
+            //         'mae_price' => $tradeData['mae_price'] ?? null,
+            //         'mfe_price' => $tradeData['mfe_price'] ?? null,
+            //     ]
+            // );
 
-            // Actualizamos la foto solo si viene una nueva (para no borrar la existente si el script re-sincroniza)
-            if ($screenshotPath) {
-                $trade->screenshot = $screenshotPath;
-                $trade->save();
-            }
-
+            // Solo guardamos el path del JSON, ya no hay screenshot automática
             if ($chartDataPath) {
                 $trade->chart_data_path = $chartDataPath;
                 $trade->save();
             }
+
             // =========================================================
             // 🔔 LÓGICA DE NOTIFICACIÓN BLINDADA (FIX POSTGRES)
             // =========================================================
 
-            $exitTime = \Carbon\Carbon::parse($tradeData['exit_time']);
+            $exitTime = Carbon::parse($tradeData['exit_time']);
             $now = now();
             $diffInMinutes = $exitTime->diffInMinutes($now);
 
             // 3. COMPROBAR DUPLICADOS (FIX)
-            // En lugar de una query JSON compleja que falla en Postgres,
-            // traemos las últimas 10 notificaciones de este usuario y miramos dentro con PHP.
-
             $alreadyNotified = $user->notifications()
-                ->where('type', 'App\Notifications\NewTradeNotification') // Solo miramos las de trades
+                ->where('type', 'App\Notifications\NewTradeNotification')
                 ->latest()
-                ->take(10) // Optimizamos trayendo solo las últimas 10
+                ->take(10)
                 ->get()
                 ->contains(function ($notification) use ($trade) {
-                    // Comprobamos si el trade_id coincide
                     return isset($notification->data['trade_id']) &&
                         $notification->data['trade_id'] == $trade->id;
                 });
 
             // 4. CONDICIONES FINALES
             if (!$alreadyNotified && $diffInMinutes < 60) {
-
-                $user->notify(new \App\Notifications\NewTradeNotification($trade));
-
+                $user->notify(new NewTradeNotification($trade));
                 Log::info("🔔 Notificación enviada: Ticket {$trade->ticket}");
-            } else {
-                // Log limpio para depuración (opcional)
-                // Log::debug("🔕 Skip: {$trade->ticket} | Diff: {$diffInMinutes}m | Ya notificado: " . ($alreadyNotified ? 'SI' : 'NO'));
             }
             $inserted++;
         }
+
+        $account->last_sync = now();
+        $account->current_balance = $data['balance'];
+        $account->save();
 
         return response()->json([
             'status' => 'ok',
@@ -171,5 +177,38 @@ class Mt5SyncController extends Controller
             'account' => $account->mt5_login,
             'balance' => $data['balance']
         ]);
+    }
+
+    // En Mt5SyncController.php
+
+    public function resetSync(Request $request)
+    {
+        $request->validate([
+            'sync_token' => 'required|string',
+            'account_login' => 'required|string',
+        ]);
+
+        // 1. Validar Usuario
+        $user = User::where('sync_token', $request->sync_token)->first();
+        if (!$user) {
+            return response()->json(['error' => 'Token inválido'], 404);
+        }
+
+        // 2. Validar Cuenta
+        $account = $user->accounts()->where('mt5_login', $request->account_login)->first();
+        if (!$account) {
+            return response()->json(['error' => 'Cuenta no encontrada'], 404);
+        }
+
+        // 3. LIMPIEZA TOTAL (Hard Reset)
+        // Borrar trades de la BD
+        $account->trades()->delete();
+
+        // Opcional: Borrar archivos JSON de charts si quieres ahorrar espacio
+        Storage::disk('public')->deleteDirectory('accounts/' . $account->id . '/charts');
+
+        Log::info("🧹 HARD RESET ejecutado para cuenta {$request->account_login} del usuario {$user->id}");
+
+        return response()->json(['status' => 'ok', 'message' => 'Cuenta reseteada correctamente']);
     }
 }
