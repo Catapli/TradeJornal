@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*'); // Confía en el LB/Ingress
-        $middleware->trustHosts(['^app\.cloud\.detrafic\.es$']);
+        // $middleware->trustHosts(['^app\.cloud\.detrafic\.es$']);
 
         $middleware->alias([
             'check.permission' => \App\Http\Middleware\CheckSectionPermission::class,
@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             SetLocale::class,
+        ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'stripe/*',
         ]);
     })
 
