@@ -7,6 +7,9 @@ document.addEventListener("alpine:init", () => {
             selectedFirmId: null,
             selectedProgramId: null,
 
+            // Flag interno para evitar listeners duplicados
+            _listenersRegistered: false,
+
             // --- ESTADO VISUAL ---
             modals: {
                 firm: false,
@@ -44,18 +47,32 @@ document.addEventListener("alpine:init", () => {
 
             // --- INIT ---
             init() {
-                this.$wire.on("refresh-tree", ({ tree }) => {
-                    this.firms = tree;
-                    this.closeAllModals();
-                });
+                // EVITAR LISTENERS DUPLICADOS
+                if (this._listenersRegistered) return;
+                this._listenersRegistered = true;
 
-                // 2. Escuchar notificaciones del Backend (NUEVO)
-                this.$wire.on("notify", (data) => {
-                    // Livewire a veces envía los params como array o objeto directo
+                console.log("🚀 PropManager Ready");
+
+                // 1. Refrescar datos (Blindado)
+                this.$wire.on("refresh-tree", (data) => {
                     const payload = Array.isArray(data) ? data[0] : data;
 
+                    if (payload && payload.tree) {
+                        // Usar structuredClone es más moderno y eficiente que JSON parse/stringify
+                        this.firms = structuredClone(payload.tree);
+                        console.log("✅ Tree actualizado");
+                    }
+                });
+
+                // 2. Notificaciones
+                this.$wire.on("notify", (data) => {
+                    const payload = Array.isArray(data) ? data[0] : data;
                     this.triggerAlert(payload.message, payload.type);
-                    this.closeAllModals(); // Cerramos el modal al recibir éxito
+                    this.closeAllModals();
+
+                    if (payload.newProgramId) {
+                        this.autoNavigateToNewProgram(payload.newProgramId);
+                    }
                 });
             },
 
@@ -69,6 +86,15 @@ document.addEventListener("alpine:init", () => {
                 setTimeout(() => {
                     this.showAlert = false;
                 }, 4000);
+            },
+
+            // --- NAVEGACIÓN AUTOMÁTICA TRAS CREAR PROGRAMA (NUEVO) ---
+            autoNavigateToNewProgram(programId) {
+                this.$nextTick(() => {
+                    this.selectedProgramId = programId;
+                    this.view = "levels";
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                });
             },
 
             // --- NAVEGACIÓN ---
@@ -119,6 +145,12 @@ document.addEventListener("alpine:init", () => {
 
                     let objectivesMap = {};
                     level.objectives.forEach((obj) => {
+                        // 1. Parsear el JSON de metadatos (si existe)
+                        const metadata = obj.rules_metadata
+                            ? JSON.parse(obj.rules_metadata)
+                            : {};
+                        const restrictions = metadata.restrictions || {};
+
                         objectivesMap[obj.phase_number] = {
                             name: obj.name,
                             profit_target_percent: obj.profit_target_percent,
@@ -126,13 +158,33 @@ document.addEventListener("alpine:init", () => {
                             max_total_loss_percent: obj.max_total_loss_percent,
                             min_trading_days: obj.min_trading_days,
                             loss_type: obj.loss_type,
-                            rules_metadata: obj.rules_metadata
-                                ? JSON.parse(obj.rules_metadata)
-                                : null,
+
+                            // --- REGLAS: Mapeo JSON -> Campos Planos ---
+                            min_trade_duration:
+                                restrictions.min_trade_duration_seconds || null,
+
+                            // Checkbox News: Si existe la key, es true
+                            news_trading_enabled:
+                                !!restrictions.no_news_trading,
+
+                            // Detalles News
+                            news_minutes_before:
+                                restrictions.no_news_trading?.minutes_before ||
+                                2,
+                            news_minutes_after:
+                                restrictions.no_news_trading?.minutes_after ||
+                                2,
+
+                            // Weekend Holding (Default true si no existe)
+                            weekend_holding:
+                                restrictions.weekend_holding !== undefined
+                                    ? restrictions.weekend_holding
+                                    : true,
                         };
                     });
                     this.objectivesForm = objectivesMap;
                 } else {
+                    // ... lógica existente de crear nuevo ...
                     this.levelForm.id = null;
                     this.levelForm.program_id = this.selectedProgramId;
                     this.levelForm.name = "";
@@ -170,6 +222,11 @@ document.addEventListener("alpine:init", () => {
                     max_total_loss_percent: 10,
                     min_trading_days: 0,
                     loss_type: "balance_based",
+                    min_trade_duration: null,
+                    news_trading_enabled: false,
+                    news_minutes_before: 2,
+                    news_minutes_after: 2,
+                    weekend_holding: true,
                 };
             },
 

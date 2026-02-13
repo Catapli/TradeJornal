@@ -861,7 +861,7 @@ document.addEventListener("alpine:init", () => {
                     colors: [mainColor], // Actualiza Verde/Rojo
                     series: [
                         {
-                            name: this.$l("acuulative_pnl"), // Evita que salga "series-1"
+                            name: this.$l("acumulative_pnl"), // Evita que salga "series-1"
                             data: seriesData,
                         },
                     ],

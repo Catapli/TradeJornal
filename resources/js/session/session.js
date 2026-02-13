@@ -2,12 +2,14 @@ document.addEventListener("alpine:init", () => {
     Alpine.data(
         "sessionPage",
         (serverAccounts, serverStrategies, restoredData) => ({
-            // === STATE ===
+            // ==========================================
+            // 🎯 STATE
+            // ==========================================
             step: 1,
             timer: "00:00:00",
             startTimeTimestamp: null,
             mobileTab: "checklist",
-            width: window.innerWidth, // INICIALIZACIÓN IMPORTANTE
+            width: window.innerWidth,
 
             // Data Sources
             accounts: serverAccounts,
@@ -36,12 +38,20 @@ document.addEventListener("alpine:init", () => {
             timerInterval: null,
             pollInterval: null,
 
+            // Additional State
             manualTradeCount: 0,
             ghostMode: false,
-
             events: [],
 
-            // === LIFECYCLE ===
+            // ✅ NUEVO: Estado del polling inteligente
+            isSyncing: false,
+            lastSyncTime: null,
+            syncErrors: 0,
+            isTabVisible: true,
+
+            // ==========================================
+            // 🎬 LIFECYCLE
+            // ==========================================
             init() {
                 if (restoredData) {
                     this.selectedAccountId = restoredData.accountId;
@@ -54,12 +64,21 @@ document.addEventListener("alpine:init", () => {
                     this.startTimer();
                     this.startPolling();
                     this.step = 2;
-                    // Si pasaste los eventos en el mount, restáuralos aquí:
                     this.events = restoredData.events || [];
                 }
+
+                // ✅ NUEVO: Listener de visibilidad de página
+                this.setupVisibilityListener();
+
+                // ✅ NUEVO: Listener de resize para responsive
+                window.addEventListener("resize", () => {
+                    this.width = window.innerWidth;
+                });
             },
 
-            // === COMPUTEDS ===
+            // ==========================================
+            // 🧮 COMPUTEDS
+            // ==========================================
             get currentAccount() {
                 return (
                     this.accounts.find((a) => a.id == this.selectedAccountId) ||
@@ -92,12 +111,14 @@ document.addEventListener("alpine:init", () => {
                         bg: "bg-rose-100 text-rose-700 border border-rose-200",
                     };
                 }
+
                 if (limits.target_pct && pnl >= limits.target_pct) {
                     return {
                         text: "text-emerald-600",
                         bg: "bg-emerald-100 text-emerald-700 border border-emerald-200",
                     };
                 }
+
                 return pnl >= 0
                     ? {
                           text: "text-emerald-600",
@@ -121,20 +142,15 @@ document.addEventListener("alpine:init", () => {
             },
 
             get isTimeValid() {
-                // Protección: Si no hay límites, siempre es válido (o false, según prefieras)
                 if (!this.currentAccount.limits) return true;
-
                 const start = this.currentAccount.limits.start_time;
                 const end = this.currentAccount.limits.end_time;
-
                 if (!start || !end) return true;
 
                 const now = new Date();
                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
                 const [startH, startM] = start.split(":").map(Number);
                 const [endH, endM] = end.split(":").map(Number);
-
                 const startMinutes = startH * 60 + startM;
                 const endMinutes = endH * 60 + endM;
 
@@ -143,44 +159,48 @@ document.addEventListener("alpine:init", () => {
                     currentMinutes < endMinutes
                 );
             },
+
             get canTakeTrade() {
                 const strategyOk =
                     this.activeRules.length > 0 &&
                     this.activeRules.every((r) => r.checked);
-
-                // Si hay Overtrading, return FALSE inmediatamente
                 if (this.isOvertrading) return false;
 
                 const limitBreached = this.isLimitBreached;
-                const tradesFull = this.isMaxTradesReached; // Esto bloquea si llegas al límite exacto
+                const tradesFull = this.isMaxTradesReached;
                 const timeOk = this.isTimeValid;
 
                 return strategyOk && !limitBreached && !tradesFull && timeOk;
             },
 
             get tradeButtonText() {
-                // EL ORDEN IMPORTA: Prioridad 1 es Overtrading (Regla violada)
                 if (this.isOvertrading) return "BLOQUEADO: OVERTRADING";
                 if (this.isLimitBreached) return "BLOQUEADO: MAX LOSS";
-
-                // Prioridad 2: Advertencias (Ya no quedan balas)
                 if (this.isMaxTradesReached) return "STOP: MUNICIÓN AGOTADA";
-
                 if (!this.isTimeValid) return "FUERA DE HORARIO";
                 if (!this.allRulesChecked) return "CHECKLIST PENDIENTE";
-
                 return "SETUP APROBADO";
             },
 
-            // Nueva propiedad computada específica
             get isOvertrading() {
                 const max = this.currentAccount.limits?.max_trades;
                 if (!max) return false;
-                // Si llevas MÁS trades que el máximo, es Overtrading
                 return this.metrics.count > max;
             },
 
-            // === ACTIONS ===
+            // ✅ NUEVO: Intervalo adaptativo de polling
+            get pollingInterval() {
+                // Si hay límite alcanzado o máximo de trades, reducir frecuencia
+                if (this.isLimitBreached || this.isMaxTradesReached) {
+                    return 15000; // 15 segundos
+                }
+                // Frecuencia normal
+                return 5000; // 5 segundos
+            },
+
+            // ==========================================
+            // 🚀 ACTIONS
+            // ==========================================
             async initSession() {
                 if (!this.selectedAccountId || !this.selectedStrategyId) return;
 
@@ -200,10 +220,7 @@ document.addEventListener("alpine:init", () => {
                 }
             },
 
-            // En la sección ACTIONS:
             toggleManualTrade(index) {
-                // Si haces click en la bala 3 y tenías 2, sube a 3.
-                // Si haces click en la 3 y tenías 3, baja a 2 (deshacer).
                 if (index === this.manualTradeCount) {
                     this.manualTradeCount = index - 1;
                 } else {
@@ -248,24 +265,107 @@ document.addEventListener("alpine:init", () => {
                 }, 1000);
             },
 
+            // ✅ OPTIMIZADO: Polling inteligente con intervalo adaptativo
             startPolling() {
-                if (this.pollInterval) clearInterval(this.pollInterval);
-                this.pollInterval = setInterval(async () => {
+                if (this.pollInterval) {
+                    clearTimeout(this.pollInterval);
+                }
+
+                // Primera actualización inmediata
+                this.fetchUpdates();
+
+                // Polling con intervalo adaptativo
+                const poll = () => {
+                    this.pollInterval = setTimeout(async () => {
+                        await this.fetchUpdates();
+                        // Reiniciar con nuevo intervalo (puede cambiar si se alcanza límite)
+                        poll();
+                    }, this.pollingInterval);
+                };
+
+                poll();
+            },
+
+            // ✅ OPTIMIZADO: Fetch con manejo de errores y visibilidad
+            async fetchUpdates() {
+                // No sincronizar si tab no está visible
+                if (!this.isTabVisible) {
+                    return;
+                }
+
+                // Evitar requests concurrentes
+                if (this.isSyncing) {
+                    return;
+                }
+
+                this.isSyncing = true;
+
+                try {
                     const data = await this.$wire.fetchUpdates();
+
                     if (data) {
                         this.trades = data.trades;
                         this.metrics = data.metrics;
-
-                        // Actualizar lista de eventos
                         this.events = data.events || [];
+
+                        // ✅ Actualizar timestamp de última sync
+                        this.lastSyncTime = new Date();
+                        this.syncErrors = 0; // Reset contador de errores
+                    } else {
+                        // Si no hay data, puede ser que la sesión no existe
+                        this.syncErrors++;
+
+                        // Después de 3 errores consecutivos, detener polling
+                        if (this.syncErrors >= 3) {
+                            console.warn(
+                                "Sesión no encontrada. Deteniendo polling.",
+                            );
+                            this.stopPolling();
+                        }
                     }
-                }, 5000);
+                } catch (error) {
+                    console.error("Error en fetchUpdates:", error);
+                    this.syncErrors++;
+
+                    // Detener polling si hay muchos errores
+                    if (this.syncErrors >= 5) {
+                        console.error(
+                            "Demasiados errores. Deteniendo polling.",
+                        );
+                        this.stopPolling();
+                    }
+                } finally {
+                    this.isSyncing = false;
+                }
             },
 
+            // ✅ NUEVO: Detener polling manualmente
+            stopPolling() {
+                if (this.pollInterval) {
+                    clearTimeout(this.pollInterval);
+                    this.pollInterval = null;
+                }
+            },
+
+            // ✅ NUEVO: Listener de visibilidad de página (Page Visibility API)
+            setupVisibilityListener() {
+                document.addEventListener("visibilitychange", () => {
+                    this.isTabVisible = !document.hidden;
+
+                    if (this.isTabVisible && this.step === 2) {
+                        // Tab vuelve a estar visible, forzar sync inmediata
+                        console.log("Tab visible, sincronizando...");
+                        this.fetchUpdates();
+                    }
+                });
+            },
+
+            // ✅ OPTIMISTIC UI: Nota aparece instantáneamente
             async submitNote() {
                 if (!this.newNoteText.trim()) return;
 
-                this.sessionNotes.unshift({
+                // OPTIMISTIC UPDATE: Añadir nota al array ANTES de la respuesta del servidor
+                const optimisticNote = {
                     id: "temp-" + Date.now(),
                     note: this.newNoteText,
                     mood: this.newNoteMood,
@@ -273,12 +373,37 @@ document.addEventListener("alpine:init", () => {
                         hour: "2-digit",
                         minute: "2-digit",
                     }),
-                });
+                };
 
-                await this.$wire.addNote(this.newNoteText, this.newNoteMood);
+                this.sessionNotes.unshift(optimisticNote);
 
+                // LIMPIAR INPUTS INMEDIATAMENTE (UX instantánea)
+                const noteText = this.newNoteText;
+                const noteMood = this.newNoteMood;
                 this.newNoteText = "";
                 this.newNoteMood = "neutral";
+
+                // ✅ Scroll automático al top (donde aparece la nota)
+                this.$nextTick(() => {
+                    const container = this.$refs.notesContainer;
+                    if (container) {
+                        container.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                });
+
+                // SYNC CON SERVIDOR (background)
+                try {
+                    await this.$wire.addNote(noteText, noteMood);
+                    // La nota temporal será reemplazada en el próximo fetchUpdates()
+                } catch (error) {
+                    // ROLLBACK: Si falla, eliminar nota temporal y restaurar inputs
+                    this.sessionNotes = this.sessionNotes.filter(
+                        (n) => n.id !== optimisticNote.id,
+                    );
+                    this.newNoteText = noteText;
+                    this.newNoteMood = noteMood;
+                    console.error("Error al guardar nota:", error);
+                }
             },
 
             async setTradeMood(tradeId, mood) {
@@ -289,7 +414,7 @@ document.addEventListener("alpine:init", () => {
 
             async finishSession(endMood) {
                 clearInterval(this.timerInterval);
-                clearInterval(this.pollInterval);
+                this.stopPolling(); // ✅ Usar método optimizado
                 const url = await this.$wire.closeSession(
                     this.metrics,
                     endMood,

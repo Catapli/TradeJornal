@@ -16,7 +16,8 @@
 
     "titles": {
         "create_account": "Crear Cuenta",
-        "edit_account": "Editar Cuenta"
+        "edit_account": "Editar Cuenta",
+        "delete_account": "¿Eliminar Cuenta?"
     },
 
     "labels": {
@@ -35,6 +36,7 @@
         "winners": "Ganadores",
         "lossers": "Perdedores",
         "acumulative_pnl": "PnL Acumulado",
-        "order_active": "Orden / Activo"
+        "order_active": "Orden / Activo",
+        "lost_history_account": "Estás seguro de que deseas eliminar esta cuenta? Se perderá todo el historial de operaciones."
     }
 }

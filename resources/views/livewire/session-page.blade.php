@@ -2,6 +2,43 @@
      x-data="sessionPage(@js($accounts), @js($strategies), @js($restoredSessionData))"
      x-on:resize.window="width = window.innerWidth">
 
+
+    {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
+    <div x-data="{
+        initialLoad: true,
+        init() {
+            // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
+            document.addEventListener('livewire:initialized', () => {
+                this.initialLoad = false;
+            });
+    
+            // Fallback de seguridad: por si Livewire ya cargó antes de este script
+            setTimeout(() => { this.initialLoad = false }, 200);
+        }
+    }">
+
+        {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
+        {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+             x-show="initialLoad"
+             x-transition:leave="transition ease-in duration-500"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+
+            {{-- Aquí tu componente loader --}}
+            <div class="flex flex-col items-center">
+                <x-loader />
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+            </div>
+        </div>
+    </div>
+
+    {{-- ? Loading --}}
+    <div wire:loading
+         wire:target=''>
+        <x-loader></x-loader>
+    </div>
+
     {{-- ========================================= --}}
     {{-- STEP 1: SETUP (CONFIGURACIÓN)             --}}
     {{-- ========================================= --}}
@@ -20,73 +57,102 @@
             </div>
 
             <div class="space-y-6 rounded-2xl border border-gray-200 bg-white p-8 shadow-xl shadow-gray-200/50">
-                <!-- Select Cuenta -->
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-500">Cuenta Operativa</label>
-                    <div class="relative">
-                        <select class="w-full cursor-pointer appearance-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                x-model="selectedAccountId">
-                            <template x-for="acc in accounts"
-                                      :key="acc.id">
-                                <option :value="acc.id"
-                                        x-text="acc.name"></option>
-                            </template>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                            <i class="fa-solid fa-chevron-down text-xs"></i>
-                        </div>
-                    </div>
-                    <!-- Preview Límites -->
-                    <div class="mt-2 flex gap-4 px-1"
-                         x-show="selectedAccountId">
-                        <span class="flex items-center gap-1.5 text-xs font-medium text-rose-600"
-                              x-show="currentAccount.limits?.max_loss_pct">
-                            <i class="fa-solid fa-shield-halved"></i> Max Loss: <span x-text="currentAccount.limits?.max_loss_pct + '%'"></span>
-                        </span>
-                        <span class="flex items-center gap-1.5 text-xs font-medium text-emerald-600"
-                              x-show="currentAccount.limits?.target_pct">
-                            <i class="fa-solid fa-crosshairs"></i> Target: <span x-text="currentAccount.limits?.target_pct + '%'"></span>
-                        </span>
-                    </div>
-                </div>
+                <!-- Selector de Cuenta -->
+                <div class="mb-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        Cuenta de Trading
+                    </label>
+                    <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                            x-model="selectedAccountId">
+                        <template x-for="acc in accounts"
+                                  :key="acc.id">
+                            <option :value="acc.id"
+                                    x-text="acc.name + ' (' + acc.currency + ' ' + acc.balance.toFixed(2) + ')'"></option>
+                        </template>
+                    </select>
 
-                <!-- Select Estrategia -->
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-500">Estrategia Foco</label>
-                    <div class="relative">
-                        <select class="w-full cursor-pointer appearance-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-500"
-                                x-model="selectedStrategyId">
-                            <template x-for="strat in strategies"
-                                      :key="strat.id">
-                                <option :value="strat.id"
-                                        x-text="strat.name"></option>
-                            </template>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                    {{-- ✅ Preview de límites (100% Alpine) --}}
+                    <div class="mt-3 grid grid-cols-2 gap-3 text-sm"
+                         x-show="currentAccount.limits">
+                        <div class="rounded bg-rose-50 p-2">
+                            <span class="text-gray-600">Max Loss:</span>
+                            <span class="font-semibold text-rose-600"
+                                  x-text="currentAccount.limits?.max_loss_pct + '%'"></span>
+                        </div>
+                        <div class="rounded bg-emerald-50 p-2">
+                            <span class="text-gray-600">Target:</span>
+                            <span class="font-semibold text-emerald-600"
+                                  x-text="currentAccount.limits?.target_pct + '%'"></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Mood Inicial -->
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-500">Mood Inicial</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <template x-for="m in ['calm', 'anxious', 'confident']">
-                            <button class="rounded-xl border px-3 py-3 text-sm font-bold capitalize shadow-sm transition-all"
-                                    @click="startMood = m"
-                                    :class="startMood === m ?
-                                        'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200' :
-                                        'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'">
-                                <span x-text="m"></span>
-                            </button>
+                <!-- Selector de Estrategia -->
+                <div class="mb-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        Estrategia
+                    </label>
+                    <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                            x-model="selectedStrategyId">
+                        <template x-for="strat in strategies"
+                                  :key="strat.id">
+                            <option :value="strat.id"
+                                    x-text="strat.name"></option>
+                        </template>
+                    </select>
+
+                    {{-- ✅ Preview de reglas (100% Alpine) --}}
+                    <div class="mt-3 rounded-lg bg-gray-50 p-3"
+                         x-show="currentStrategy.rules?.length > 0">
+                        <p class="mb-2 text-xs font-medium text-gray-600">Reglas de la estrategia:</p>
+                        <ul class="space-y-1">
+                            <template x-for="(rule, index) in currentStrategy.rules"
+                                      :key="index">
+                                <li class="flex items-start text-xs text-gray-700">
+                                    <svg class="mr-1 mt-0.5 h-3 w-3 flex-shrink-0 text-indigo-500"
+                                         fill="currentColor"
+                                         viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                              clip-rule="evenodd" />
+                                    </svg>
+                                    <span x-text="rule"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Estado Emocional Inicial -->
+                <div class="mb-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        ¿Cómo te sientes?
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <template x-for="mood in ['calm', 'neutral', 'anxious', 'confident']"
+                                  :key="mood">
+                            <button class="rounded-lg border-2 px-4 py-3 font-medium capitalize transition"
+                                    type="button"
+                                    @click="startMood = mood"
+                                    :class="{
+                                        'bg-indigo-100 border-indigo-500 text-indigo-700': startMood === mood,
+                                        'bg-white border-gray-300 text-gray-700 hover:border-indigo-300': startMood !== mood
+                                    }"
+                                    x-text="mood"></button>
                         </template>
                     </div>
                 </div>
 
-                <button class="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-4 font-bold text-white shadow-lg transition-transform hover:bg-black active:scale-[0.98]"
-                        @click="initSession()">
-                    <span>INICIAR</span> <i class="fa-solid fa-arrow-right"></i>
+                <!-- Botón Iniciar Sesión -->
+                <button class="w-full rounded-lg py-4 font-semibold text-white shadow-lg transition"
+                        @click="initSession()"
+                        :disabled="!selectedAccountId || !selectedStrategyId"
+                        :class="{
+                            'bg-indigo-600 hover:bg-indigo-700 cursor-pointer': selectedAccountId && selectedStrategyId,
+                            'bg-gray-300 cursor-not-allowed': !selectedAccountId || !selectedStrategyId
+                        }">
+                    <span x-show="!selectedAccountId || !selectedStrategyId">Selecciona Cuenta y Estrategia</span>
+                    <span x-show="selectedAccountId && selectedStrategyId">🚀 INICIAR SESIÓN</span>
                 </button>
             </div>
         </div>
@@ -155,6 +221,37 @@
                 <i class="fa-solid"
                    :class="ghostMode ? 'fa-eye-slash' : 'fa-eye'"></i>
             </button>
+
+            {{-- Añadir en el header de la sesión activa --}}
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+                {{-- Indicador de sync --}}
+                <div class="flex items-center gap-1"
+                     x-show="isSyncing">
+                    <svg class="h-3 w-3 animate-spin text-indigo-500"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                        <circle class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"></circle>
+                        <path class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Sincronizando...</span>
+                </div>
+
+                {{-- Última sincronización --}}
+                <div class="flex items-center gap-1"
+                     x-show="lastSyncTime && !isSyncing">
+                    <i class="fa-solid fa-check text-emerald-500"></i>
+                    <span x-text="'Sync: ' + (lastSyncTime ? lastSyncTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '-')"></span>
+                </div>
+            </div>
+
 
             <button class="group flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 shadow-sm transition-all hover:border-rose-300 hover:bg-rose-50"
                     @click="step = 3">
@@ -364,23 +461,44 @@
                                    type="checkbox"
                                    x-model="rule.checked"
                                    @change="syncChecklist()">
-                            <span class="select-none text-xs font-medium leading-relaxed"
+                            <span class="select-none text-xs font-medium leading-relaxed transition-all duration-200"
                                   :class="rule.checked ? 'text-indigo-800 line-through opacity-70' : 'text-gray-700'"
                                   x-text="rule.text"></span>
+
+                            {{-- ✅ NUEVO: Checkmark animado cuando se marca --}}
+                            <svg class="ml-auto h-4 w-4 flex-shrink-0 text-emerald-500"
+                                 x-show="rule.checked"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 scale-50 rotate-12"
+                                 x-transition:enter-end="opacity-100 scale-100 rotate-0"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-50"
+                                 fill="currentColor"
+                                 viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clip-rule="evenodd" />
+                            </svg>
                         </label>
                     </template>
+
                     <div class="py-6 text-center text-xs text-gray-400"
-                         x-show="activeRules.length === 0">Sin reglas de setup.</div>
+                         x-show="activeRules.length === 0"
+                         x-transition>
+                        Sin reglas de setup.
+                    </div>
                 </div>
 
                 <div class="shrink-0 border-t border-gray-100 bg-gray-50/30 p-4">
-                    <div class="flex w-full items-center justify-center gap-2 rounded-lg border py-3 text-xs font-bold shadow-sm transition-all"
-                         :class="canTakeTrade ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-400 border-gray-200 opacity-75 cursor-not-allowed'">
-                        <i class="fa-solid"
-                           :class="canTakeTrade ? 'fa-check' : 'fa-lock'"></i>
+                    <div class="flex w-full items-center justify-center gap-2 rounded-lg border py-3 text-xs font-bold shadow-sm transition-all duration-300"
+                         :class="canTakeTrade ? 'bg-emerald-50 text-emerald-700 border-emerald-200 scale-100' : 'bg-gray-100 text-gray-400 border-gray-200 opacity-75 cursor-not-allowed scale-95'">
+                        <i class="fa-solid transition-transform duration-300"
+                           :class="canTakeTrade ? 'fa-check scale-110' : 'fa-lock scale-100'"></i>
                         <span x-text="tradeButtonText"></span>
                     </div>
                 </div>
+
             </div>
 
 
@@ -392,19 +510,29 @@
                     <span class="flex items-center gap-2 text-xs font-bold uppercase text-gray-700">
                         <i class="fa-solid fa-feather text-indigo-500"></i> Bitácora
                     </span>
+                    {{-- ✅ NUEVO: Contador de notas --}}
+                    <span class="ml-auto text-[10px] font-bold text-gray-400"
+                          x-show="sessionNotes.length > 0">
+                        <span x-text="sessionNotes.length"></span> nota<span x-show="sessionNotes.length > 1">s</span>
+                    </span>
                 </div>
 
                 <div id="notes-container"
-                     class="flex-1 space-y-4 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden">
+                     class="flex-1 space-y-4 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden"
+                     x-ref="notesContainer">
                     <template x-for="note in sessionNotes"
                               :key="note.id">
-                        <div class="flex gap-3">
+                        <div class="flex gap-3"
+                             {{-- ✅ OPTIMISTIC UI: Transición de entrada --}}
+                             x-transition:enter="transition ease-out duration-300"
+                             x-transition:enter-start="opacity-0 transform -translate-y-2 scale-95"
+                             x-transition:enter-end="opacity-100 transform translate-y-0 scale-100">
                             <div class="flex flex-col items-center pt-1.5">
-                                <div class="h-2 w-2 rounded-full"
+                                <div class="h-2 w-2 rounded-full transition-all duration-300"
                                      :class="{
-                                         'bg-emerald-400': note.mood === 'confident',
-                                         'bg-rose-400': note.mood === 'fear' || note.mood === 'anxious',
-                                         'bg-amber-400': note.mood === 'fomo',
+                                         'bg-emerald-400 shadow-emerald-200 shadow-lg': note.mood === 'confident',
+                                         'bg-rose-400 shadow-rose-200 shadow-lg': note.mood === 'fear' || note.mood === 'anxious',
+                                         'bg-amber-400 shadow-amber-200 shadow-lg': note.mood === 'fomo',
                                          'bg-gray-300': note.mood === 'neutral' || note.mood === 'calm'
                                      }">
                                 </div>
@@ -414,46 +542,68 @@
                                 <div class="mb-1 flex items-center gap-2">
                                     <span class="font-mono text-[10px] font-bold text-gray-400"
                                           x-text="note.time"></span>
-                                    <span class="text-[10px] font-bold uppercase text-gray-500"
+                                    <span class="text-[10px] font-bold uppercase tracking-wide transition-colors"
+                                          :class="{
+                                              'text-emerald-600': note.mood === 'confident',
+                                              'text-rose-600': note.mood === 'fear' || note.mood === 'anxious',
+                                              'text-amber-600': note.mood === 'fomo',
+                                              'text-gray-500': note.mood === 'neutral' || note.mood === 'calm'
+                                          }"
                                           x-text="note.mood"></span>
                                 </div>
-                                <div class="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-700 shadow-sm"
+                                <div class="rounded-lg border bg-white p-3 text-xs text-gray-700 shadow-sm transition-all duration-200 hover:shadow-md"
+                                     :class="{
+                                         'border-emerald-200': note.mood === 'confident',
+                                         'border-rose-200': note.mood === 'fear' || note.mood === 'anxious',
+                                         'border-amber-200': note.mood === 'fomo',
+                                         'border-gray-200': note.mood === 'neutral' || note.mood === 'calm'
+                                     }"
                                      x-text="note.note"></div>
                             </div>
                         </div>
                     </template>
+
                     <div class="py-10 text-center text-xs text-gray-400"
-                         x-show="sessionNotes.length === 0">
+                         x-show="sessionNotes.length === 0"
+                         x-transition>
                         La sesión está tranquila...
                     </div>
                 </div>
 
                 <div class="shrink-0 border-t border-gray-200 bg-white p-3">
+                    {{-- Selector de Mood --}}
                     <div class="mb-2 flex gap-2 overflow-x-auto pb-1"
                          style="scrollbar-width: none;">
-                        <template x-for="m in ['calm', 'fomo', 'fear', 'confident']">
-                            <button class="shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase transition"
+                        <template x-for="m in ['calm', 'fomo', 'fear', 'confident']"
+                                  :key="m">
+                            <button class="shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase transition-all duration-200"
                                     @click="newNoteMood = m"
                                     :class="newNoteMood === m ?
-                                        'bg-indigo-100 text-indigo-700 border-indigo-200' :
-                                        'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'">
+                                        'bg-indigo-100 text-indigo-700 border-indigo-300 scale-105 shadow-sm' :
+                                        'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 hover:border-gray-300'">
                                 <span x-text="m"></span>
                             </button>
                         </template>
                     </div>
+
+                    {{-- Input de Nueva Nota --}}
                     <div class="relative">
-                        <input class="w-full rounded-xl border-gray-200 bg-gray-50 py-2.5 pl-4 pr-10 text-xs focus:ring-2 focus:ring-indigo-500"
+                        <input class="w-full rounded-xl border-gray-200 bg-gray-50 py-2.5 pl-4 pr-10 text-xs transition-all duration-200 focus:bg-white focus:ring-2 focus:ring-indigo-500"
                                type="text"
                                x-model="newNoteText"
                                @keydown.enter="submitNote"
                                placeholder="Nuevo pensamiento...">
-                        <button class="absolute right-1.5 top-1.5 rounded-lg p-1.5 text-indigo-400 hover:text-indigo-600"
-                                @click="submitNote">
+
+                        <button class="absolute right-1.5 top-1.5 rounded-lg p-1.5 transition-all duration-200"
+                                :class="newNoteText.trim() ? 'text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50' : 'text-gray-300 cursor-not-allowed'"
+                                @click="submitNote"
+                                :disabled="!newNoteText.trim()">
                             <i class="fa-solid fa-paper-plane text-xs"></i>
                         </button>
                     </div>
                 </div>
             </div>
+
 
             {{-- COL 3: TRADES (35%) --}}
             <div class="flex w-full flex-col bg-white lg:w-[35%]"
@@ -536,29 +686,140 @@
     </div>
 
     {{-- STEP 3: SUMMARY --}}
-    <div class="flex h-full flex-col items-center justify-center bg-white p-6"
+    <div class="flex h-full flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-white p-6"
          x-show="step === 3"
+         {{-- ✅ Transición de entrada suave --}}
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
          x-cloak>
-        <div class="w-full max-w-lg text-center">
-            <h2 class="text-2xl font-black text-gray-900">SESIÓN FINALIZADA</h2>
-            <div class="my-8 text-6xl font-black tracking-tighter transition-all duration-300"
-                 :class="[
-                     metrics.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600',
-                     ghostMode ? 'blur-xl select-none opacity-50' : ''
-                 ]"
-                 x-text="(metrics.pnl > 0 ? '+' : '') + metrics.pnl + '$'"></div>
+        <div class="w-full max-w-2xl">
+            {{-- Header con animación --}}
+            <div class="mb-8 text-center">
+                <div class="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide"
+                     :class="metrics.pnl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                    <span>SESIÓN FINALIZADA</span>
+                </div>
+                <h2 class="text-3xl font-black text-gray-900">Resumen de Sesión</h2>
+            </div>
 
+            {{-- Métricas Principales --}}
+            <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+                {{-- PnL Total --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                    <div class="mb-1 text-3xl font-black transition-all duration-300"
+                         :class="[
+                             metrics.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                             ghostMode ? 'blur-xl select-none opacity-50' : ''
+                         ]"
+                         x-text="(metrics.pnl > 0 ? '+' : '') + metrics.pnl.toFixed(2) + '$'"></div>
+                    <p class="text-xs font-medium text-gray-500">P&L Total</p>
+                </div>
 
-            <p class="mb-8 text-gray-500">¿Cómo te sientes ahora mismo?</p>
+                {{-- PnL Porcentaje --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                    <div class="mb-1 text-3xl font-black"
+                         :class="metrics.pnl_percent >= 0 ? 'text-emerald-600' : 'text-rose-600'"
+                         x-text="(metrics.pnl_percent > 0 ? '+' : '') + metrics.pnl_percent.toFixed(2) + '%'"></div>
+                    <p class="text-xs font-medium text-gray-500">ROI</p>
+                </div>
 
-            <div class="grid grid-cols-3 gap-4">
-                <button class="rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all hover:border-emerald-200 hover:bg-emerald-50"
-                        @click="finishSession('satisfied')">😊<br><span class="mt-2 block text-xs font-bold">Satisfecho</span></button>
-                <button class="rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all hover:border-gray-300 hover:bg-gray-100"
-                        @click="finishSession('tired')">😴<br><span class="mt-2 block text-xs font-bold">Cansado</span></button>
-                <button class="rounded-xl border border-gray-200 bg-gray-50 p-4 transition-all hover:border-rose-200 hover:bg-rose-50"
-                        @click="finishSession('frustrated')">🤬<br><span class="mt-2 block text-xs font-bold">Frustrado</span></button>
+                {{-- Trades --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                    <div class="mb-1 text-3xl font-black text-gray-800"
+                         x-text="metrics.count"></div>
+                    <p class="text-xs font-medium text-gray-500">Trades</p>
+                </div>
+
+                {{-- Winrate --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                    <div class="mb-1 text-3xl font-black"
+                         :class="{
+                             'text-emerald-600': metrics.winrate >= 50,
+                             'text-amber-600': metrics.winrate >= 40 && metrics.winrate < 50,
+                             'text-rose-600': metrics.winrate < 40
+                         }"
+                         x-text="metrics.winrate + '%'"></div>
+                    <p class="text-xs font-medium text-gray-500">Winrate</p>
+                </div>
+            </div>
+
+            {{-- Tiempo de Sesión --}}
+            <div class="mb-8 rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+                <div class="flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-clock text-gray-400"></i>
+                    <span class="font-mono text-2xl font-bold text-gray-700"
+                          x-text="timer"></span>
+                    <span class="text-sm text-gray-500">de trading</span>
+                </div>
+            </div>
+
+            {{-- Mood Final --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <p class="mb-6 text-center text-sm font-semibold text-gray-700">
+                    ¿Cómo te sientes después de esta sesión?
+                </p>
+
+                <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    {{-- Satisfied --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg'"
+                            @click="finishSession('satisfied')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😊</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-emerald-700">Satisfecho</span>
+                    </button>
+
+                    {{-- Confident --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-lg'"
+                            @click="finishSession('confident')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">💪</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-indigo-700">Confiado</span>
+                    </button>
+
+                    {{-- Neutral --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 hover:shadow-lg'"
+                            @click="finishSession('neutral')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😐</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-gray-800">Neutral</span>
+                    </button>
+
+                    {{-- Tired --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-amber-300 hover:bg-amber-50 hover:shadow-lg'"
+                            @click="finishSession('tired')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😴</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-amber-700">Cansado</span>
+                    </button>
+
+                    {{-- Frustrated --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-rose-300 hover:bg-rose-50 hover:shadow-lg'"
+                            @click="finishSession('frustrated')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😤</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-rose-700">Frustrado</span>
+                    </button>
+
+                    {{-- Anxious --}}
+                    <button class="group relative rounded-xl border-2 p-5 transition-all duration-200 hover:scale-105 active:scale-95"
+                            :class="'border-gray-200 bg-gray-50 hover:border-purple-300 hover:bg-purple-50 hover:shadow-lg'"
+                            @click="finishSession('anxious')">
+                        <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😰</div>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-purple-700">Ansioso</span>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Botón alternativo: Volver sin cerrar (opcional) --}}
+            <div class="mt-6 text-center">
+                <button class="text-xs text-gray-500 underline transition hover:text-gray-700"
+                        @click="step = 2">
+                    ← Volver a la sesión
+                </button>
             </div>
         </div>
     </div>
+
 </div>

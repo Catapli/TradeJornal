@@ -6,11 +6,15 @@ document.addEventListener("alpine:init", () => {
         showAlert: false,
         bodyAlert: "",
         typeAlert: "error",
-        showModal: false, // Control del modal
+
+        // ✅ MODALES (100% Alpine)
+        showModalAccount: false, // ← Modal Crear/Editar Cuenta
+        showRulesModal: false, // ← Modal Reglas Trading Plan
         labelTitleModal: "",
-        typeButton: "", // Tipo de Boton para los modals
         showDeleteModal: false, // Variable para mostrar el modal
+        typeButton: "", // Tipo de Boton para los modals
         accountToDeleteId: null, // ID temporal
+        showSyncOptions: false,
 
         init() {
             const self = this; // Capturamos el scope de Alpine
@@ -24,9 +28,21 @@ document.addEventListener("alpine:init", () => {
                 this.initChart();
             });
 
+            // ✅ DESACTIVAR POLLING CUANDO LA PESTAÑA NO ESTÁ ACTIVA
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    // Usuario cambió de pestaña, pausar polling
+                    this.$wire.syncCheckEnabled = false;
+                } else {
+                    // Usuario volvió, reactivar polling
+                    this.$wire.syncCheckEnabled = true;
+                    // Verificar inmediatamente
+                    this.$wire.checkSyncStatus();
+                }
+            });
+
             window.addEventListener("show-alert", (e) => {
                 const data = e.detail[0] || e.detail; // Ajuste por si viene en array o no
-                this.showModal = false; // Cerramos modal si está abierto
                 this.triggerAlert(data.message, data.type);
             });
 
@@ -36,28 +52,35 @@ document.addEventListener("alpine:init", () => {
                 this.timeframe = e.detail.timeframe;
             });
 
-            // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
-            window.addEventListener("account-updated", (e) => {
-                // ... tu lógica de timeframe ...
-                this.timeframe = e.detail.timeframe;
+            // ✅ LISTENER: Abrir modal de reglas
+            window.addEventListener("open-rules-modal", () => {
+                this.showRulesModal = true;
+            });
 
-                this.showModal = false; // Cerramos modal si está abierto
+            // ✅ LISTENER: Cerrar modal de reglas tras guardar
+            window.addEventListener("rules-saved", () => {
+                this.closeRulesModal();
+            });
 
+            // ✅ LISTENER: Abrir modal de edición de cuenta
+            window.addEventListener("open-modal-edit", () => {
+                this.showModalAccount = true;
+            });
+
+            window.addEventListener("account-created", (e) => {
+                this.closeModalAccount();
+                this.timeframe = e.detail.timeframe || "all";
                 this.triggerAlert(
-                    this.$s("account_updated_success"),
+                    this.$s("account_created_success"),
                     "success",
                 );
             });
 
-            // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
-            window.addEventListener("account-created", (e) => {
-                // ... tu lógica de timeframe ...
-                this.timeframe = e.detail.timeframe;
-
-                this.showModal = false; // Cerramos modal si está abierto
-
+            window.addEventListener("account-updated", (e) => {
+                this.closeModalAccount();
+                this.timeframe = e.detail.timeframe || "all";
                 this.triggerAlert(
-                    this.$s("account_created_success"),
+                    this.$s("account_updated_success"),
                     "success",
                 );
             });
@@ -73,8 +96,19 @@ document.addEventListener("alpine:init", () => {
 
         // 1. ABRIR MODAL
         confirmDeleteAccount(id) {
-            this.accountToDeleteId = id;
-            this.showDeleteModal = true;
+            // this.accountToDeleteId = id;
+            window.dispatchEvent(
+                new CustomEvent("open-confirm-modal", {
+                    detail: {
+                        title: this.$t("delete_account"),
+                        text: this.$l("lost_history_account"),
+                        type: "red",
+                        action: "deleteAccount",
+                        params: id,
+                    },
+                }),
+            );
+            // this.showDeleteModal = true;
         },
 
         // 2. EJECUTAR BORRADO (Llamado desde el botón rojo del modal)
@@ -86,19 +120,21 @@ document.addEventListener("alpine:init", () => {
             }
         },
 
+        closeModalAccount() {
+            this.showModalAccount = false;
+            // Disparar evento para que accountSelector resetee su formulario
+            window.dispatchEvent(new CustomEvent("reset-account-form"));
+        },
+
+        closeRulesModal() {
+            // Cerrar el modal
+            this.showRulesModal = false;
+        },
+
         setTimeframe(value) {
+            this.timeframe = value; // ← Alpine primero (instantáneo)
             this.showLoadingGrafic = true;
-            this.$wire.setTimeframe(value);
-        },
-
-        showOpenModalCreate() {
-            this.showModal = true;
-            this.labelTitleModal = this.$t("create_account");
-        },
-
-        showOpenModalEdit() {
-            this.showModal = true;
-            this.labelTitleModal = this.$t("edit_account");
+            this.$wire.setTimeframe(value); // ← Sincroniza después
         },
 
         initChart() {
@@ -111,16 +147,28 @@ document.addEventListener("alpine:init", () => {
                     window.balanceChart.destroy();
                 }
 
-                const categories =
-                    this.$wire.balanceChartData?.categories || [];
-                const seriesData = this.$wire.balanceChartData?.series || [];
+                // ✅ OBTENER DATOS DIRECTAMENTE DE LIVEWIRE (Ya vienen procesados)
+                const chartData = this.$wire.balanceChartData;
+
+                // Validación de datos
+                if (!chartData || !chartData.categories || !chartData.series) {
+                    this.showLoadingGrafic = false;
+                    return;
+                }
+
+                const categories = chartData.categories;
+                const seriesData = chartData.series;
                 const currency = this.$wire.currency || "$";
 
-                // Si no hay datos, salimos (o podrías mostrar un div de "Sin datos")
-                if (!categories.length) return;
+                // Si no hay datos, salimos
+                if (!categories.length) {
+                    this.showLoadingGrafic = false;
+                    return;
+                }
 
+                // ✅ CONFIGURACIÓN APEXCHARTS (Sin procesamiento adicional)
                 const options = {
-                    series: seriesData,
+                    series: seriesData, // ← Ya viene formateado desde PHP
                     chart: {
                         type: "area",
                         height: 350,
@@ -138,11 +186,9 @@ document.addEventListener("alpine:init", () => {
                     },
 
                     // --- COLORES SEMÁNTICOS ---
-                    // Azul (Cielo/Potencial), Verde (Realidad), Rojo (Riesgo/Suelo)
                     colors: ["#3B82F6", "#10B981", "#EF4444"],
 
                     // --- RELLENO ---
-                    // Solo rellenamos el Balance Real para darle peso visual y no ensuciar
                     fill: {
                         type: ["solid", "gradient", "solid"],
                         gradient: {
@@ -151,16 +197,21 @@ document.addEventListener("alpine:init", () => {
                             opacityTo: 0.05,
                             stops: [0, 100],
                         },
-                        opacity: [0, 0.3, 0], // Transparente, Semitransparente, Transparente
+                        opacity: [0, 0.3, 0],
                     },
 
                     xaxis: {
-                        categories: categories,
+                        categories: categories, // ← Ya viene agrupado desde PHP
                         tooltip: { enabled: false },
                         axisBorder: { show: false },
                         axisTicks: { show: false },
                         labels: {
                             style: { colors: "#9ca3af", fontSize: "12px" },
+                            rotate: -45, // ← Rotar labels si hay muchos
+                            rotateAlways: false,
+                            hideOverlappingLabels: true, // ← CLAVE para evitar apiñamiento
+                            trim: true,
+                            maxHeight: 80,
                         },
                     },
 
@@ -180,7 +231,7 @@ document.addEventListener("alpine:init", () => {
                     // --- TOOLTIP COMPARTIDO ---
                     tooltip: {
                         theme: "light",
-                        shared: true, // Muestra los 3 valores a la vez al pasar el ratón
+                        shared: true,
                         intersect: false,
                         y: {
                             formatter: function (val) {
@@ -322,7 +373,20 @@ document.addEventListener("alpine:init", () => {
                 this.resetForm();
                 this.mode = "create";
                 this.labelTitleModal = this.$t("create_account"); // O tu traducción
-                this.showOpenModalCreate(); // Tu función que pone showModal = true
+                this.showModalAccount = true;
+                this.labelTitleModal = this.$t("create_account");
+            });
+
+            // ✅ ESCUCHAMOS EVENTO DE RESET desde dashboardLogic
+            window.addEventListener("reset-account-form", () => {
+                this.resetForm();
+            });
+
+            // ESCUCHAMOS APERTURA DE CREACIÓN
+            window.addEventListener("open-modal-create", () => {
+                this.resetForm();
+                this.mode = "create";
+                // dashboardLogic ya abrió el modal, solo limpiamos datos
             });
 
             // ❌ ELIMINADO: this.syncToLivewire()
@@ -366,7 +430,8 @@ document.addEventListener("alpine:init", () => {
 
             this.$nextTick(() => {
                 this.isLoading = false; // Reactivamos watchers
-                this.showOpenModalEdit(); // Abrimos el modal
+                this.showModalAccount = true;
+                this.labelTitleModal = this.$t("edit_account");
             });
         },
 
@@ -385,7 +450,7 @@ document.addEventListener("alpine:init", () => {
             this.$wire.form.sync = this.syncronize;
             this.$wire.form.platformBroker = this.platformBroker;
             this.$wire.form.loginPlatform = this.loginPlatform;
-            this.$wire.form.passwordPlatform = this.passwordPlatform;
+            // this.$wire.form.passwordPlatform = this.passwordPlatform;
             this.$wire.form.name = this.nameAccount;
         },
 
@@ -461,19 +526,19 @@ document.addEventListener("alpine:init", () => {
                     return false;
                 }
 
-                if (this.mode === "create") {
-                    if (
-                        this.$wire.form.passwordPlatform === null ||
-                        this.$wire.form.passwordPlatform.trim() === ""
-                    ) {
-                        this.triggerAlert(
-                            this.$e("enter_password_platform"),
-                            "error",
-                        );
-                        this.inputRed(this.$refs.passwordPlatform);
-                        return false;
-                    }
-                }
+                // if (this.mode === "create") {
+                //     if (
+                //         this.$wire.form.passwordPlatform === null ||
+                //         this.$wire.form.passwordPlatform.trim() === ""
+                //     ) {
+                //         this.triggerAlert(
+                //             this.$e("enter_password_platform"),
+                //             "error",
+                //         );
+                //         this.inputRed(this.$refs.passwordPlatform);
+                //         return false;
+                //     }
+                // }
             }
             this.syncToLivewire();
 
@@ -497,6 +562,7 @@ document.addEventListener("alpine:init", () => {
             this.selectedLevelId = "";
             this.nameAccount = "";
             this.syncronize = false;
+            this.showSyncOptions = "";
             this.loginPlatform = "";
             this.passwordPlatform = "";
 

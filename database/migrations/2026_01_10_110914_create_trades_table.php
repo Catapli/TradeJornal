@@ -48,6 +48,22 @@ return new class extends Migration
             $table->index(['account_id', 'position_id']);
             $table->index('entry_time');
             $table->index(['exit_time', 'id']);
+            // 👇 ÍNDICE 1: Para queries de agregación por cuenta y fecha
+            // Usado en: calculateStats(), generateCalendar(), heatmap
+            $table->index(['account_id', 'exit_time', 'pnl'], 'idx_trades_account_exit_pnl');
+
+            // 👇 ÍNDICE 2: Para filtrar por PnL positivo/negativo (winRate)
+            $table->index(['account_id', 'pnl'], 'idx_trades_account_pnl');
+
+            // 👇 ÍNDICE 3: Para el heatmap (día de la semana + hora)
+            // PostgreSQL permite índices con expresiones
+            $table->rawIndex(
+                'account_id, (EXTRACT(ISODOW FROM exit_time)), (EXTRACT(HOUR FROM exit_time))',
+                'idx_trades_heatmap'
+            );
+            $table->index('direction', 'idx_trades_direction');
+            $table->index(['mae_price', 'mfe_price'], 'idx_trades_mae_mfe');
+            $table->index(['account_id', 'entry_time'], 'idx_trades_account_entry');
             $table->timestamps();
         });
     }

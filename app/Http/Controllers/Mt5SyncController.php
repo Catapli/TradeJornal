@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\AccountSyncCompleted;
 use Carbon\Carbon;
 use App\Notifications\NewTradeNotification;
 use App\Models\Trade;
 use App\Models\TradeAsset;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -111,28 +113,6 @@ class Mt5SyncController extends Controller
                     'chart_data_path' => $chartDataPath ?? null, // Solo si viene nuevo
                 ]
             );
-            // $trade = Trade::updateOrCreate(
-            //     [
-            //         'account_id' => $account->id,
-            //         'ticket' => $tradeData['ticket']
-            //     ],
-            //     [
-            //         'trade_asset_id' => $asset->id,
-            //         'direction' => $tradeData['direction'],
-            //         'entry_price' => $tradeData['entry_price'],
-            //         'exit_price' => $tradeData['exit_price'],
-            //         'size' => $tradeData['size'],
-            //         'pnl' => $tradeData['pnl'],
-            //         'duration_minutes' => $tradeData['duration_minutes'],
-            //         'entry_time' => $tradeData['entry_time'],
-            //         'exit_time' => $tradeData['exit_time'],
-            //         'notes' => $tradeData['notes'] ?? '',
-            //         "pnl_percentage" => $percentage,
-            //         // NUEVOS CAMPOS
-            //         'mae_price' => $tradeData['mae_price'] ?? null,
-            //         'mfe_price' => $tradeData['mfe_price'] ?? null,
-            //     ]
-            // );
 
             // Solo guardamos el path del JSON, ya no hay screenshot automática
             if ($chartDataPath) {
@@ -170,6 +150,15 @@ class Mt5SyncController extends Controller
         $account->last_sync = now();
         $account->current_balance = $data['balance'];
         $account->save();
+
+        // ✅ INVALIDAR CACHÉ PARA FORZAR RECÁLCULO
+        Cache::forget("account_stats_{$account->id}");
+        Cache::forget("balance_chart_{$account->id}_all");
+        Cache::forget("balance_chart_{$account->id}_1h");
+        Cache::forget("balance_chart_{$account->id}_24h");
+        Cache::forget("balance_chart_{$account->id}_7d");
+
+        Log::info("✅ Sync completado para cuenta {$account->id}: {$inserted} trades insertados/actualizados");
 
         return response()->json([
             'status' => 'ok',

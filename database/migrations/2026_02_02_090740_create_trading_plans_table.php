@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('trading_plans', function (Blueprint $table) {
             $table->id();
             // Polimorfismo: Se conecta a Account o Strategy
-            $table->foreignId('account_id')->constrained()->onDelete('cascade');
+            $table->foreignId('account_id')->unique()->constrained()->onDelete('cascade');
 
             // Reglas (Null = No aplica esa regla)
             $table->integer('max_daily_trades')->nullable(); // Ej: 5 trades

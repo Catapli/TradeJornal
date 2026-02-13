@@ -1,29 +1,23 @@
 <div class="min-h-screen bg-gray-50 p-6"
-     x-data>
+     x-data="reports">
 
     {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
     <div x-data="{
         initialLoad: true,
         init() {
-            // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
             document.addEventListener('livewire:initialized', () => {
                 this.initialLoad = false;
             });
-    
-            // Fallback de seguridad: por si Livewire ya cargó antes de este script
             setTimeout(() => { this.initialLoad = false }, 200);
         }
     }">
 
-        {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
-        {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+        {{-- 1. LOADER DE CARGA INICIAL --}}
         <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0">
-
-            {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
                 <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
@@ -31,15 +25,87 @@
         </div>
     </div>
 
+    {{-- ============================================ --}}
+    {{-- SISTEMA DE ALERTAS (Alpine-Driven) --}}
+    {{-- ============================================ --}}
 
+    <div class="fixed right-4 top-4 z-50 max-w-md"
+         x-show="showAlert"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-y-2"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="display: none;">
 
-    {{-- ? Loading --}}
-    <div wire:loading
-         wire:target='resetFilters'>
-        <x-loader></x-loader>
+        <div class="rounded-r-lg border-l-4 p-4 shadow-lg"
+             :class="{
+                 'bg-red-50 border-red-500 text-red-800': typeAlert === 'error',
+                 'bg-yellow-50 border-yellow-500 text-yellow-800': typeAlert === 'warning',
+                 'bg-blue-50 border-blue-500 text-blue-800': typeAlert === 'info',
+                 'bg-green-50 border-green-500 text-green-800': typeAlert === 'success'
+             }">
+
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-500"
+                         x-show="typeAlert === 'error'"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                              clip-rule="evenodd" />
+                    </svg>
+                    <svg class="h-5 w-5 text-yellow-500"
+                         x-show="typeAlert === 'warning'"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clip-rule="evenodd" />
+                    </svg>
+                    <svg class="h-5 w-5 text-blue-500"
+                         x-show="typeAlert === 'info'"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                              clip-rule="evenodd" />
+                    </svg>
+                    <svg class="h-5 w-5 text-green-500"
+                         x-show="typeAlert === 'success'"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clip-rule="evenodd" />
+                    </svg>
+                </div>
+
+                <div class="ml-3 flex-1">
+                    <p class="text-sm font-medium"
+                       x-text="bodyAlert"></p>
+                </div>
+
+                <button class="ml-4 inline-flex flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        @click="closeAlert()">
+                    <svg class="h-4 w-4"
+                         fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
 
-    {{-- HEADER --}}
+    {{-- ============================================ --}}
+    {{-- HEADER CON SELECTOR Y BADGES --}}
+    {{-- ============================================ --}}
+
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <div class="flex items-center gap-2">
@@ -49,25 +115,77 @@
             <p class="text-sm text-gray-500">Analiza el impacto de tu disciplina en el resultado final.</p>
         </div>
 
-        <select class="rounded-lg border-gray-300 text-sm font-bold shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                wire:model.live="accountId">
-            <option value="all">Todas las Cuentas</option>
-            @foreach ($accounts as $acc)
-                <option value="{{ $acc->id }}">{{ $acc->name }}</option>
-            @endforeach
-        </select>
+        <div class="flex items-center gap-3">
+            {{-- Selector de cuenta (Livewire) --}}
+            <select class="rounded-lg border-gray-300 text-sm font-bold shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    wire:model.live="accountId">
+                <option value="all">Todas las Cuentas</option>
+                @foreach ($this->accounts as $acc)
+                    <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                @endforeach
+            </select>
+
+            {{-- Badge de escenarios activos --}}
+            <div class="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700"
+                 x-show="hasActiveScenarios()"
+                 x-transition>
+                <svg class="h-4 w-4"
+                     fill="currentColor"
+                     viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                          d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                          clip-rule="evenodd" />
+                </svg>
+                <span x-text="countActiveScenarios() + ' escenario' + (countActiveScenarios() > 1 ? 's' : '') + ' activo' + (countActiveScenarios() > 1 ? 's' : '')"></span>
+            </div>
+
+            {{-- Badge de cambios pendientes --}}
+            <div class="flex animate-pulse items-center gap-2 rounded-full bg-yellow-100 px-3 py-1.5 text-xs font-bold text-yellow-700"
+                 x-show="hasUnsavedChanges"
+                 x-transition>
+                <svg class="h-4 w-4"
+                     fill="currentColor"
+                     viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                          clip-rule="evenodd" />
+                </svg>
+                Cambios pendientes
+            </div>
+        </div>
     </div>
 
     <div class="grid grid-cols-12 gap-6">
 
-        {{-- COLUMNA IZQUIERDA: CONTROLES --}}
+        {{-- ============================================ --}}
+        {{-- COLUMNA IZQUIERDA: CONTROLES (ALPINE-FIRST) --}}
+        {{-- ============================================ --}}
+
         <div class="col-span-12 space-y-6 lg:col-span-3">
 
-            {{-- TARJETA 1: LABORATORIO DE ESTRATEGIA (SIMULADOR) --}}
+            {{-- TARJETA 1: LABORATORIO DE ESTRATEGIA --}}
             <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <h3 class="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                    <i class="fa-solid fa-flask text-indigo-600"></i> Laboratorio
-                </h3>
+                <div class="mb-5 flex items-center justify-between">
+                    <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
+                        <i class="fa-solid fa-flask text-indigo-600"></i> Laboratorio
+                    </h3>
+
+                    {{-- Botón Resetear (Instantáneo) --}}
+                    <button class="flex items-center gap-1 text-xs text-gray-500 transition hover:text-red-600"
+                            @click="resetAllScenarios()"
+                            x-show="hasActiveScenarios()"
+                            x-transition
+                            type="button">
+                        <svg class="h-3.5 w-3.5"
+                             fill="currentColor"
+                             viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                                  clip-rule="evenodd" />
+                        </svg>
+                        Reset
+                    </button>
+                </div>
 
                 <div class="space-y-6">
 
@@ -83,7 +201,8 @@
                                 <div class="relative">
                                     <input class="w-full rounded-lg border-gray-200 bg-white py-1.5 pl-2 pr-7 text-xs font-bold text-rose-600 placeholder-gray-300 focus:border-rose-500 focus:ring-rose-500"
                                            type="number"
-                                           wire:model.live.debounce.500ms="scenarios.fixed_sl"
+                                           x-model="scenarios.fixed_sl"
+                                           @input="onScenarioChange()"
                                            placeholder="Ej: 15">
                                     <span class="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">pts</span>
                                 </div>
@@ -94,7 +213,8 @@
                                 <div class="relative">
                                     <input class="w-full rounded-lg border-gray-200 bg-white py-1.5 pl-2 pr-7 text-xs font-bold text-emerald-600 placeholder-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                            type="number"
-                                           wire:model.live.debounce.500ms="scenarios.fixed_tp"
+                                           x-model="scenarios.fixed_tp"
+                                           @input="onScenarioChange()"
                                            placeholder="Ej: 30">
                                     <span class="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">pts</span>
                                 </div>
@@ -114,7 +234,8 @@
                         {{-- Select Fatiga --}}
                         <div class="mb-4">
                             <select class="w-full rounded-lg border-gray-200 text-xs font-bold text-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
-                                    wire:model.live="scenarios.max_daily_trades">
+                                    x-model="scenarios.max_daily_trades"
+                                    @change="onScenarioChange()">
                                 <option value="">Fatiga: Todas las operaciones</option>
                                 <option value="1">Solo la 1ª del día (Sniper)</option>
                                 <option value="2">Max 2 trades/día</option>
@@ -131,7 +252,8 @@
                                     <div class="relative inline-block w-8 select-none align-middle">
                                         <input class="peer sr-only"
                                                type="checkbox"
-                                               wire:model.live="scenarios.no_fridays" />
+                                               x-model="scenarios.no_fridays"
+                                               @change="onScenarioChange()" />
                                         <div
                                              class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full">
                                         </div>
@@ -144,7 +266,8 @@
                                     <div class="relative inline-block w-8 select-none align-middle">
                                         <input class="peer sr-only"
                                                type="checkbox"
-                                               wire:model.live="scenarios.remove_worst" />
+                                               x-model="scenarios.remove_worst"
+                                               @change="onScenarioChange()" />
                                         <div
                                              class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full">
                                         </div>
@@ -158,7 +281,8 @@
                                     <div class="relative inline-block w-8 select-none align-middle">
                                         <input class="peer sr-only"
                                                type="checkbox"
-                                               wire:model.live="scenarios.only_longs" />
+                                               x-model="scenarios.only_longs"
+                                               @change="onScenarioChange()" />
                                         <div
                                              class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full">
                                         </div>
@@ -171,7 +295,8 @@
                                     <div class="relative inline-block w-8 select-none align-middle">
                                         <input class="peer sr-only"
                                                type="checkbox"
-                                               wire:model.live="scenarios.only_shorts" />
+                                               x-model="scenarios.only_shorts"
+                                               @change="onScenarioChange()" />
                                         <div
                                              class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-rose-500 peer-checked:after:translate-x-full">
                                         </div>
@@ -181,13 +306,56 @@
                         </div>
                     </div>
 
+                    {{-- BOTÓN APLICAR SIMULACIÓN --}}
+                    <div class="border-t border-gray-100 pt-4">
+                        <button class="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition"
+                                @click="applyScenarios()"
+                                :disabled="!hasUnsavedChanges || isApplying"
+                                :class="{
+                                    'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md': hasUnsavedChanges && !isApplying,
+                                    'bg-gray-200 text-gray-400 cursor-not-allowed': !hasUnsavedChanges || isApplying
+                                }">
+
+                            {{-- Loading Spinner --}}
+                            <svg class="h-4 w-4 animate-spin"
+                                 x-show="isApplying"
+                                 fill="none"
+                                 viewBox="0 0 24 24">
+                                <circle class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                <path class="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+
+                            {{-- Icono normal --}}
+                            <svg class="h-4 w-4"
+                                 x-show="!isApplying"
+                                 fill="currentColor"
+                                 viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clip-rule="evenodd" />
+                            </svg>
+
+                            <span x-text="isApplying ? 'Aplicando...' : 'Aplicar Simulación'"></span>
+                        </button>
+                    </div>
+
                     {{-- SECCIÓN C: RESULTADO IMPACTO --}}
-                    @if ($simulatedStats)
+                    @if ($this->simulatedData['stats'])
                         <div class="border-t border-gray-100 pt-4">
                             @php
-                                // Calculamos la diferencia total en dinero (más tangible que expectancy)
-                                $totalReal = end($realCurve)['y'] ?? 0;
-                                $totalSim = end($simulatedCurve)['y'] ?? 0;
+                                // ✅ FIX: Crear copias locales ANTES de usar end()
+                                $realCurve = $this->realCurve;
+                                $simulatedCurve = $this->simulatedData['curve'];
+
+                                $totalReal = !empty($realCurve) ? end($realCurve)['y'] : 0;
+                                $totalSim = !empty($simulatedCurve) ? end($simulatedCurve)['y'] : 0;
                                 $diffTotal = $totalSim - $totalReal;
                             @endphp
 
@@ -198,17 +366,17 @@
                                 <div class="{{ $diffTotal > 0 ? 'text-emerald-700' : 'text-rose-700' }} text-lg font-black">
                                     {{ $diffTotal > 0 ? '+' : '' }}{{ number_format($diffTotal, 2) }} €
                                 </div>
-                                @if ($realStats['expectancy'] != 0)
+                                @if ($this->realStats['expectancy'] != 0)
                                     <div class="mt-1 text-[10px] font-medium opacity-70">
-                                        Mejora del sistema: <strong>{{ round((($simulatedStats['expectancy'] - $realStats['expectancy']) / abs($realStats['expectancy'])) * 100) }}%</strong>
+                                        Mejora del sistema: <strong>{{ round((($this->simulatedData['stats']['expectancy'] - $this->realStats['expectancy']) / abs($this->realStats['expectancy'])) * 100) }}%</strong>
                                     </div>
                                 @endif
                             </div>
                         </div>
                     @endif
+
                 </div>
             </div>
-
 
             {{-- TARJETA 2: CALIDAD DEL SISTEMA (SQN) --}}
             <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -217,15 +385,15 @@
                 <div class="mb-2 mt-4 flex items-end gap-3">
                     {{-- Valor Real --}}
                     <div>
-                        <span class="text-4xl font-black text-gray-900">{{ $realStats['sqn'] ?? '0.0' }}</span>
+                        <span class="text-4xl font-black text-gray-900">{{ $this->realStats['sqn'] ?? '0.0' }}</span>
                         <span class="block text-[10px] font-bold uppercase text-gray-400">Actual</span>
                     </div>
 
                     {{-- Valor Simulado (si existe) --}}
-                    @if ($simulatedStats)
+                    @if ($this->simulatedData['stats'])
                         <div class="mb-1 text-gray-300"><i class="fa-solid fa-arrow-right"></i></div>
                         <div>
-                            <span class="text-2xl font-black text-indigo-500">{{ $simulatedStats['sqn'] }}</span>
+                            <span class="text-2xl font-black text-indigo-500">{{ $this->simulatedData['stats']['sqn'] }}</span>
                             <span class="block text-[10px] font-bold uppercase text-indigo-300">Simulado</span>
                         </div>
                     @endif
@@ -233,9 +401,8 @@
 
                 {{-- Barra de Progreso --}}
                 <div class="mb-2 mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                    {{-- Barra Real --}}
                     <div class="h-2 rounded-full bg-gray-800 transition-all duration-500"
-                         style="width: {{ min(100, (($realStats['sqn'] ?? 0) / 5) * 100) }}%"></div>
+                         style="width: {{ min(100, (($this->realStats['sqn'] ?? 0) / 5) * 100) }}%"></div>
                 </div>
 
                 <div class="flex justify-between text-[10px] font-bold uppercase text-gray-400">
@@ -245,12 +412,12 @@
 
                 {{-- Diagnóstico --}}
                 <div class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs leading-relaxed text-indigo-800">
-                    @if (($realStats['sqn'] ?? 0) < 1.6)
+                    @if (($this->realStats['sqn'] ?? 0) < 1.6)
                         <div class="flex gap-2">
                             <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
                             <span>Difícil de operar. Mucha volatilidad para poco beneficio.</span>
                         </div>
-                    @elseif(($realStats['sqn'] ?? 0) < 3.0)
+                    @elseif(($this->realStats['sqn'] ?? 0) < 3.0)
                         <div class="flex gap-2">
                             <i class="fa-solid fa-check mt-0.5"></i>
                             <span>Buen sistema. Tienes ventaja estadística clara.</span>
@@ -266,14 +433,16 @@
 
         </div>
 
-
+        {{-- ============================================ --}}
         {{-- COLUMNA DERECHA: DASHBOARD COMPLETO --}}
+        {{-- ============================================ --}}
+
         <div class="col-span-12 space-y-6 lg:col-span-9">
 
             {{-- 1. GRÁFICO EQUITY CURVE --}}
             <div class="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                 x-data="equityChart(@js($realCurve), @js($simulatedCurve))"
-                 x-effect="updateData(@js($realCurve), @js($simulatedCurve))">
+                 x-data="equityChart(@js($this->realCurve), @js($this->simulatedData['curve']))"
+                 x-effect="updateData(@js($this->realCurve), @js($this->simulatedData['curve']))">
 
                 <div class="mb-2 flex items-center justify-between">
                     <h3 class="font-bold text-gray-800">Curva de Crecimiento (Equity Curve)</h3>
@@ -281,7 +450,7 @@
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
                             <span class="h-3 w-3 rounded-full bg-slate-300"></span> Realidad
                         </div>
-                        @if (!empty($simulatedCurve))
+                        @if (!empty($this->simulatedData['curve']))
                             <div class="flex items-center gap-2 text-xs font-bold text-indigo-600">
                                 <span class="h-3 w-3 rounded-full bg-indigo-500"></span> Simulación
                             </div>
@@ -289,14 +458,13 @@
                     </div>
                 </div>
 
-                {{-- GRÁFICO CON ALTURA FIJA --}}
                 <div id="equityChart"
                      class="h-[400px] w-full"></div>
 
-                {{-- Loading --}}
+                {{-- Loading Overlay --}}
                 <div class="absolute inset-0 z-10 items-center justify-center rounded-2xl bg-white/50 backdrop-blur-[1px]"
-                     wire:loading.flex
-                     wire:target="scenarios, accountId">
+                     x-show="isApplying"
+                     x-transition>
                     <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-600"></i>
                 </div>
             </div>
@@ -304,7 +472,7 @@
             {{-- 2. REPORTES TEMPORALES --}}
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="barChart(@js($hourlyReportData), 'hour', 'P&L por Hora')">
+                     x-data="barChart(@js($this->hourlyReportData), 'hour', 'P&L por Hora')">
                     <h3 class="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
                         <i class="fa-regular fa-clock text-blue-600"></i> Rendimiento por Hora
                     </h3>
@@ -313,7 +481,7 @@
                 </div>
 
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="barChart(@js($sessionReportData), 'session', 'P&L por Sesión')">
+                     x-data="barChart(@js($this->sessionReportData), 'session', 'P&L por Sesión')">
                     <h3 class="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
                         <i class="fa-solid fa-globe-americas text-green-600"></i> Rendimiento por Sesión
                     </h3>
@@ -322,13 +490,12 @@
                 </div>
             </div>
 
-            {{-- 3. PSICOLOGÍA Y GESTIÓN (SCATTER + DISTRIBUCIÓN) --}}
+            {{-- 3. PSICOLOGÍA Y GESTIÓN --}}
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-                {{-- REEMPLAZAR EL DIV DEL "SCATTER PLOT" POR ESTE BLOQUE --}}
-
+                {{-- Efficiency Chart --}}
                 <div class="col-span-1 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm md:col-span-2"
-                     x-data="efficiencyChart(@js($efficiencyData))">
+                     x-data="efficiencyChart(@js($this->efficiencyData))">
 
                     <div class="mb-6 flex flex-col justify-between sm:flex-row sm:items-end">
                         <div>
@@ -344,11 +511,9 @@
                         </div>
                     </div>
 
-                    {{-- Contenedor del Gráfico --}}
                     <div id="efficiencyChart"
                          class="h-[350px] w-full"></div>
 
-                    {{-- Leyenda Explicativa Rápida --}}
                     <div class="mt-4 flex flex-wrap justify-center gap-4 text-[10px] text-gray-400">
                         <div class="flex items-center gap-1">
                             <span class="block h-2 w-2 rounded-full bg-rose-400"></span> MAE: Cuanto se fue en contra antes de cerrar.
@@ -359,10 +524,9 @@
                     </div>
                 </div>
 
-
-                {{-- Histograma Distribución --}}
+                {{-- Distribution Chart --}}
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="distributionChart(@js($distributionData))">
+                     x-data="distributionChart(@js($this->distributionData))">
                     <div class="mb-4 flex items-start justify-between">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
@@ -375,8 +539,9 @@
                          class="h-[250px] w-full"></div>
                 </div>
 
+                {{-- Radar Chart --}}
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="radarChart(@js($radarData))">
+                     x-data="radarChart(@js($this->radarData))">
 
                     <div class="mb-2 flex items-start justify-between">
                         <div>
@@ -387,66 +552,59 @@
                         </div>
                     </div>
 
-                    {{-- Contenedor Gráfico --}}
                     <div id="radarChart"
                          class="flex h-[250px] w-full items-center justify-center"></div>
-
                 </div>
 
+                {{-- Risk Analysis --}}
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
                      x-data>
                     <div class="mb-4">
                         <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
                             <i class="fa-solid fa-skull-crossbones text-gray-800"></i> Análisis de Riesgo & Ruina
                         </h3>
-                        <p class="mt-1 text-xs text-gray-400">Probabilidades matemáticas basadas en tu Winrate ({{ $riskData['win_rate'] ?? 0 }}%) y Ratio (1:{{ $riskData['payoff'] ?? 0 }}).</p>
+                        <p class="mt-1 text-xs text-gray-400">Probabilidades matemáticas basadas en tu Winrate ({{ $this->riskData['win_rate'] ?? 0 }}%) y Ratio (1:{{ $this->riskData['payoff'] ?? 0 }}).</p>
                     </div>
 
-                    @if (empty($riskData))
+                    @if (empty($this->riskData))
                         <div class="flex h-32 items-center justify-center text-xs text-gray-400">
                             Necesitas al menos 10 trades para calcular el riesgo.
                         </div>
                     @else
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-                            {{-- IZQUIERDA: GAUGE DE RUINA --}}
+                            {{-- Gauge de Ruina --}}
                             <div class="flex flex-col items-center justify-center border-r border-gray-100 pr-0 md:pr-6">
 
-                                {{-- Gauge Visual CSS Puro (Semicírculo) --}}
                                 <div class="relative flex h-32 w-48 items-end justify-center overflow-hidden">
-                                    {{-- Fondo Arco --}}
                                     <div class="absolute top-0 h-full w-full rounded-t-full bg-gray-100"></div>
 
-                                    {{-- Arco de Valor (Rotación dinámica) --}}
-                                    {{-- 0% Risk = Green, 100% Risk = Red --}}
                                     @php
-                                        $deg = ($riskData['risk_of_ruin'] / 100) * 180; // 0 a 180 grados
-                                        $colorClass = $riskData['risk_of_ruin'] < 1 ? 'bg-emerald-500' : ($riskData['risk_of_ruin'] < 20 ? 'bg-amber-400' : 'bg-rose-600');
+                                        $deg = ($this->riskData['risk_of_ruin'] / 100) * 180;
+                                        $colorClass = $this->riskData['risk_of_ruin'] < 1 ? 'bg-emerald-500' : ($this->riskData['risk_of_ruin'] < 20 ? 'bg-amber-400' : 'bg-rose-600');
                                     @endphp
                                     <div class="{{ $colorClass }} absolute top-0 h-full w-full origin-bottom rounded-t-full opacity-80 transition-transform duration-1000 ease-out"
                                          style="transform: rotate({{ $deg - 180 }}deg);"></div>
 
-                                    {{-- Centro Blanco (Máscara) --}}
                                     <div class="absolute bottom-0 z-10 flex h-20 w-32 items-end justify-center rounded-t-full bg-white pb-2">
                                         <div class="text-center">
-                                            <span class="block text-3xl font-black text-gray-900">{{ $riskData['risk_of_ruin'] }}%</span>
+                                            <span class="block text-3xl font-black text-gray-900">{{ $this->riskData['risk_of_ruin'] }}%</span>
                                             <span class="text-[10px] font-bold uppercase text-gray-400">Prob. Ruina</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {{-- Mensaje de Diagnóstico --}}
                                 <div class="mt-2 text-center text-xs">
-                                    @if ($riskData['risk_of_ruin'] < 1)
+                                    @if ($this->riskData['risk_of_ruin'] < 1)
                                         <span class="font-bold text-emerald-600">✅ Zona Segura</span>
-                                    @elseif($riskData['risk_of_ruin'] < 10)
+                                    @elseif($this->riskData['risk_of_ruin'] < 10)
                                         <span class="font-bold text-amber-500">⚠️ Precaución</span>
                                     @else
                                         <span class="font-bold text-rose-600">🚨 Peligro Crítico</span>
                                     @endif
                                     <p class="mt-1 text-[10px] text-gray-400">
-                                        @if ($riskData['edge'] > 0)
-                                            Tienes ventaja estadística (Edge: {{ $riskData['edge'] }}).
+                                        @if ($this->riskData['edge'] > 0)
+                                            Tienes ventaja estadística (Edge: {{ $this->riskData['edge'] }}).
                                         @else
                                             Tu esperanza matemática es negativa.
                                         @endif
@@ -454,50 +612,47 @@
                                 </div>
                             </div>
 
-                            {{-- DERECHA: TABLA DE RACHAS --}}
+                            {{-- Tabla de Rachas --}}
                             <div>
                                 <h4 class="mb-3 text-xs font-bold text-gray-500">Probabilidad de Racha (Losing Streak)</h4>
                                 <div class="space-y-3">
 
-                                    {{-- Item Racha 3 --}}
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
                                             <span>3 Pérdidas seguidas</span>
-                                            <span>{{ $riskData['streak_prob']['3'] }}%</span>
+                                            <span>{{ $this->riskData['streak_prob']['3'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
                                             <div class="h-1.5 rounded-full bg-gray-400"
-                                                 style="width: {{ min(100, $riskData['streak_prob']['3']) }}%"></div>
+                                                 style="width: {{ min(100, $this->riskData['streak_prob']['3']) }}%"></div>
                                         </div>
                                     </div>
 
-                                    {{-- Item Racha 5 --}}
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
                                             <span>5 Pérdidas seguidas</span>
-                                            <span class="{{ $riskData['streak_prob']['5'] > 50 ? 'text-rose-500 font-bold' : '' }}">{{ $riskData['streak_prob']['5'] }}%</span>
+                                            <span class="{{ $this->riskData['streak_prob']['5'] > 50 ? 'text-rose-500 font-bold' : '' }}">{{ $this->riskData['streak_prob']['5'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
-                                            <div class="{{ $riskData['streak_prob']['5'] > 20 ? 'bg-amber-400' : 'bg-gray-400' }} h-1.5 rounded-full"
-                                                 style="width: {{ min(100, $riskData['streak_prob']['5']) }}%"></div>
+                                            <div class="{{ $this->riskData['streak_prob']['5'] > 20 ? 'bg-amber-400' : 'bg-gray-400' }} h-1.5 rounded-full"
+                                                 style="width: {{ min(100, $this->riskData['streak_prob']['5']) }}%"></div>
                                         </div>
                                     </div>
 
-                                    {{-- Item Racha 8 --}}
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
                                             <span>8 Pérdidas seguidas</span>
-                                            <span>{{ $riskData['streak_prob']['8'] }}%</span>
+                                            <span>{{ $this->riskData['streak_prob']['8'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
                                             <div class="h-1.5 rounded-full bg-rose-400"
-                                                 style="width: {{ min(100, $riskData['streak_prob']['8']) }}%"></div>
+                                                 style="width: {{ min(100, $this->riskData['streak_prob']['8']) }}%"></div>
                                         </div>
                                     </div>
 
                                     <div class="mt-3 rounded-md bg-indigo-50 p-2 text-[10px] leading-tight text-indigo-800">
                                         <i class="fa-solid fa-circle-info mr-1"></i>
-                                        Si tienes un <strong>{{ $riskData['streak_prob']['5'] }}%</strong> de perder 5 veces seguidas, asegúrate de que 5 pérdidas no quemen más del 10% de tu cuenta.
+                                        Si tienes un <strong>{{ $this->riskData['streak_prob']['5'] }}%</strong> de perder 5 veces seguidas, asegúrate de que 5 pérdidas no quemen más del 10% de tu cuenta.
                                     </div>
 
                                 </div>
@@ -506,10 +661,10 @@
                     @endif
                 </div>
 
+                {{-- Mistakes Chart --}}
                 <div class="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="mistakesChart(@js($mistakesData))">
+                     x-data="mistakesChart(@js($this->mistakesData))">
 
-                    {{-- Header --}}
                     <div class="mb-2 flex items-center justify-between">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
@@ -519,9 +674,7 @@
                         </div>
                     </div>
 
-                    {{-- Contenedor Gráfico --}}
                     <div class="relative min-h-[250px] w-full flex-1">
-                        {{-- Estado Vacío --}}
                         <template x-if="!hasData">
                             <div class="absolute inset-0 flex h-full flex-col items-center justify-center text-center text-gray-400">
                                 <div class="mb-3 rounded-full bg-emerald-50 p-4">
@@ -531,620 +684,14 @@
                             </div>
                         </template>
 
-                        {{-- Gráfico --}}
                         <div id="mistakesChart"
                              class="w-full"
                              x-show="hasData"></div>
                     </div>
                 </div>
-
-
-
-
-
-
-
-
             </div>
 
         </div>
 
     </div>
-
-    <div>
-        {{-- SCRIPTS JS --}}
-        <script>
-            document.addEventListener('alpine:init', () => {
-
-                // 1. EQUITY CHART
-                Alpine.data('equityChart', (initialReal, initialSim) => ({
-                    chart: null,
-                    init() {
-                        const options = {
-                            series: [{
-                                name: 'Realidad',
-                                data: initialReal
-                            }, {
-                                name: 'Simulación',
-                                data: initialSim
-                            }],
-                            chart: {
-                                type: 'area',
-                                height: 400,
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                },
-                                animations: {
-                                    enabled: true,
-                                    easing: 'easeinout',
-                                    speed: 800
-                                }
-                            },
-                            colors: ['#9CA3AF', '#6366F1'],
-                            fill: {
-                                type: 'gradient',
-                                gradient: {
-                                    shadeIntensity: 1,
-                                    opacityFrom: 0.4,
-                                    opacityTo: 0.05,
-                                    stops: [0, 90, 100]
-                                }
-                            },
-                            dataLabels: {
-                                enabled: false
-                            },
-                            stroke: {
-                                curve: 'smooth',
-                                width: [2, 3],
-                                dashArray: [5, 0]
-                            },
-                            xaxis: {
-                                type: 'datetime',
-                                tooltip: {
-                                    enabled: false
-                                },
-                                axisBorder: {
-                                    show: false
-                                },
-                                axisTicks: {
-                                    show: false
-                                },
-                                labels: {
-                                    style: {
-                                        colors: '#94a3b8',
-                                        fontSize: '10px'
-                                    }
-                                }
-                            },
-                            yaxis: {
-                                labels: {
-                                    formatter: (val) => val.toFixed(0) + ' $',
-                                    style: {
-                                        colors: '#94a3b8',
-                                        fontSize: '10px'
-                                    }
-                                }
-                            },
-                            grid: {
-                                borderColor: '#f3f4f6',
-                                strokeDashArray: 4,
-                                padding: {
-                                    left: 10
-                                }
-                            },
-                            tooltip: {
-                                theme: 'light',
-                                x: {
-                                    format: 'dd MMM yyyy'
-                                },
-                                y: {
-                                    formatter: (val) => val.toFixed(2) + ' $'
-                                }
-                            },
-                            legend: {
-                                show: false
-                            }
-                        };
-                        this.chart = new ApexCharts(document.querySelector("#equityChart"), options);
-                        this.chart.render();
-                    },
-                    updateData(newReal, newSim) {
-                        if (this.chart) this.chart.updateSeries([{
-                            name: 'Realidad',
-                            data: newReal
-                        }, {
-                            name: 'Simulación',
-                            data: newSim
-                        }]);
-                    }
-                }));
-
-                // 2. BAR CHARTS (HORA/SESIÓN)
-                Alpine.data('barChart', (data, categoryKey, title) => ({
-                    chart: null,
-                    init() {
-                        if (!data || data.length === 0) return;
-                        const categories = data.map(item => item[categoryKey]);
-                        const seriesData = data.map(item => item.pnl);
-                        const chartId = categoryKey === 'hour' ? 'hourlyChart' : 'sessionChart';
-                        const el = document.getElementById(chartId);
-                        if (!el) return;
-
-                        const options = {
-                            series: [{
-                                name: 'P&L',
-                                data: seriesData
-                            }],
-                            chart: {
-                                type: 'bar',
-                                height: 250,
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                }
-                            },
-                            plotOptions: {
-                                bar: {
-                                    borderRadius: 4,
-                                    columnWidth: '60%',
-                                    colors: {
-                                        ranges: [{
-                                            from: -1000000,
-                                            to: -0.01,
-                                            color: '#F43F5E'
-                                        }, {
-                                            from: 0,
-                                            to: 1000000,
-                                            color: '#10B981'
-                                        }]
-                                    }
-                                }
-                            },
-                            dataLabels: {
-                                enabled: false
-                            },
-                            xaxis: {
-                                categories: categories,
-                                labels: {
-                                    style: {
-                                        colors: '#94a3b8',
-                                        fontSize: '10px'
-                                    }
-                                }
-                            },
-                            yaxis: {
-                                labels: {
-                                    formatter: (val) => val.toFixed(0) + ' $',
-                                    style: {
-                                        colors: '#94a3b8',
-                                        fontSize: '10px'
-                                    }
-                                }
-                            },
-                            grid: {
-                                borderColor: '#f3f4f6',
-                                strokeDashArray: 4
-                            },
-                            tooltip: {
-                                theme: 'light',
-                                y: {
-                                    formatter: (val) => val.toFixed(2) + ' $'
-                                }
-                            }
-                        };
-                        this.chart = new ApexCharts(el, options);
-                        this.chart.render();
-                    }
-                }));
-
-                Alpine.data('efficiencyChart', (payload) => ({
-                    chart: null,
-                    init() {
-                        if (!payload || !payload.categories || payload.categories.length === 0) return;
-
-                        const options = {
-                            series: payload.series,
-                            chart: {
-                                type: 'bar',
-                                height: 350,
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                },
-                                zoom: {
-                                    enabled: false
-                                }
-                            },
-                            plotOptions: {
-                                bar: {
-                                    horizontal: false,
-                                    columnWidth: '70%',
-                                    endingShape: 'rounded',
-                                    dataLabels: {
-                                        position: 'top', // top, center, bottom
-                                    },
-                                },
-                            },
-                            dataLabels: {
-                                enabled: false // Desactivado para limpieza, el tooltip hace el trabajo
-                            },
-                            stroke: {
-                                show: true,
-                                width: 2,
-                                colors: ['transparent']
-                            },
-                            xaxis: {
-                                categories: payload.categories,
-                                labels: {
-                                    style: {
-                                        fontSize: '10px',
-                                        colors: '#64748b'
-                                    }
-                                },
-                                axisBorder: {
-                                    show: false
-                                },
-                                axisTicks: {
-                                    show: false
-                                }
-                            },
-                            yaxis: {
-                                title: {
-                                    text: 'Valor Monetario ($)',
-                                    style: {
-                                        fontSize: '10px',
-                                        color: '#94a3b8'
-                                    }
-                                },
-                                labels: {
-                                    formatter: (val) => val.toFixed(0),
-                                    style: {
-                                        colors: '#94a3b8'
-                                    }
-                                }
-                            },
-                            // Colores Semánticos:
-                            // 0: MAE (Rojo Rosado)
-                            // 1: PnL (Azul Oscuro - Realidad)
-                            // 2: MFE (Verde Esmeralda - Potencial)
-                            colors: ['#F43F5E', '#1E293B', '#10B981'],
-                            fill: {
-                                opacity: 1
-                            },
-                            tooltip: {
-                                theme: 'light',
-                                y: {
-                                    formatter: function(val) {
-                                        return val + " $"
-                                    }
-                                }
-                            },
-                            grid: {
-                                borderColor: '#f1f5f9',
-                                strokeDashArray: 4,
-                                yaxis: {
-                                    lines: {
-                                        show: true
-                                    }
-                                }
-                            },
-                            legend: {
-                                position: 'top',
-                                horizontalAlign: 'right',
-                                fontSize: '12px',
-                                fontFamily: 'Inter',
-                                offsetY: -20,
-                                itemMargin: {
-                                    horizontal: 10,
-                                    vertical: 0
-                                }
-                            }
-                        };
-
-                        this.chart = new ApexCharts(document.querySelector("#efficiencyChart"), options);
-                        this.chart.render();
-                    }
-                }));
-
-                // 4. DISTRIBUTION CHART (HISTOGRAMA)
-                Alpine.data('distributionChart', (payload) => ({
-                    chart: null,
-                    init() {
-                        if (!payload || !payload.data || payload.data.length === 0) return;
-                        const colors = payload.categories.map(cat => cat.includes('-') ? '#EF4444' : '#10B981');
-                        const options = {
-                            series: [{
-                                name: 'Trades',
-                                data: payload.data
-                            }],
-                            chart: {
-                                type: 'bar',
-                                height: 250,
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                }
-                            },
-                            plotOptions: {
-                                bar: {
-                                    borderRadius: 2,
-                                    columnWidth: '95%',
-                                    distributed: true,
-                                    dataLabels: {
-                                        position: 'top'
-                                    }
-                                }
-                            },
-                            colors: colors,
-                            dataLabels: {
-                                enabled: true,
-                                offsetY: -20,
-                                style: {
-                                    fontSize: '10px',
-                                    colors: ["#64748b"]
-                                }
-                            },
-                            xaxis: {
-                                categories: payload.categories,
-                                labels: {
-                                    show: false
-                                },
-                                axisBorder: {
-                                    show: false
-                                },
-                                axisTicks: {
-                                    show: false
-                                }
-                            },
-                            yaxis: {
-                                show: false
-                            },
-                            grid: {
-                                show: false
-                            },
-                            legend: {
-                                show: false
-                            },
-                            tooltip: {
-                                theme: 'light',
-                                y: {
-                                    formatter: (val) => val + ' trades'
-                                }
-                            }
-                        };
-                        this.chart = new ApexCharts(document.querySelector("#distChart"), options);
-                        this.chart.render();
-                    }
-                }));
-
-                Alpine.data('radarChart', (data) => ({
-                    chart: null,
-                    init() {
-                        if (!data) return;
-
-                        // Extraer etiquetas y valores del objeto PHP
-                        const categories = Object.keys(data);
-                        const values = Object.values(data);
-
-                        const options = {
-                            series: [{
-                                name: 'Puntuación',
-                                data: values,
-                            }],
-                            chart: {
-                                height: 280, // Un poco más alto para que quepan las etiquetas
-                                type: 'radar',
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                },
-                                animations: {
-                                    enabled: true
-                                }
-                            },
-                            colors: ['#8B5CF6'], // Un morado vibrante (Purple-500)
-                            fill: {
-                                opacity: 0.2,
-                                colors: ['#8B5CF6']
-                            },
-                            stroke: {
-                                show: true,
-                                width: 2,
-                                colors: ['#7C3AED'], // Borde más oscuro
-                                dashArray: 0
-                            },
-                            markers: {
-                                size: 4,
-                                colors: ['#fff'],
-                                strokeColors: '#7C3AED',
-                                strokeWidth: 2,
-                                hover: {
-                                    size: 6
-                                }
-                            },
-                            xaxis: {
-                                categories: categories,
-                                labels: {
-                                    show: true,
-                                    style: {
-                                        colors: ['#64748B', '#64748B', '#64748B', '#64748B', '#64748B'],
-                                        fontSize: '11px',
-                                        fontFamily: 'Inter, sans-serif',
-                                        fontWeight: 600
-                                    }
-                                }
-                            },
-                            yaxis: {
-                                show: false, // Ocultar los anillos concéntricos numéricos
-                                min: 0,
-                                max: 100,
-                                tickAmount: 4,
-                            },
-                            plotOptions: {
-                                radar: {
-                                    polygons: {
-                                        strokeColors: '#e2e8f0', // Color de la telaraña
-                                        connectorColors: '#e2e8f0',
-                                    }
-                                }
-                            },
-                            tooltip: {
-                                theme: 'light',
-                                y: {
-                                    formatter: function(val) {
-                                        return val + " / 100";
-                                    }
-                                }
-                            }
-                        };
-
-                        this.chart = new ApexCharts(document.querySelector("#radarChart"), options);
-                        this.chart.render();
-                    }
-                }));
-
-                Alpine.data('mistakesChart', (data) => ({
-                    chart: null,
-                    hasData: false,
-                    init() {
-                        if (!data || data.length === 0) {
-                            this.hasData = false;
-                            return;
-                        }
-                        this.hasData = true;
-
-                        const categories = data.map(d => d.name);
-                        const counts = data.map(d => d.count);
-                        const costs = data.map(d => d.total_loss);
-
-                        // Paleta de seguridad (Vibrante)
-                        const palette = ['#F43F5E', '#8B5CF6', '#F59E0B', '#3B82F6', '#10B981'];
-                        const colors = data.map((d, index) => d.color ? d.color : palette[index % palette.length]);
-
-                        const options = {
-                            series: [{
-                                name: 'Repeticiones',
-                                data: counts
-                            }],
-                            chart: {
-                                type: 'bar',
-                                height: 280, // Un poco más alto para que respire
-                                fontFamily: 'Inter, sans-serif',
-                                toolbar: {
-                                    show: false
-                                },
-                                animations: {
-                                    enabled: true
-                                }
-                            },
-                            plotOptions: {
-                                bar: {
-                                    borderRadius: 3,
-                                    horizontal: true,
-                                    distributed: true,
-                                    barHeight: '70%', // Barras más gruesas para que quepa bien el texto
-                                    dataLabels: {
-                                        position: 'bottom' // Obliga al texto a empezar a la izquierda
-                                    }
-                                }
-                            },
-                            colors: colors,
-                            dataLabels: {
-                                enabled: true,
-                                textAnchor: 'center', // Alineación izquierda
-                                offsetX: 15, // <--- AQUÍ ESTÁ EL PADDING QUE PEDÍAS
-                                style: {
-                                    colors: ['#fff'],
-                                    fontSize: '11px',
-                                    fontWeight: 800,
-                                    fontFamily: 'Inter, sans-serif',
-                                    // Sombra importante para leer texto blanco sobre barras claras (ej: amarillo)
-                                    textShadow: '0px 1px 2px rgba(0,0,0,0.6)'
-                                },
-                                formatter: function(val, opt) {
-                                    // Formato: "FOMO: 5"
-                                    return opt.w.globals.labels[opt.dataPointIndex] + ": " + val;
-                                }
-                            },
-                            xaxis: {
-                                categories: categories,
-                                labels: {
-                                    show: false
-                                },
-                                axisBorder: {
-                                    show: false
-                                },
-                                axisTicks: {
-                                    show: false
-                                }
-                            },
-                            yaxis: {
-                                labels: {
-                                    show: false
-                                }
-                            },
-                            grid: {
-                                show: false,
-                                padding: {
-                                    left: 0,
-                                    right: 0,
-                                    top: 0,
-                                    bottom: 0
-                                }
-                            },
-                            legend: {
-                                show: false
-                            },
-
-                            tooltip: {
-                                theme: 'light',
-                                // Tooltip FIJO en la esquina superior derecha del gráfico
-                                fixed: {
-                                    enabled: true,
-                                    position: 'topRight',
-                                    offsetX: 0,
-                                    offsetY: 30, // Bajado un poco para no tapar el título si el gráfico es corto
-                                },
-                                custom: function({
-                                    series,
-                                    seriesIndex,
-                                    dataPointIndex,
-                                    w
-                                }) {
-                                    var count = w.globals.series[seriesIndex][dataPointIndex];
-                                    var cost = costs[dataPointIndex];
-                                    var color = w.globals.colors[dataPointIndex];
-                                    var label = w.globals.labels[dataPointIndex];
-                                    var costClass = cost < 0 ? 'text-rose-600' : 'text-emerald-600';
-
-                                    return `
-                        <div class="px-3 py-2 text-xs bg-white border border-gray-100 shadow-lg rounded-lg" style="border-left: 4px solid ${color}; min-width: 140px;">
-                            <div class="font-bold text-gray-800 mb-1 truncate">${label}</div>
-                            <div class="flex justify-between items-center text-gray-500 gap-3">
-                                <span>${count} veces</span>
-                                <span class="font-black ${costClass}">${cost.toFixed(0)} $</span>
-                            </div>
-                        </div>
-                    `;
-                                }
-                            }
-                        };
-
-                        // Render con pequeño delay de seguridad
-                        setTimeout(() => {
-                            if (document.querySelector("#mistakesChart")) {
-                                this.chart = new ApexCharts(document.querySelector("#mistakesChart"), options);
-                                this.chart.render();
-                            }
-                        }, 50);
-                    }
-                }));
-
-
-            });
-        </script>
-    </div>
-
-
 </div>

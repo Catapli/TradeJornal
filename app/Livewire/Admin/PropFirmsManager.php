@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\AuthActions; // Tu trait
+use Illuminate\Support\Facades\Log;
 
 class PropFirmsManager extends Component
 {
@@ -25,11 +26,14 @@ class PropFirmsManager extends Component
     // Objetivos dinámicos
     public $objectivesForm = [];
 
+    public array $tree = [];
     public function mount()
     {
         if (!$this->isSuperAdmin(Auth::user())) {
             abort(403);
         }
+
+        $this->tree = $this->getTreeData();
     }
 
     /**
@@ -79,6 +83,8 @@ class PropFirmsManager extends Component
 
         // 2. Lanzar alerta visual
         $this->dispatch('notify', message: 'Empresa guardada correctamente', type: 'success');
+
+        $this->skipRender(); // <--- AÑADIR ESTO
     }
 
     // --- CRUD PROGRAMAS ---
@@ -91,9 +97,9 @@ class PropFirmsManager extends Component
             'programForm.step_count' => 'required|in:0,1,2,3',
         ]);
 
-        $firm = PropFirm::find($this->programForm['firm_id']); // Obtener objeto para slug correcto
+        $firm = PropFirm::find($this->programForm['firm_id']);
 
-        Program::updateOrCreate(
+        $program = Program::updateOrCreate(
             ['id' => $this->programForm['id'] ?? null],
             [
                 'prop_firm_id' => $this->programForm['firm_id'],
@@ -103,9 +109,19 @@ class PropFirmsManager extends Component
             ]
         );
 
+        // 1. Refrescar árbol
         $this->dispatch('refresh-tree', tree: $this->getTreeData());
-        $this->dispatch('notify', message: 'Programa creado correctamente', type: 'success');
+
+        // 2. Notificar con el ID del programa recién creado
+        $this->dispatch('notify', [
+            'message' => 'Programa creado correctamente',
+            'type' => 'success',
+            'newProgramId' => $program->id  // <-- CLAVE: Pasar el ID
+        ]);
+
+        $this->skipRender(); // <--- AÑADIR ESTO
     }
+
 
     // --- CRUD NIVELES (Complejo) ---
 
@@ -118,7 +134,7 @@ class PropFirmsManager extends Component
         ]);
 
         DB::transaction(function () {
-            // 1. Guardar Nivel
+            // 1. Guardar o Actualizar el Nivel (Datos básicos)
             $level = ProgramLevel::updateOrCreate(
                 ['id' => $this->levelForm['id'] ?? null],
                 [
@@ -130,13 +146,40 @@ class PropFirmsManager extends Component
                 ]
             );
 
-            // 2. Guardar Objetivos
-            // Borramos los objetivos existentes para recrearlos limpiamente (más seguro ante cambios de estructura)
-            // O usamos updateOrCreate. Dado que objectivesForm viene completo del front:
+            // 2. Guardar Objetivos y Reglas (JSON)
+            // Iteramos sobre el array que nos manda Alpine vía Livewire
             foreach ($this->objectivesForm as $phaseNum => $objData) {
+
+                // --- A) EMPAQUETADO DEL JSON (Logica inversa al JS) ---
+                $restrictions = [];
+
+                // 1. Duración Mínima
+                if (!empty($objData['min_trade_duration']) && $objData['min_trade_duration'] > 0) {
+                    $restrictions['min_trade_duration_seconds'] = (int) $objData['min_trade_duration'];
+                }
+
+                // 2. Noticias (Solo si el checkbox está activo)
+                if (!empty($objData['news_trading_enabled'])) {
+                    $restrictions['no_news_trading'] = [
+                        'minutes_before' => (int) ($objData['news_minutes_before'] ?? 2),
+                        'minutes_after' => (int) ($objData['news_minutes_after'] ?? 2),
+                    ];
+                }
+
+                // 3. Weekend Holding
+                // Si viene definido, lo usamos. Si no, no lo guardamos (o default true)
+                if (isset($objData['weekend_holding'])) {
+                    $restrictions['weekend_holding'] = (bool) $objData['weekend_holding'];
+                }
+
+                // Estructura final: { "restrictions": { ... } }
+                $finalMetadata = !empty($restrictions) ? ['restrictions' => $restrictions] : null;
+
+
+                // --- B) GUARDADO EN BD ---
                 $level->objectives()->updateOrCreate(
                     [
-                        'phase_number' => $phaseNum, // Clave única compuesta lógica
+                        'phase_number' => $phaseNum,
                         'program_level_id' => $level->id
                     ],
                     [
@@ -146,44 +189,71 @@ class PropFirmsManager extends Component
                         'max_total_loss_percent' => $objData['max_total_loss_percent'],
                         'min_trading_days' => $objData['min_trading_days'],
                         'loss_type' => $objData['loss_type'],
-                        'rules_metadata' => isset($objData['rules_metadata']) ? json_encode($objData['rules_metadata']) : null,
+
+                        // AQUÍ SE GUARDA EL JSON CALCULADO
+                        'rules_metadata' => $finalMetadata ? json_encode($finalMetadata) : null,
                     ]
                 );
             }
         });
 
+        // Refrescar y Salir
         $this->dispatch('refresh-tree', tree: $this->getTreeData());
         $this->dispatch('notify', message: 'Nivel configurado con éxito', type: 'success');
+        $this->skipRender();
     }
+
 
     public function duplicateLevel($levelId)
     {
-        DB::transaction(function () use ($levelId) {
-            $original = ProgramLevel::with('objectives')->findOrFail($levelId);
+        try {
+            DB::transaction(function () use ($levelId) {
+                $original = ProgramLevel::with('objectives')->findOrFail($levelId);
 
-            // 1. Clonar Nivel
-            $newLevel = $original->replicate();
-            $newLevel->name = $original->name . ' (Copia)';
-            $newLevel->save();
+                // 1. Clonar Nivel
+                $newLevel = $original->replicate();
+                $newLevel->name = $original->name . ' (Copia)';
+                $newLevel->save();
 
-            // 2. Clonar Objetivos
-            foreach ($original->objectives as $objective) {
-                $newObjective = $objective->replicate();
-                $newObjective->program_level_id = $newLevel->id;
-                $newObjective->save();
-            }
-        });
+                // 2. Clonar Objetivos
+                foreach ($original->objectives as $objective) {
+                    $newObjective = $objective->replicate();
+                    $newObjective->program_level_id = $newLevel->id;
+                    $newObjective->save();
+                }
+            });
 
-        $this->dispatch('refresh-tree', tree: $this->getTreeData());
-        $this->dispatch('notify', 'Nivel duplicado con éxito');
+            // SOLO UN dispatch de refresh-tree
+            $this->dispatch('refresh-tree', tree: $this->getTreeData());
+
+            // Y notify por separado
+            $this->dispatch('notify', [
+                'message' => 'Nivel duplicado con éxito',
+                'type' => 'success'
+            ]);
+
+            $this->skipRender(); // <--- AÑADIR ESTO
+        } catch (\Exception $e) {
+            Log::error('Error duplicando nivel', [
+                'levelId' => $levelId,
+                'error' => $e->getMessage()
+            ]);
+
+            $this->dispatch('notify', [
+                'message' => 'Error al duplicar nivel',
+                'type' => 'error'
+            ]);
+        }
     }
+
 
     public function deleteLevel($id)
     {
         // El delete cascade de la BD borrará los objetivos
         ProgramLevel::destroy($id);
         $this->dispatch('refresh-tree', tree: $this->getTreeData());
-        $this->dispatch('notify', 'Nivel eliminado');
+        $this->dispatch('notify', message: 'Nivel eliminado', type: 'success');
+        $this->skipRender(); // <--- AÑADIR ESTO
     }
 
     public function render()

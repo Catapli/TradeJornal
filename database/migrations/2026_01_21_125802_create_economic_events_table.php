@@ -24,6 +24,11 @@ return new class extends Migration
             $table->string('previous')->nullable(); // Dato previo (opcional)
             $table->string('forecast')->nullable(); // Previsión (opcional)
             $table->unique(['date', 'time', 'currency', 'event'], 'unique_event_idx');
+            // ✅ Índice compuesto para scope upcoming()
+            $table->index(
+                ['date', 'time', 'impact'],
+                'idx_economic_events_upcoming'
+            );
             $table->timestamps();
         });
     }

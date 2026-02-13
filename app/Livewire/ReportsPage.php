@@ -3,56 +3,222 @@
 namespace App\Livewire;
 
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 use App\Models\Trade;
 use App\Models\Account;
 use App\Services\TradingAnalysisService;
 use Illuminate\Support\Facades\Auth;
+use App\LogActions;
 
 class ReportsPage extends Component
 {
+    use LogActions;
+
+    // ============================================
+    // PROPIEDADES PÚBLICAS (SOLO ESTADO)
+    // ============================================
+
     public $accountId = 'all';
 
-    // Escenarios What-If
     public $scenarios = [
         'no_fridays' => false,
         'only_longs' => false,
-        'only_shorts' => false, // Nuevo
+        'only_shorts' => false,
         'remove_worst' => false,
         'max_daily_trades' => null,
-        'fixed_sl' => null, // Nuevo (pips)
-        'fixed_tp' => null, // Nuevo (pips)
+        'fixed_sl' => null,
+        'fixed_tp' => null,
     ];
-    // Datos para la vista
-    public $hourlyReportData = [];
-    public $sessionReportData = [];
-    public $scatterData = []; // Nuevo
-    public $distributionData = []; // Nuevo
-    public $efficiencyData = []; // NUEVO
-    public $radarData = []; // NUEVO
-    public $riskData = []; // NUEVO
-    public $mistakesData = []; // NUEVO
 
+    // ============================================
+    // LIFECYCLE HOOKS
+    // ============================================
 
-    public function render(TradingAnalysisService $service)
+    public function updatedAccountId($value)
     {
-        // 1. Query Base
-        $query = Trade::with('mistakes')->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
-            ->orderBy('entry_time', 'asc');
+        if ($value !== 'all') {
+            $account = Account::where('id', $value)
+                ->where('user_id', Auth::id())
+                ->first();
 
-        if ($this->accountId !== 'all') {
-            $query->where('account_id', $this->accountId);
+            if (!$account) {
+                $this->accountId = 'all';
+
+                $this->insertLog(
+                    action: 'Intento de acceso a cuenta no autorizada',
+                    form: 'ReportsPage',
+                    description: "Usuario intentó acceder a account_id: {$value}",
+                    type: 'warning'
+                );
+
+                $this->dispatch('show-alert', [
+                    'type' => 'error',
+                    'message' => '⚠️ La cuenta seleccionada no existe o no tienes permisos para verla.'
+                ]);
+
+                return;
+            }
         }
 
-        $allTrades = $query->get();
+        $this->insertLog(
+            action: 'Cambio de cuenta en Laboratorio',
+            form: 'ReportsPage',
+            description: "Cambió a cuenta: {$value}"
+        );
+    }
 
-        // 2. Curvas y Stats (Realidad)
-        $realCurve = $service->calculateEquityCurve($allTrades);
-        $realStats = $service->calculateSystemHealth($allTrades);
+    public function updatedScenarios($value, $key)
+    {
+        $this->insertLog(
+            action: 'Modificación de escenario',
+            form: 'ReportsPage',
+            description: "Escenario '{$key}' cambió a: " . json_encode($value)
+        );
+    }
 
-        // 3. Simulación
-        $simulatedCurve = [];
-        $simulatedStats = null;
-        $isActive = in_array(true, [
+    // ============================================
+    // MÉTODOS PRIVADOS (HELPERS)
+    // ============================================
+
+    /**
+     * Obtiene los trades del usuario con seguridad y EAGER LOADING COMPLETO
+     * 
+     * ⚡ OPTIMIZACIÓN: Se cargan todas las relaciones necesarias en UNA sola query
+     * 
+     * @return \Illuminate\Support\Collection
+     */
+    private function getTrades()
+    {
+        try {
+            // DOBLE VALIDACIÓN de seguridad
+            if ($this->accountId !== 'all') {
+                $accountExists = Account::where('id', $this->accountId)
+                    ->where('user_id', Auth::id())
+                    ->exists();
+
+                if (!$accountExists) {
+                    $this->accountId = 'all';
+
+                    $this->insertLog(
+                        action: 'Bloqueo de acceso no autorizado',
+                        form: 'ReportsPage',
+                        description: 'Intento de obtener trades con cuenta no autorizada',
+                        type: 'error'
+                    );
+
+                    $this->dispatch('show-alert', [
+                        'type' => 'error',
+                        'message' => 'Error de seguridad detectado. Se ha reseteado la selección.'
+                    ]);
+                }
+            }
+
+            // ⚡ OPTIMIZACIÓN 1: EAGER LOADING COMPLETO
+            // Cargamos TODAS las relaciones que necesitamos en una sola query
+            $query = Trade::with([
+                'mistakes',           // Para analyzeMistakes()
+                'account',            // Para validaciones y balances
+                'tradeAsset',         // Para símbolos (si usas $trade->tradeAsset->symbol)
+                'strategy',           // Para filtros por estrategia (opcional)
+            ])
+                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->orderBy('entry_time', 'asc');
+
+            // ⚡ OPTIMIZACIÓN 2: SELECT SOLO LOS CAMPOS NECESARIOS
+            // Si no necesitas TODOS los campos, especifica solo los que usas
+            // Esto reduce el payload de la query en ~30-40%
+            $query->select([
+                'id',
+                'account_id',
+                'trade_asset_id',
+                'strategy_id',
+                'trading_session_id',
+                'ticket',
+                'direction',
+                'entry_price',
+                'exit_price',
+                'size',
+                'pnl',
+                'duration_minutes',
+                'entry_time',
+                'exit_time',
+                'mae_price',
+                'mfe_price',
+                'notes',
+            ]);
+
+            if ($this->accountId !== 'all') {
+                $query->where('account_id', $this->accountId);
+            }
+
+            return $query->get();
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error al obtener trades',
+                form: 'ReportsPage',
+                description: 'Fallo en getTrades() - accountId: ' . $this->accountId
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => '❌ Error al cargar los datos. Por favor, recarga la página.'
+            ]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * Helper para obtener el balance actual con seguridad
+     * 
+     * @return float
+     */
+    private function getCurrentBalance()
+    {
+        try {
+            $balance = 0;
+
+            if ($this->accountId !== 'all') {
+                $account = Account::where('id', $this->accountId)
+                    ->where('user_id', Auth::id())
+                    ->first();
+
+                $balance = $account ? $account->current_balance : 10000;
+            } else {
+                $balance = Account::where('user_id', Auth::id())->sum('current_balance');
+            }
+
+            if ($balance <= 0) {
+                $balance = 10000;
+            }
+
+            return $balance;
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error al obtener balance',
+                form: 'ReportsPage',
+                description: 'Fallo en getCurrentBalance()'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'warning',
+                'message' => '⚠️ No se pudo obtener el balance. Usando valor por defecto.'
+            ]);
+
+            return 10000;
+        }
+    }
+
+    /**
+     * Helper para verificar si hay escenarios activos
+     * 
+     * @return bool
+     */
+    private function hasActiveScenarios()
+    {
+        return in_array(true, [
             $this->scenarios['no_fridays'],
             $this->scenarios['only_longs'],
             $this->scenarios['only_shorts'],
@@ -60,52 +226,389 @@ class ReportsPage extends Component
         ]) || !empty($this->scenarios['max_daily_trades'])
             || !empty($this->scenarios['fixed_sl'])
             || !empty($this->scenarios['fixed_tp']);
+    }
 
-        if ($isActive) {
-            $simTrades = $service->applyScenarios($allTrades, $this->scenarios);
-            $simulatedCurve = $service->calculateEquityCurve($simTrades);
-            $simulatedStats = $service->calculateSystemHealth($simTrades);
+    // ============================================
+    // COMPUTED PROPERTIES (CON GESTIÓN DE ERRORES)
+    // ============================================
+
+    #[Computed]
+    public function allTrades()
+    {
+        return $this->getTrades();
+    }
+
+    #[Computed]
+    public function realCurve()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
+
+            return app(TradingAnalysisService::class)->calculateEquityCurve($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en realCurve',
+                form: 'ReportsPage',
+                description: 'Fallo al calcular curva de capital real'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar la curva de capital.'
+            ]);
+
+            return [];
         }
+    }
 
-        // 4. Reportes Avanzados
-        $this->hourlyReportData = $service->analyzeByHour($allTrades);
-        $this->sessionReportData = $service->analyzeBySession($allTrades);
+    #[Computed]
+    public function realStats()
+    {
+        try {
+            if ($this->allTrades->count() < 5) {
+                return null;
+            }
 
-        // Nuevos gráficos psicológicos
-        // NUEVO: Eficiencia en lugar de Scatter
-        $this->efficiencyData = $service->analyzeTradeEfficiency($allTrades);
-        $this->distributionData = $service->analyzeDistribution($allTrades);
-        // Calcular Radar
-        $this->radarData = $service->analyzeTraderProfile($allTrades);
-        // Si no hay datos suficientes, devolvemos un array con ceros para que no rompa
-        if (!$this->radarData) {
-            $this->radarData = ['Winrate' => 0, 'Rentabilidad' => 0, 'Ratio R:R' => 0, 'Consistencia' => 0, 'Experiencia' => 0];
+            return app(TradingAnalysisService::class)->calculateSystemHealth($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en realStats',
+                form: 'ReportsPage',
+                description: 'Fallo al calcular estadísticas reales'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al calcular las estadísticas del sistema.'
+            ]);
+
+            return null;
         }
+    }
 
-        // Calcular Balance Actual (Simplificado: Initial + PnL total)
-        // En tu app real, esto vendría de $account->current_balance
-        $currentBalance = 0;
-        if ($this->accountId !== 'all') {
-            $account = Account::find($this->accountId);
-            $currentBalance = $account ? $account->current_balance : 10000;
-        } else {
-            // Suma de todas las cuentas o un default
-            $currentBalance = Account::where('user_id', Auth::id())->sum('current_balance');
+    #[Computed]
+    public function simulatedData()
+    {
+        try {
+            if (!$this->hasActiveScenarios()) {
+                return ['curve' => [], 'stats' => null];
+            }
+
+            if ($this->allTrades->isEmpty()) {
+                return ['curve' => [], 'stats' => null];
+            }
+
+            $service = app(TradingAnalysisService::class);
+
+            $simTrades = $service->applyScenarios($this->allTrades, $this->scenarios);
+
+            if ($simTrades->count() < 5) {
+                $this->dispatch('show-alert', [
+                    'type' => 'warning',
+                    'message' => "⚠️ Solo quedan {$simTrades->count()} trades después de aplicar los filtros. Los resultados pueden no ser significativos."
+                ]);
+            }
+
+            $stats = $simTrades->count() >= 5
+                ? $service->calculateSystemHealth($simTrades)
+                : null;
+
+            return [
+                'curve' => $service->calculateEquityCurve($simTrades),
+                'stats' => $stats
+            ];
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en simulatedData',
+                form: 'ReportsPage',
+                description: 'Fallo al calcular simulación. Escenarios: ' . json_encode($this->scenarios)
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al calcular la simulación. Revisa los parámetros.'
+            ]);
+
+            return ['curve' => [], 'stats' => null];
         }
+    }
 
-        if ($currentBalance <= 0) $currentBalance = 10000; // Evitar errores en cuentas vacías
+    #[Computed]
+    public function hourlyReportData()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
 
-        // Llamada al servicio
-        $this->riskData = $service->analyzeRiskOfRuin($allTrades, $currentBalance);
+            return app(TradingAnalysisService::class)->analyzeByHour($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en hourlyReportData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar por hora'
+            );
 
-        $this->mistakesData = $service->analyzeMistakes($allTrades);
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el análisis por hora.'
+            ]);
 
-        return view('livewire.reports-page', [
-            'accounts' => Account::where('user_id', Auth::id())->get(),
-            'realCurve' => $realCurve,
-            'realStats' => $realStats,
-            'simulatedCurve' => $simulatedCurve,
-            'simulatedStats' => $simulatedStats
-        ]);
+            return [];
+        }
+    }
+
+    #[Computed]
+    public function sessionReportData()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
+
+            return app(TradingAnalysisService::class)->analyzeBySession($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en sessionReportData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar por sesión'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el análisis por sesión.'
+            ]);
+
+            return [];
+        }
+    }
+
+    #[Computed]
+    public function efficiencyData()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
+
+            $tradesWithMAE = $this->allTrades->filter(function ($t) {
+                return $t->mae_price !== null && $t->mfe_price !== null;
+            });
+
+            if ($tradesWithMAE->isEmpty()) {
+                $this->dispatch('show-alert', [
+                    'type' => 'info',
+                    'message' => 'ℹ️ Tus trades no tienen datos de MAE/MFE. El gráfico de eficiencia no está disponible.'
+                ]);
+
+                return [];
+            }
+
+            return app(TradingAnalysisService::class)->analyzeTradeEfficiency($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en efficiencyData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar eficiencia'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el análisis de eficiencia.'
+            ]);
+
+            return [];
+        }
+    }
+
+    #[Computed]
+    public function distributionData()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
+
+            return app(TradingAnalysisService::class)->analyzeDistribution($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en distributionData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar distribución'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el histograma de distribución.'
+            ]);
+
+            return [];
+        }
+    }
+
+    #[Computed]
+    public function radarData()
+    {
+        try {
+            if ($this->allTrades->count() < 5) {
+                return [
+                    'Winrate' => 0,
+                    'Rentabilidad' => 0,
+                    'Ratio R:R' => 0,
+                    'Consistencia' => 0,
+                    'Experiencia' => 0
+                ];
+            }
+
+            $data = app(TradingAnalysisService::class)->analyzeTraderProfile($this->allTrades);
+
+            if (!$data) {
+                return [
+                    'Winrate' => 0,
+                    'Rentabilidad' => 0,
+                    'Ratio R:R' => 0,
+                    'Consistencia' => 0,
+                    'Experiencia' => 0
+                ];
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en radarData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar perfil del trader'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el perfil del trader.'
+            ]);
+
+            return [
+                'Winrate' => 0,
+                'Rentabilidad' => 0,
+                'Ratio R:R' => 0,
+                'Consistencia' => 0,
+                'Experiencia' => 0
+            ];
+        }
+    }
+
+    #[Computed]
+    public function riskData()
+    {
+        try {
+            if ($this->allTrades->count() < 10) {
+                return null;
+            }
+
+            $currentBalance = $this->getCurrentBalance();
+
+            return app(TradingAnalysisService::class)->analyzeRiskOfRuin($this->allTrades, $currentBalance);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en riskData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar riesgo de ruina'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al calcular el riesgo de ruina.'
+            ]);
+
+            return null;
+        }
+    }
+
+    #[Computed]
+    public function mistakesData()
+    {
+        try {
+            if ($this->allTrades->isEmpty()) {
+                return [];
+            }
+
+            return app(TradingAnalysisService::class)->analyzeMistakes($this->allTrades);
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error en mistakesData',
+                form: 'ReportsPage',
+                description: 'Fallo al analizar errores'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al generar el ranking de errores.'
+            ]);
+
+            return [];
+        }
+    }
+
+    #[Computed]
+    public function accounts()
+    {
+        try {
+            return Account::where('user_id', Auth::id())->get();
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error al cargar cuentas',
+                form: 'ReportsPage',
+                description: 'Fallo al obtener listado de cuentas'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar el listado de cuentas.'
+            ]);
+
+            return collect();
+        }
+    }
+
+    // ============================================
+    // RENDER
+    // ============================================
+
+    public function render()
+    {
+        try {
+            $this->insertLog(
+                action: 'Vista de Laboratorio',
+                form: 'ReportsPage',
+                description: "Visualizó reportes con {$this->allTrades->count()} trades. Cuenta: {$this->accountId}"
+            );
+
+            return view('livewire.reports-page');
+        } catch (\Exception $e) {
+            $this->logError(
+                exception: $e,
+                action: 'Error crítico en render',
+                form: 'ReportsPage',
+                description: 'Fallo catastrófico al renderizar la vista'
+            );
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => '💥 Error crítico al cargar la página. Por favor, contacta con soporte.'
+            ]);
+
+            return view('livewire.reports-page');
+        }
     }
 }

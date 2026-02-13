@@ -6,7 +6,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;   // <-- añade esto
 use App\Events\AccountSynced;           // ← AÑADE
 use App\Listeners\SyncAccountListener;  // ← AÑADE
+use App\Models\Account;
 use App\Models\Trade;
+use App\Observers\AccountObserver;
 use App\Observers\TradeObserver;
 use Illuminate\Support\Facades\Event;  // ← AÑADE IMPORT
 
@@ -31,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
         // 🔥 AÑADE ESTAS 2 LÍNEAS
         Event::listen(AccountSynced::class, SyncAccountListener::class);
         Trade::observe(TradeObserver::class);
+        Account::observe(AccountObserver::class);
+        // Trade::observe(TradeObserver::class);
     }
 }

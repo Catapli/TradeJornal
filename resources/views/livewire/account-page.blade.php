@@ -1,6 +1,7 @@
 {{-- CONTENEDOR PRINCIPAL: Solo lógica de dashboard --}}
 <div class="min-h-screen bg-gray-50 p-6"
-     x-data="dashboardLogic()">
+     x-data="dashboardLogic()"
+     wire:poll.10s="checkSyncStatus">
 
     {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
     <div x-data="{
@@ -33,19 +34,13 @@
     </div>
 
     {{-- ? Loading --}}
-    <div wire:loading
-         wire:target='updatedSelectedAccountId, insertAccount, updateAccount, deleteAccount'>
+    <div class="fixed inset-0 z-[9999]"
+         wire:loading
+         wire:target='updatedSelectedAccountId,openRules, insertAccount, updateAccount, deleteAccount, changeAccount'>
         <x-loader></x-loader>
     </div>
 
-    {{-- 👇 EL MODAL DE CONFIRMACIÓN (Al final) --}}
-    <x-modal-confirmation show="showDeleteModal"
-                          title="{{ __('labels.¿delete_account?') }}"
-                          text="{{ __('labels.lost_history_account') }}"
-                          confirmText="{{ __('labels.confirm_delete') }}"
-                          {{-- Escuchamos el evento que dispara el botón del componente --}}
-                          @confirm-action="executeDelete()" />
-
+    <x-confirm-modal />
 
     {{-- Top-Right Snackbar --}}
 
@@ -53,424 +48,416 @@
     <x-modal-template show="showAlert">
     </x-modal-template>
 
-    <x-modals.modal-account show="showModal"
+    <x-modals.modal-account show="showModalAccount"
                             labelTitle="labelTitleModal"
                             event="trigger-save-account">
 
-        <div class="grid w-full grid-cols-12 gap-3 p-4"
+        <div class="space-y-6"
              x-data="accountSelector(@js($propFirmsData))"
              @trigger-save-account.window="checkForm()">
-            {{-- ? Nombre Cuenta --}}
-            <x-input-group id="name"
-                           class="col-span-12"
-                           x-ref="nameAccount"
-                           x-model="nameAccount"
-                           placeholder="{{ __('labels.account_name') }}"
-                           icono=" <i class='fa-solid fa-signature'></i>"
-                           tooltip="{{ __('labels.account_name') }}" />
 
-            {{-- Apartado Cuenta --}}
-            {{-- Pasamos los datos SOLO aquí. Así no pesan en el resto de la app --}}
-            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
+            {{-- 1. NOMBRE DE LA CUENTA --}}
+            <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <i class="fa-solid fa-signature text-gray-600"></i>
+                    {{ __('labels.account_name') }}
+                    <span class="text-red-500">*</span>
+                </label>
+                <input class="w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-3 text-sm transition focus:border-gray-500 focus:bg-white focus:ring-2 focus:ring-gray-200"
+                       type="text"
+                       x-ref="nameAccount"
+                       x-model="nameAccount"
+                       placeholder="{{ __('labels.enter_account_name') }}"
+                       required>
+            </div>
 
-                <legend class="font-google font-bold">{{ __('labels.prop_firm_data') }}</legend>
+            {{-- 2. CONFIGURACIÓN DE PROPFIRM --}}
+            <div class="space-y-4 rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-5">
+                <div class="flex items-center gap-2 border-b border-gray-200 pb-3">
+                    <i class="fa-solid fa-building text-gray-600"></i>
+                    <h4 class="font-semibold text-gray-900">{{ __('labels.propfirm_configuration') }}</h4>
+                </div>
 
-                {{-- 1. PROP FIRM --}}
-                <x-select-group id="propFirm"
-                                class="col-span-12"
-                                x-ref="propFirm"
-                                x-model="selectedFirmId"
-                                tooltip="{{ __('labels.prop_firm') }}"
-                                icono="<i class='fa-brands fa-sketch'></i>">
-                    <x-slot name="options">
+                {{-- PropFirm --}}
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                        <i class="fa-brands fa-sketch text-gray-400"></i>
+                        {{ __('labels.prop_firm') }}
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                            x-ref="propFirm"
+                            x-model="selectedFirmId"
+                            required>
                         <option value="">{{ __('labels.select_prop_firm') }}</option>
                         <template x-for="firm in allFirms"
                                   :key="firm.id">
                             <option :value="firm.id"
                                     x-text="firm.name"></option>
                         </template>
-                    </x-slot>
-                </x-select-group>
+                    </select>
+                </div>
 
-                {{-- 2. PROGRAMA --}}
-                <x-select-group id="program"
-                                class="col-span-12"
-                                x-ref="program"
-                                x-model="selectedProgramId"
-                                x-bind:disabled="!selectedFirmId"
-                                tooltip="{{ __('labels.account_type') }}"
-                                icono="<i class='fa-solid fa-list'></i>">
-                    <x-slot name="options">
+                {{-- Programa --}}
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                        <i class="fa-solid fa-list text-gray-400"></i>
+                        {{ __('labels.program_type') }}
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                            x-ref="program"
+                            x-model="selectedProgramId"
+                            :disabled="!selectedFirmId"
+                            required>
                         <option value="">{{ __('labels.select_program') }}</option>
                         <template x-for="program in getPrograms()"
                                   :key="program.id">
                             <option :value="program.id"
                                     x-text="program.name"></option>
                         </template>
-                    </x-slot>
-                </x-select-group>
+                    </select>
+                </div>
 
-                {{-- 3. BALANCE --}}
-                <x-select-group id="size"
-                                class="col-span-12"
+                {{-- Grid para Tamaño y Divisa --}}
+                <div class="grid grid-cols-2 gap-4">
+                    {{-- Tamaño --}}
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                            <i class="fa-solid fa-coins text-gray-400"></i>
+                            {{ __('labels.account_size') }}
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                                 x-ref="size"
                                 x-model="selectedSize"
-                                x-bind:disabled="!selectedProgramId"
-                                tooltip="{{ __('labels.balance_account') }}"
-                                icono="<i class='fa-solid fa-coins'></i>">
-                    <x-slot name="options">
-                        <option value="">{{ __('labels.select_balance') }}</option>
-                        <template x-for="size in getSizes()"
-                                  :key="size">
-                            <option :value="size"
-                                    x-text="new Intl.NumberFormat().format(size)"></option>
-                        </template>
-                    </x-slot>
-                </x-select-group>
+                                :disabled="!selectedProgramId"
+                                required>
+                            <option value="">{{ __('labels.select_size') }}</option>
+                            <template x-for="size in getSizes()"
+                                      :key="size">
+                                <option :value="size"
+                                        x-text="new Intl.NumberFormat().format(size)"></option>
+                            </template>
+                        </select>
+                    </div>
 
-                {{-- 4. DIVISA --}}
-                <x-select-group id="currency"
-                                class="col-span-12"
+                    {{-- Divisa --}}
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                            <i class="fa-solid fa-dollar-sign text-gray-400"></i>
+                            {{ __('labels.currency') }}
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                                 x-ref="currency"
                                 x-model="selectedLevelId"
-                                x-bind:disabled="!selectedSize"
-                                tooltip="{{ __('labels.currency_account') }}"
-                                icono="<i class='fa-solid fa-euro-sign'></i>">
-                    <x-slot name="options">
-                        <option value="">{{ __('labels.select_currency') }}</option>
-                        <template x-for="level in getCurrencies()"
-                                  :key="level.id">
-                            <option :value="level.id"
-                                    x-text="level.currency"></option>
-                        </template>
-                    </x-slot>
-                </x-select-group>
-            </fieldset>
-            <fieldset class="hover:shadow-3xl col-span-6 my-1 grid grid-cols-12 rounded-xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-                <legend class="font-google font-bold">{{ __('labels.sync_options') }}</legend>
-                <div class="col-span-12 grid grid-cols-12">
-                    <div class="col-span-6">
-                        <span>{{ __('labels.enable_sync') }}</span>
-                    </div>
-                    <div class="col-span-6">
-
-                        <label class="relative inline-flex cursor-pointer items-center">
-                            <input class="peer sr-only"
-                                   type="checkbox"
-                                   x-model="syncronize"
-                                   value="" />
-                            <div
-                                 class="group peer h-8 w-16 rounded-full bg-white ring-2 ring-red-500 duration-300 after:absolute after:left-1 after:top-1 after:flex after:h-6 after:w-6 after:items-center after:justify-center after:rounded-full after:bg-red-500 after:duration-300 peer-checked:ring-green-500 peer-checked:after:translate-x-8 peer-checked:after:bg-green-500 peer-hover:after:scale-95">
-                            </div>
-                        </label>
+                                :disabled="!selectedSize"
+                                required>
+                            <option value="">{{ __('labels.select_currency') }}</option>
+                            <template x-for="level in getCurrencies()"
+                                      :key="level.id">
+                                <option :value="level.id"
+                                        x-text="level.currency"></option>
+                            </template>
+                        </select>
                     </div>
                 </div>
-                {{-- 5. Plataforma Broker --}}
-                <x-select-group id="level"
-                                class="col-span-12"
-                                x-ref="platformBroker"
-                                x-model="platformBroker"
-                                tooltip="{{ __('labels.platform_trading') }}"
-                                icono="<i class='fa-solid fa-terminal'></i>">
-                    <x-slot name="options">
-                        <option value="">{{ __('labels.select_platform') }}</option>
-                        <option value="mt5">MetaTrader 5</option>
-                        <option value="cTrader">cTrader</option>
-                    </x-slot>
-                </x-select-group>
 
-                <x-input-group id="login_platform"
-                               class="col-span-12"
+                {{-- Servidor (Read-only) --}}
+                {{-- <div class="space-y-2">
+                    <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                        <i class="fa-solid fa-server text-gray-400"></i>
+                        {{ __('labels.server') }}
+                    </label>
+                    <input class="w-full rounded-lg border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-500"
+                           type="text"
+                           x-model="selectedServer"
+                           disabled
+                           placeholder="{{ __('labels.auto_assigned') }}">
+                </div> --}}
+            </div>
+
+            {{-- 3. SINCRONIZACIÓN (Colapsable) --}}
+            <div class="space-y-4 rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-5"
+                 x-data="{ showSyncOptions: false }">
+
+                {{-- Toggle Header --}}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                            <i class="fa-solid fa-rotate text-emerald-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">{{ __('labels.auto_sync') }}</h4>
+                            <p class="text-xs text-gray-500">{{ __('labels.sync_with_trading_platform') }}</p>
+                        </div>
+                    </div>
+
+                    {{-- Toggle Switch --}}
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input class="peer sr-only"
+                               type="checkbox"
+                               x-model="syncronize"
+                               @change="showSyncOptions = syncronize">
+                        <div
+                             class="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-5">
+                        </div>
+                    </label>
+                </div>
+
+                {{-- Sync Options (Collapsed) --}}
+                <div class="space-y-4 border-t border-emerald-100 pt-4"
+                     x-show="showSyncOptions"
+                     x-collapse>
+
+                    {{-- Plataforma --}}
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                            <i class="fa-solid fa-terminal text-gray-400"></i>
+                            {{ __('labels.platform') }}
+                        </label>
+                        <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                x-ref="platformBroker"
+                                x-model="platformBroker">
+                            <option value="">{{ __('labels.select_platform') }}</option>
+                            <option value="mt5">MetaTrader 5</option>
+                            <option value="cTrader">cTrader</option>
+                        </select>
+                    </div>
+
+                    {{-- Login ID --}}
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                            <i class="fa-solid fa-id-card text-gray-400"></i>
+                            {{ __('labels.account_id') }}
+                        </label>
+                        <input class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                               type="text"
                                x-ref="loginPlatform"
                                x-model="loginPlatform"
-                               placeholder="{{ __('labels.login_platform') }}"
-                               icono=" <i class='fa-solid fa-user-astronaut'></i>"
-                               tooltip="{{ __('labels.login_platform') }}" />
-
-                <x-input-group id="password_platform"
-                               class="col-span-12"
-                               type="password"
-                               x-ref="passwordPlatform"
-                               x-model="passwordPlatform"
-                               placeholder="{{ __('labels.password_platform') }}"
-                               icono=" <i class='fa-solid fa-key'></i>"
-                               tooltip="{{ __('labels.password_platform') }}" />
-
-                {{-- 5. Servidor Broker --}}
-                <x-input-group id="server"
-                               class="col-span-12"
-                               x-model="selectedServer"
-                               placeholder="{{ __('labels.server_platform') }}"
-                               icono=" <i class='fa-solid fa-server'></i>"
-                               disabled="true"
-                               tooltip="{{ __('labels.server_platform') }}" />
-            </fieldset>
+                               placeholder="{{ __('labels.enter_account_id') }}">
+                        {{-- <p class="text-xs text-gray-500">
+                            <i class="fa-solid fa-info-circle"></i>
+                            {{ __('labels.account_id_help') }}
+                        </p> --}}
+                    </div>
+                </div>
+            </div>
 
         </div>
-
 
     </x-modals.modal-account>
 
-    {{-- MODAL DE REGLAS (TRADING PLAN) --}}
-    @if ($showRulesModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4 backdrop-blur-sm"
-             x-transition.opacity>
 
-            <div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
 
-                {{-- Header --}}
-                <div class="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-gray-900">Reglas Operativas</h3>
-                        <p class="text-xs text-gray-500">Define los límites para esta estrategia.</p>
+    {{-- Modal Reglas de Trading Plan --}}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm"
+         x-show="showRulesModal"
+         x-transition.opacity
+         x-cloak
+         style="display: none;"
+         @click.self="closeRulesModal()">
+
+        <div class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+
+            {{-- Header --}}
+            <div class="border-b border-gray-100 bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
+                            <i class="fa-solid fa-sliders text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">
+                            {{ __('labels.trading_plan_rules') }}
+                        </h3>
                     </div>
-                    <button class="text-gray-400 hover:text-gray-600"
-                            wire:click="closeRulesModal">
-                        <i class="fa-solid fa-times text-xl"></i>
+                    <button class="rounded-lg p-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
+                            type="button"
+                            @click="closeRulesModal()">
+                        <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
                 </div>
+            </div>
 
-                {{-- Body --}}
-                <div class="space-y-5 p-6">
+            {{-- Body --}}
+            <div class="space-y-4 p-6">
+                {{-- Max Daily Loss --}}
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">
+                        {{ __('labels.max_daily_loss_percent') }}
+                    </label>
+                    <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                           type="number"
+                           step="0.01"
+                           x-model="$wire.rules_max_loss_percent"
+                           placeholder="Ej: 5.00">
+                </div>
 
-                    {{-- 1. Límites Porcentuales --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1 block text-xs font-bold text-rose-500">Límite Pérdida Diario (%)</label>
-                            <div class="relative">
-                                <input class="w-full rounded-lg border-rose-200 pr-6 text-sm focus:border-rose-500 focus:ring-rose-500"
-                                       type="number"
-                                       step="0.1"
-                                       max="100"
-                                       wire:model="rules_max_loss_percent"
-                                       placeholder="Ej: 2.5">
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <span class="text-xs text-gray-500">%</span>
-                                </div>
-                            </div>
-                            <p class="mt-1 text-[10px] text-gray-400">Porcentaje del balance.</p>
-                        </div>
+                {{-- Daily Profit Target --}}
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">
+                        {{ __('labels.daily_profit_target_percent') }}
+                    </label>
+                    <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                           type="number"
+                           step="0.01"
+                           x-model="$wire.rules_profit_target_percent"
+                           placeholder="Ej: 2.00">
+                </div>
 
-                        <div>
-                            <label class="mb-1 block text-xs font-bold text-emerald-600">Meta Ganancia Diaria (%)</label>
-                            <div class="relative">
-                                <input class="w-full rounded-lg border-emerald-200 pr-6 text-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                       type="number"
-                                       step="0.1"
-                                       wire:model="rules_profit_target_percent"
-                                       placeholder="Ej: 1.0">
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <span class="text-xs text-gray-500">%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {{-- 2. Operativa --}}
+                {{-- Max Daily Trades --}}
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">
+                        {{ __('labels.max_daily_trades') }}
+                    </label>
+                    <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                           type="number"
+                           x-model="$wire.rules_max_trades"
+                           placeholder="Ej: 5">
+                </div>
+
+                {{-- Trading Hours --}}
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="mb-1 block text-xs font-bold text-gray-500">Máx. Trades Diarios</label>
-                        <input class="w-full rounded-lg border-gray-300 text-sm focus:ring-indigo-500"
-                               type="number"
-                               wire:model="rules_max_trades"
-                               placeholder="Ej: 3">
+                        <label class="mb-1 block text-sm font-medium text-gray-700">
+                            {{ __('labels.start_time') }}
+                        </label>
+                        <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                               type="time"
+                               x-model="$wire.rules_start_time">
                     </div>
-
-                    {{-- 3. Horario --}}
-                    <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                        <label class="mb-2 block text-xs font-bold uppercase text-gray-500">Horario Permitido</label>
-                        <div class="flex items-center gap-2">
-                            <input class="w-full rounded-lg border-gray-300 text-sm"
-                                   type="time"
-                                   wire:model="rules_start_time">
-                            <span class="text-gray-400">-</span>
-                            <input class="w-full rounded-lg border-gray-300 text-sm"
-                                   type="time"
-                                   wire:model="rules_end_time">
-                        </div>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700">
+                            {{ __('labels.end_time') }}
+                        </label>
+                        <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                               type="time"
+                               x-model="$wire.rules_end_time">
                     </div>
-
                 </div>
-
-                {{-- Footer --}}
-                <div class="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
-                    <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700"
-                            wire:click="closeRulesModal">Cancelar</button>
-                    <button class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700"
-                            wire:click="saveRules">
-                        Guardar Reglas
-                    </button>
-                </div>
-
             </div>
-        </div>
-    @endif
 
-    {{-- HEADER --}}
-    <div class="flex flex-col gap-4 p-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-wallet text-2xl text-indigo-600"></i>
-                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.accounts') }}</h1>
+            {{-- Footer --}}
+            <div class="flex gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
+                <button class="flex-1 rounded-xl border border-gray-300 bg-white py-3 font-bold text-gray-700 transition hover:bg-gray-50"
+                        type="button"
+                        @click="closeRulesModal()">
+                    {{ __('labels.cancel') }}
+                </button>
+                <button class="flex-1 rounded-xl bg-gray-800 py-3 font-bold text-white shadow-lg transition hover:bg-gray-700 focus:ring-4 focus:ring-gray-200"
+                        type="button"
+                        @click="$wire.saveRules()">
+                    {{ __('labels.save') }}
+                </button>
             </div>
-            <p class="text-sm text-gray-500">{{ __('menu.resume_accounts') }}</p>
         </div>
     </div>
+
+
+
+    {{-- HEADER --}}
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-gray-800 to-gray-700 shadow-lg">
+                    <i class="fa-solid fa-wallet text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black text-gray-900">{{ __('menu.accounts') }}</h1>
+                    <p class="text-sm text-gray-500">{{ __('menu.resume_accounts') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 
 
     <div class="grid grid-cols-12 p-2">
 
         {{-- ? Selector de cuenta --}}
-        <div class="hover:shadow-3xl col-span-12 mb-2 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-            <div class="min-w-0 flex-1">
-                <div class="mb-3 flex items-center justify-between">
-                    <span class="bg-gradient-to-r from-gray-900 to-gray-800 bg-clip-text text-xl font-black text-gray-900 text-transparent">Cuenta</span>
+        <div class="col-span-12 mb-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <div class="mb-4 flex items-center justify-between">
+                <span class="text-xl font-black text-gray-900">{{ __('labels.account') }}</span>
 
-                    {{-- BADGE --}}
+                <div class="flex flex-col items-end gap-2">
+                    <span class="text-xs text-gray-500">
+                        {{ __('labels.last_sync') }}
+                        @if ($selectedAccount?->last_sync)
+                            {{ Carbon\Carbon::parse($selectedAccount?->last_sync)->format('H:i d/m/Y') }}
+                        @else
+                            {{ __('labels.never') }}
+                        @endif
+                    </span>
 
-
-                    <!-- Añadimos flex-col e items-end para que todo se alinee a la derecha -->
-                    <div class="flex flex-col items-end">
-
-                        <!-- Forzamos que el span no se rompa y esté alineado a la derecha -->
-                        <span class="mb-1 whitespace-nowrap text-xs">
-                            {{ __('labels.last_sync') }} @if ($selectedAccount?->last_sync)
-                                {{ Carbon\Carbon::parse($selectedAccount?->last_sync)->format('H:i d/m/Y') }}
-                            @else
-                                {{ __('labels.never') }}
-                            @endif
+                    {{-- Badge de Estado --}}
+                    <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                        <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
+                        <span>
+                            {{ $selectedAccount?->status_formatted ?? '---' }} •
+                            {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
                         </span>
-                        {{-- <livewire:sync-token-modal /> --}}
-                        <div class="flex items-center"> <!-- Quitamos clases que puedan estorbar y aseguramos flex -->
-
-                            {{-- En header cuenta seleccionada --}}
-                            {{--                            @if ($selectedAccount?->mt5_login)
-
-                                @if ($isSyncing)
-                                    <div wire:poll.2s="checkSyncStatus"></div>
-                                @endif
-
-                                <button class="@if ($isSyncing) from-amber-500 to-amber-600 cursor-not-allowed @else from-emerald-500 to-emerald-600 @endif mx-2 flex items-center gap-2 rounded-3xl bg-gradient-to-r px-4 py-2 text-sm font-medium text-white shadow-2xl transition-all"
-                                        wire:click="syncSelectedAccount"
-                                        wire:loading.attr="disabled"
-                                        {{ $isSyncing ? 'disabled' : '' }}>
-
-                                    {{~~ Spinner (mientras carga red o Job) ~~}}
-                                    <svg class="h-4 w-4 animate-spin"
-                                         wire:loading
-                                         {{~~ También mostramos si isSyncing es true aunque no haya carga de red activa ~~}}
-                                         @if ($isSyncing) style="display: block" @endif
-                                         fill="none"
-                                         stroke="currentColor"
-                                         viewBox="0 0 24 24">
-                                        <path stroke-linecap="round"
-                                              stroke-linejoin="round"
-                                              stroke-width="2"
-                                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-
-                                    <span>
-                                        <span wire:loading>{{ __('labels.sending') }}</span>
-                                        <span wire:loading.remove>
-                                            @if ($isSyncing)
-                                                {{ __('labels.syncronizing') }}
-                                            @else
-                                                {{ __('labels.sync') }}
-                                            @endif
-                                        </span>
-                                    </span>
-                                </button>
-                            @else
-                                <button class="ml-2 rounded-3xl bg-slate-200 px-4 py-2 text-xs text-slate-500 opacity-50"
-                                        disabled>
-                                    {{ __('labels.configure_platform') }}
-                                </button>
-                            @endif --}}
-
-                            {{-- Badge de Estado --}}
-                            <div class="flex items-center space-x-2 rounded-xl border border-emerald-200 bg-emerald-100/50 px-3 py-1.5 text-xs font-bold text-emerald-800">
-                                <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
-                                <span class="whitespace-nowrap">
-                                    {{ $selectedAccount?->status_formatted ?? '---' }} •
-                                    {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-
-                {{-- SELECT PREMIUM --}}
-                <div class="relative">
-                    <select class="group/select w-full appearance-none rounded-3xl border-2 border-gray-200 bg-gradient-to-r from-emerald-50/70 via-white to-gray-50 px-4 py-3 pr-14 text-xl font-bold text-gray-900 shadow-xl transition-all duration-300 hover:border-emerald-300 hover:shadow-xl focus:border-emerald-400 focus:shadow-2xl focus:ring-4 focus:ring-emerald-200/50"
-                            @change="$wire.changeAccount($event.target.value)"
-                            {{-- wire:model.live="selectedAccountId" --}}>
-                        @forelse($accounts as $account)
-                            <option class="rounded-xl border-b border-gray-100 px-6 py-4 text-lg font-medium italic text-gray-600 hover:text-white"
-                                    value="{{ $account->id }}">{{ $account->name }}</option>
-                        @empty
-                            <option value="">{{ __('labels.without_accounts') }}</option>
-                        @endforelse
-                    </select>
-
-                    {{-- ICONO FLECHA --}}
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                        <svg class="h-6 w-6 text-gray-500 transition-transform duration-200 group-hover/select:-translate-y-px"
-                             fill="none"
-                             stroke="currentColor"
-                             viewBox="0 0 24 24">
-                            <path stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M19 9l-7 7-7-7" />
-                        </svg>
                     </div>
                 </div>
-                <div class="flex items-center justify-between text-center">
-                    {{-- SUBINFO --}}
-                    <p class="mt-3 flex items-center text-sm font-medium text-gray-600">
-                        <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                        {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker_name ?? __('labels.not_selected_account') }} • {{ $selectedAccount?->phase_label ?? '---' }}
-                    </p>
+            </div>
 
-                    <div>
-                        <div class="flex items-center gap-2 rounded-lg p-1">
+            {{-- SELECT --}}
+            <div class="relative">
+                <select class="w-full appearance-none rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white via-gray-50 to-white px-4 py-3 pr-12 text-lg font-bold text-gray-900 shadow-sm transition-all duration-300 hover:border-gray-300 hover:shadow-md focus:border-gray-400 focus:shadow-lg focus:ring-4 focus:ring-gray-100"
+                        @change="$wire.changeAccount($event.target.value)">
+                    @forelse($accounts as $account)
+                        <option value="{{ $account->id }}"
+                                {{ $selectedAccount?->id == $account->id ? 'selected' : '' }}>
+                            {{ $account->name }}
+                        </option>
+                    @empty
+                        <option value="">{{ __('labels.without_accounts') }}</option>
+                    @endforelse
+                </select>
 
-                            <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                                    @click="$dispatch('open-modal-create')">
-                                <i class="fa-solid fa-plus text-green-500"></i>
-                                {{ __('labels.create_account') }}
-                            </button>
-                            <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                                    @click="$wire.editAccount({{ $selectedAccount->id }})">
-                                <i class="fa-solid fa-pen-to-square text-yellow-500"></i>
-                                {{ __('labels.edit_account') }}
-                            </button>
-                            @if (count($accounts) > 0)
-                                <button class="ring-offset-background focus-visible:ring-ring relative inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-800 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-700 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                                        @click="confirmDeleteAccount({{ $selectedAccount->id }})">
-                                    <i class="fa-solid fa-xmark text-red-500"></i>
-                                    {{ __('labels.delete_account') }}
-                                </button>
-
-                                {{-- BOTÓN REGLAS (NUEVO) --}}
-                                <button class="rounded-md p-1.5 text-gray-400 transition hover:bg-white hover:text-indigo-600 hover:shadow-sm"
-                                        wire:click="openRules({{ $selectedAccount->id }})"
-                                        title="Configurar Reglas y Objetivos">
-                                    <i class="fa-solid fa-sliders"></i>
-                                </button>
-                            @endif
-
-
-                        </div>
-
-                    </div>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                    <i class="fa-solid fa-chevron-down text-gray-400"></i>
                 </div>
+            </div>
 
+            {{-- SUBINFO Y BOTONES --}}
+            <div class="mt-4 flex items-center justify-between">
+                <p class="flex items-center text-sm text-gray-600">
+                    <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                    {{ count($accounts) }} {{ __('labels.count_brokers') }} • {{ $selectedAccount?->broker_name ?? '---' }} • {{ $selectedAccount?->phase_label ?? '---' }}
+                </p>
 
+                <div class="flex items-center gap-2">
+                    <button class="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+                            @click="$dispatch('open-modal-create')">
+                        <i class="fa-solid fa-plus text-emerald-400"></i>
+                        {{ __('labels.create_account') }}
+                    </button>
 
+                    @if ($selectedAccount)
+                        <button class="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+                                @click="$wire.editAccount({{ $selectedAccount->id }})">
+                            <i class="fa-solid fa-pen text-yellow-400"></i>
+                            {{ __('labels.edit_account') }}
+                        </button>
+
+                        <button class="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+                                @click="confirmDeleteAccount({{ $selectedAccount->id }})">
+                            <i class="fa-solid fa-trash text-red-400"></i>
+                            {{ __('labels.delete_account') }}
+                        </button>
+
+                        <button class="rounded-lg bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200"
+                                wire:click="openRules({{ $selectedAccount->id }})"
+                                title="{{ __('labels.configure_rules') }}">
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    @endif
+                </div>
             </div>
         </div>
+
 
         {{-- ? Grafico y timeframe --}}
         <div class="hover:shadow-3xl col-span-12 mb-2 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300 xl:col-span-8">
@@ -479,34 +466,30 @@
                 <!-- Botones Timeframe con Alpine compartido -->
                 <div class="mb-6 flex justify-center gap-2 sm:justify-start">
 
-                    <button class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
-                            {{-- wire:click="setTimeframe('1h')" --}}
+                    <button class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md"
                             @click="setTimeframe('1h')"
-                            x-bind:class="timeframe === '1h' ? 'bg-emerald-500 text-white shadow-emerald-500/50 !ring-2 !ring-emerald-300/50' : 'bg-white/50 hover:bg-white shadow-slate-200'"
-                            title="{{ __('labels.last_hour') }}">
+                            x-bind:class="timeframe === '1h' ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/50 ring-2 ring-emerald-200' : 'bg-white hover:bg-gray-50'">
                         <span>🕐 1H</span>
                     </button>
 
-                    <button class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
+                    <button class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md"
                             @click="setTimeframe('24h')"
-                            x-bind:class="timeframe === '24h' ? 'bg-emerald-500 text-white shadow-emerald-500/50 !ring-2 !ring-emerald-300/50' : 'bg-white/50 hover:bg-white shadow-slate-200'"
-                            title="{{ __('labels.last_24_hours') }}">
+                            x-bind:class="timeframe === '24h' ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/50 ring-2 ring-emerald-200' : 'bg-white hover:bg-gray-50'">
                         <span>📅 24H</span>
                     </button>
 
-                    <button class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
+                    <button class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md"
                             @click="setTimeframe('7d')"
-                            x-bind:class="timeframe === '7d' ? 'bg-emerald-500 text-white shadow-emerald-500/50 !ring-2 !ring-emerald-300/50' : 'bg-white/50 hover:bg-white shadow-slate-200'"
-                            title="{{ __('labels.last_week') }}">
+                            x-bind:class="timeframe === '7d' ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/50 ring-2 ring-emerald-200' : 'bg-white hover:bg-gray-50'">
                         <span>📊 7D</span>
                     </button>
 
-                    <button class="rounded-2xl border border-slate-200 px-5 py-2 text-sm font-semibold shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl"
+                    <button class="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold shadow-sm transition-all duration-200 hover:shadow-md"
                             @click="setTimeframe('all')"
-                            x-bind:class="timeframe === 'all' ? 'bg-emerald-500 text-white shadow-emerald-500/50 !ring-2 !ring-emerald-300/50' : 'bg-white/50 hover:bg-white shadow-slate-200'"
-                            title="{{ __('labels.from_start') }}">
+                            x-bind:class="timeframe === 'all' ? 'bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/50 ring-2 ring-emerald-200' : 'bg-white hover:bg-gray-50'">
                         <span>{{ __('labels.start') }}</span>
                     </button>
+
                 </div>
             </div>
 
@@ -549,176 +532,229 @@
 
         {{-- ? Resumen de la cuenta --}}
         <div class="col-span-12 m-1 xl:col-span-4">
+
             {{-- ? Datos Balance --}}
-            <div class="hover:shadow-3xl my-1 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-                <div class="col-span-12 mb-1 font-google">{{ __('labels.summary_account') }}</div>
-                <div class="col-span-12 flex items-center justify-between">
-                    <div class="flex">
-                        <div class="p-2">
-                            <i class="fa-solid fa-coins text-lg"></i>
+            <div class="mb-3 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-lg transition-all duration-300 hover:shadow-xl">
+
+                {{-- Header --}}
+                <div class="border-b border-gray-100 bg-gradient-to-r from-gray-800 to-gray-700 px-5 py-3">
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
+                            <i class="fa-solid fa-wallet text-sm text-white"></i>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="font-google text-base">{{ __('labels.initial_balance') }}</span>
-                            <span class="text-sm text-gray-400">{{ __('labels.size_account') }}</span>
+                        <h3 class="font-bold text-white">{{ __('labels.summary_account') }}</h3>
+                    </div>
+                </div>
+
+                {{-- Body --}}
+                <div class="space-y-4 p-5">
+
+                    {{-- Balance Inicial --}}
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50/50 p-3 transition hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                                <i class="fa-solid fa-coins text-lg text-emerald-600"></i>
+                            </div>
+                            <div>
+                                <span class="block text-sm font-semibold text-gray-900">{{ __('labels.initial_balance') }}</span>
+                                <span class="text-xs text-gray-500">{{ __('labels.size_account') }}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-gray-900">
+                                {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
+                            </span>
                         </div>
                     </div>
 
-                    <div>
-                        {{ $selectedAccount?->initial_balance ? $currency . number_format($selectedAccount->initial_balance, $selectedAccount->initial_balance == floor($selectedAccount->initial_balance) ? 0 : 2) : '0' . $currency }}
-                    </div>
-                </div>
-                <div class="col-span-12 flex items-center justify-between">
-                    <div class="flex">
-                        <div class="p-2">
-                            <i class="fa-solid fa-coins text-lg"></i>
+                    {{-- Balance Actual --}}
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50/50 p-3 transition hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                                <i class="fa-solid fa-chart-line text-lg text-blue-600"></i>
+                            </div>
+                            <div>
+                                <span class="block text-sm font-semibold text-gray-900">{{ __('labels.current_balance') }}</span>
+                                <span class="text-xs text-gray-500">{{ __('labels.current_balance_desc') }}</span>
+                            </div>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="font-google text-base">{{ __('labels.current_balance') }}</span>
-                            <span class="text-sm text-gray-400">{{ __('labels.current_balance_desc') }}</span>
+                        <div class="flex items-center gap-2 text-right">
+                            {{-- Badge de Porcentaje --}}
+                            @if ($profitPercentage == 0)
+                                <span class="rounded-lg bg-gray-200 px-2 py-1 text-xs font-bold text-gray-600">
+                                    {{ number_format($profitPercentage, 2) }}%
+                                </span>
+                            @else
+                                <span class="@if ($profitPercentage > 0) bg-emerald-100 text-emerald-700 @else bg-rose-100 text-rose-700 @endif flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold">
+                                    @if ($profitPercentage >= 0)
+                                        <i class="fa-solid fa-arrow-up text-emerald-500"></i>
+                                    @else
+                                        <i class="fa-solid fa-arrow-down text-rose-500"></i>
+                                    @endif
+                                    {{ number_format($profitPercentage, 2) }}%
+                                </span>
+                            @endif
+
+                            {{-- Valor --}}
+                            <span class="text-lg font-bold text-gray-900">
+                                {{ $selectedAccount?->current_balance ? $currency . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0' . $currency }}
+                            </span>
                         </div>
-                    </div>
-                    <div>
-                        @if ($profitPercentage == 0)
-                            <span class="m-1 rounded-3xl bg-gray-300 p-1 pl-2 text-sm font-bold">
-                                {{ number_format($profitPercentage, 2) }}%
-                            </span>
-                        @else
-                            <span class="@if ($profitPercentage > 0) bg-[#4cd34079] text-green-700   @else bg-[#ff00003d] text-red-700 @endif mr-1 rounded-3xl p-1 text-sm font-bold">
-                                @if ($profitPercentage >= 0)
-                                    <i class="fa-solid fa-arrow-up text-green-500"></i>
-                                @else
-                                    <i class="fa-solid fa-arrow-down text-red-500"></i>
-                                @endif
-                                {{ number_format($profitPercentage, 2) }}%
-                            </span>
-                        @endif
-                        <span>{{ $selectedAccount?->current_balance ? $currency . number_format($selectedAccount->current_balance, $selectedAccount->current_balance == floor($selectedAccount->current_balance) ? 0 : 2) : '0' . $currency }}</span>
                     </div>
 
                 </div>
             </div>
 
-            {{-- ? Informacion Plataforma --}}
-            <div class="hover:shadow-3xl my-1 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-                <div class="col-span-12 mb-1 font-google">{{ __('labels.info_platform') }}</div>
-                <div class="col-span-12 flex items-center justify-between">
-                    <div class="flex">
-                        <div class="p-2">
-                            <i class="fa-solid fa-laptop text-lg"></i>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="font-google text-base">{{ __('labels.broker') }}</span>
-                            <span class="text-sm text-gray-400">{{ __('labels.broker_desc') }}</span>
-                        </div>
-                    </div>
+            {{-- ? Información Plataforma --}}
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-lg transition-all duration-300 hover:shadow-xl">
 
-                    <div>
-                        {{ $selectedAccount?->broker_name ?? '---' }}
+                {{-- Header --}}
+                <div class="border-b border-gray-100 bg-gradient-to-r from-gray-800 to-gray-700 px-5 py-3">
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
+                            <i class="fa-solid fa-server text-sm text-white"></i>
+                        </div>
+                        <h3 class="font-bold text-white">{{ __('labels.info_platform') }}</h3>
                     </div>
                 </div>
-                <div class="col-span-12 flex items-center justify-between">
-                    <div class="flex">
-                        <div class="p-2">
-                            <i class="fa-regular fa-calendar text-lg"></i>
+
+                {{-- Body --}}
+                <div class="space-y-4 p-5">
+
+                    {{-- Broker --}}
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50/50 p-3 transition hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+                                <i class="fa-solid fa-laptop text-lg text-slate-600"></i>
+                            </div>
+                            <div>
+                                <span class="block text-sm font-semibold text-gray-900">{{ __('labels.broker') }}</span>
+                                <span class="text-xs text-gray-500">{{ __('labels.broker_desc') }}</span>
+                            </div>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="font-google text-base">{{ __('labels.first_trade') }}</span>
-                            <span class="text-sm text-gray-400">{{ __('labels.first_trade_desc') }}</span>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-gray-900">
+                                {{ $selectedAccount?->broker_name ?? '---' }}
+                            </span>
                         </div>
                     </div>
 
-                    <div>
-                        {{ $firstTradeDate ? $firstTradeDate->format('d M Y, H:i') : '---' }}
+                    {{-- Primer Trade --}}
+                    <div class="flex items-center justify-between rounded-lg bg-gray-50/50 p-3 transition hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                                <i class="fa-regular fa-calendar text-lg text-amber-600"></i>
+                            </div>
+                            <div>
+                                <span class="block text-sm font-semibold text-gray-900">{{ __('labels.first_trade') }}</span>
+                                <span class="text-xs text-gray-500">{{ __('labels.first_trade_desc') }}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-gray-900">
+                                {{ $firstTradeDate }}
+                            </span>
+                        </div>
                     </div>
 
                 </div>
             </div>
-
-
 
         </div>
 
-        <div class="hover:shadow-3xl col-span-12 m-1 grid grid-cols-12 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-5 shadow-2xl transition-all duration-300">
-            <div class="col-span-12 font-google text-lg font-bold text-gray-800">
-                {{ __('labels.statsitics_account') }}
+
+        <div class="col-span-12 m-1 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 shadow-lg transition-all duration-300 hover:shadow-xl">
+
+            {{-- Header --}}
+            <div class="border-b border-gray-100 bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4">
+                <div class="flex items-center gap-2">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
+                        <i class="fa-solid fa-chart-pie text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">{{ __('labels.statsitics_account') }}</h3>
+                </div>
             </div>
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.profit_rate') }}"
-                               icono="<i class='fa-solid fa-trophy'></i>"
-                               key="{{ $winRate }}%"
-                               tooltip="{{ __('labels.tlp_winrate') }}" />
+            {{-- Body - Grid de Estadísticas --}}
+            <div class="grid grid-cols-12 gap-4 p-6">
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.avg_retention_time') }}"
-                               icono="<i class='fa-solid fa-stopwatch'></i>"
-                               key="{{ $avgDurationFormatted }}"
-                               tooltip="{{ __('labels.tlp_avg_retention_time') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.profit_rate') }}"
+                                   icono="<i class='fa-solid fa-trophy'></i>"
+                                   key="{{ $winRate }}%"
+                                   tooltip="{{ __('labels.tlp_winrate') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.number_trades') }}"
-                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $totalTrades }}"
-                               tooltip="{{ __('labels.tlp_number_trades') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.avg_retention_time') }}"
+                                   icono="<i class='fa-solid fa-stopwatch'></i>"
+                                   key="{{ $avgDurationFormatted }}"
+                                   tooltip="{{ __('labels.tlp_avg_retention_time') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.profit_factor') }}"
-                               icono="<i class='fa-solid fa-wallet'></i>"
-                               key="{{ $profitFactor }} "
-                               align="right"
-                               tooltip="{{ __('labels.tlp_profit_factor') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.number_trades') }}"
+                                   icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                                   key="{{ $totalTrades }}"
+                                   tooltip="{{ __('labels.tlp_number_trades') }}" />
 
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.profit_factor') }}"
+                                   icono="<i class='fa-solid fa-wallet'></i>"
+                                   key="{{ $profitFactor }}"
+                                   align="right"
+                                   tooltip="{{ __('labels.tlp_profit_factor') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.bigger_profit_trade') }}"
-                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $maxWin }} {{ $currency }}"
-                               tooltip="{{ __('labels.tlp_bigger_profit_trade') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.bigger_profit_trade') }}"
+                                   icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                                   key="{{ $maxWin }} {{ $currency }}"
+                                   tooltip="{{ __('labels.tlp_bigger_profit_trade') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.avg_profit_trade') }}"
-                               icono="<i class='fa-solid fa-arrow-trend-up'></i>"
-                               key="{{ $avgWinTrade }} {{ $currency }}"
-                               tooltip="{{ __('labels.tlp_avg_profit_trade') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.avg_profit_trade') }}"
+                                   icono="<i class='fa-solid fa-arrow-trend-up'></i>"
+                                   key="{{ $avgWinTrade }} {{ $currency }}"
+                                   tooltip="{{ __('labels.tlp_avg_profit_trade') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.losser_trade') }}"
-                               icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $maxLoss }} {{ $currency }}"
-                               tooltip="{{ __('labels.tlp_losser_trade') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.losser_trade') }}"
+                                   icono="<i class='fa-solid fa-arrow-trend-down'></i>"
+                                   key="{{ $maxLoss }} {{ $currency }}"
+                                   tooltip="{{ __('labels.tlp_losser_trade') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               align="right"
-                               label="{{ __('labels.avg_losser_trade') }}"
-                               icono="<i class='fa-solid fa-arrow-trend-down'></i>"
-                               key="{{ $avgLossTrade }} {{ $currency }}"
-                               tooltip="{{ __('labels.tlp_avg_losser_trade') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   align="right"
+                                   label="{{ __('labels.avg_losser_trade') }}"
+                                   icono="<i class='fa-solid fa-arrow-trend-down'></i>"
+                                   key="{{ $avgLossTrade }} {{ $currency }}"
+                                   tooltip="{{ __('labels.tlp_avg_losser_trade') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.arr') }}"
-                               icono="<i class='fa-solid fa-chart-bar'></i>"
-                               key="{{ $arr }}"
-                               tooltip="{{ __('labels.tlp_arr') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.arr') }}"
+                                   icono="<i class='fa-solid fa-chart-bar'></i>"
+                                   key="{{ $arr }}"
+                                   tooltip="{{ __('labels.tlp_arr') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.asset_most_traded') }}"
-                               icono="<i class='fa-brands fa-bitcoin'></i>"
-                               key="{{ $topAsset }}"
-                               tooltip="{{ __('labels.tlp_asset_most_traded') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.asset_most_traded') }}"
+                                   icono="<i class='fa-brands fa-bitcoin'></i>"
+                                   key="{{ $topAsset }}"
+                                   tooltip="{{ __('labels.tlp_asset_most_traded') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               label="{{ __('labels.days_trading') }}"
-                               icono="<i class='fa-solid fa-calendar'></i>"
-                               key="{{ $tradingDays }} {{ __('labels.days') }}"
-                               tooltip="{{ __('labels.tlp_days_trading') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   label="{{ __('labels.days_trading') }}"
+                                   icono="<i class='fa-solid fa-calendar'></i>"
+                                   key="{{ $tradingDays }} {{ __('labels.days') }}"
+                                   tooltip="{{ __('labels.tlp_days_trading') }}" />
 
-            <x-card-statistics class="col-span-6 xl:col-span-3"
-                               align="right"
-                               label="{{ __('labels.age_account') }}"
-                               icono="<i class='fa-solid fa-calendar'></i>"
-                               key="{{ $accountAgeFormatted }} "
-                               tooltip="{{ __('labels.tlp_age_account') }}" />
+                <x-card-statistics class="col-span-6 xl:col-span-3"
+                                   align="right"
+                                   label="{{ __('labels.age_account') }}"
+                                   icono="<i class='fa-solid fa-hourglass-half'></i>"
+                                   key="{{ $accountAgeFormatted }}"
+                                   tooltip="{{ __('labels.tlp_age_account') }}" />
+            </div>
         </div>
+
 
         <div class="col-span-12 m-1 mt-4 rounded-3xl border border-gray-400 bg-gradient-to-br from-white to-gray-50 p-6 shadow-2xl transition-all duration-300">
 

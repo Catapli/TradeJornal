@@ -16,6 +16,10 @@ return new class extends Migration
             $table->foreignId('trading_session_id')->constrained()->onDelete('cascade');
             $table->text('note'); // "Me siento FOMO..."
             $table->string('mood')->nullable(); // 'angry', 'happy', etc.
+            $table->index(
+                ['trading_session_id', 'created_at'],
+                'idx_session_notes_fetch'
+            );
             $table->timestamps();
         });
     }

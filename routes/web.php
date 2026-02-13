@@ -87,6 +87,10 @@ Route::middleware([
         return view('pricing.index');
     })->name('pricing');
 
+    Route::get('/alerts', function () {
+        return view('alerts.index');
+    })->name('alerts');
+
     Route::get('/checkout/success', function () {
         return redirect()->route('dashboard')->with('status', '¡Pago realizado con éxito! Bienvenido a Pro 🚀');
     })->name('checkout.success'); // <--- IMPORTANTE: Este es el nombre que busca Laravel

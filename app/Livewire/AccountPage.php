@@ -13,10 +13,16 @@ use App\Models\PropFirm;
 use App\Models\Trade;
 use App\Services\Mt5Gateway;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
+
+use App\Actions\Accounts\CalculateAccountStatistics;
+use App\Actions\Accounts\GenerateBalanceChartData;
+use Illuminate\Support\Facades\DB;
 
 class AccountPage extends Component
 {
@@ -59,13 +65,11 @@ class AccountPage extends Component
     public $grossLoss = 0;       // €5,780
 
     public $lastSyncedAccountId;
-    public $isSyncing = false;  // idle, syncing, done
     public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
     public $selectedTimeframe = 'all'; // ← NUEVO
     public AccountForm $form;
     public $propFirmsData = [];
 
-    public $showRulesModal = false;
     public $editingAccountId = null;
 
     // Campos del plan
@@ -77,12 +81,19 @@ class AccountPage extends Component
 
     public $currency;
 
+    public $lastKnownSync = null;
+    public $syncCheckEnabled = true; // Por si quieres desactivarlo
+
 
     public $timeframes = [  // ← ASEGÚRATE de tener esto
         '1h' => ['minutes' => 60, 'format' => 'H:i'],     // "14:30"
         '24h' => ['hours' => 24, 'format' => 'd H:i'],    // "08 14:30" 
         '7d' => ['days' => 7, 'format' => 'd M (D)'],   // "08 Jan (Dom)" ← ÚNICO
         'all' => ['all' => true, 'format' => 'd MMM yy']  // "08 Jan 26"
+    ];
+
+    protected $listeners = [
+        'echo:account.{selectedAccountId},sync.completed' => 'handleSyncCompleted'
     ];
 
     public function mount()
@@ -104,475 +115,379 @@ class AccountPage extends Component
         $this->changeCurrency();
 
         $this->updateData();
+        $this->lastKnownSync = $this->selectedAccount?->last_sync;
     }
 
+    /**
+     * Carga las reglas de una cuenta y dispara evento para que Alpine abra el modal
+     */
     public function openRules($accountId)
     {
-        $this->editingAccountId = $accountId;
-        $account = Account::with('tradingPlan')->findOrFail($accountId);
-        $plan = $account->tradingPlan;
+        try {
+            $account = Account::with('tradingPlan')->findOrFail($accountId);
+            $plan = $account->tradingPlan;
 
-        $this->rules_max_loss_percent = $plan?->max_daily_loss_percent;
-        $this->rules_profit_target_percent = $plan?->daily_profit_target_percent;
-        $this->rules_max_trades = $plan?->max_daily_trades;
-        $this->rules_start_time = $plan?->start_time; // Formato H:i
-        $this->rules_end_time = $plan?->end_time;
+            // Cargar datos en propiedades públicas (solo lectura/escritura)
+            $this->editingAccountId = $accountId;
+            $this->rules_max_loss_percent = $plan?->max_daily_loss_percent;
+            $this->rules_profit_target_percent = $plan?->daily_profit_target_percent;
+            $this->rules_max_trades = $plan?->max_daily_trades;
+            $this->rules_start_time = $plan?->start_time;
+            $this->rules_end_time = $plan?->end_time;
 
-        $this->showRulesModal = true;
+            // Alpine abre el modal (no Livewire)
+            $this->dispatch('open-rules-modal');
+        } catch (Exception $e) {
+            $this->logError($e, 'openRules', 'AccountPage', "Error abriendo reglas para cuenta {$accountId}");
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar las reglas de la cuenta.'
+            ]);
+        }
     }
 
-    public function closeRulesModal()
+
+    public function handleSyncCompleted($data)
     {
-        $this->showRulesModal = false;
-        $this->reset(['rules_max_loss_percent', 'rules_profit_target_percent', 'rules_max_trades', 'rules_start_time', 'rules_end_time', 'editingAccountId']);
+        try {
+            Log::info("🔔 Evento sync.completed recibido", $data);
+
+            // Invalidar caché (por si acaso)
+            Cache::forget("account_stats_{$this->selectedAccountId}");
+            Cache::forget("balance_chart_{$this->selectedAccountId}_all");
+
+            // Refrescar datos
+            $this->selectedAccount->refresh(); // Recargar desde BD
+            $this->updateData();
+
+            // Notificar al usuario
+            $this->dispatch('show-alert', [
+                'type' => 'success',
+                'message' => "Sincronización completada: {$data['trades_inserted']} operaciones actualizadas."
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error manejando sync.completed: " . $e->getMessage());
+        }
     }
 
+
+    /**
+     * Guarda las reglas en BD y dispara evento de éxito
+     * Alpine cierra el modal y resetea las variables
+     */
     public function saveRules()
     {
-        $account = Account::find($this->editingAccountId);
+        try {
+            $account = Account::findOrFail($this->editingAccountId);
 
-        $data = [
-            'max_daily_loss_percent' => $this->rules_max_loss_percent === '' ? null : $this->rules_max_loss_percent,
-            'daily_profit_target_percent' => $this->rules_profit_target_percent === '' ? null : $this->rules_profit_target_percent,
-            'max_daily_trades' => $this->rules_max_trades === '' ? null : $this->rules_max_trades,
-            'start_time' => $this->rules_start_time === '' ? null : $this->rules_start_time,
-            'end_time' => $this->rules_end_time === '' ? null : $this->rules_end_time,
-            'is_active' => true
-        ];
+            $data = [
+                'max_daily_loss_percent' => $this->rules_max_loss_percent === '' ? null : $this->rules_max_loss_percent,
+                'daily_profit_target_percent' => $this->rules_profit_target_percent === '' ? null : $this->rules_profit_target_percent,
+                'max_daily_trades' => $this->rules_max_trades === '' ? null : $this->rules_max_trades,
+                'start_time' => $this->rules_start_time === '' ? null : $this->rules_start_time,
+                'end_time' => $this->rules_end_time === '' ? null : $this->rules_end_time,
+                'is_active' => true
+            ];
 
-        $account->tradingPlan()->updateOrCreate([], $data);
+            $account->tradingPlan()->updateOrCreate([], $data);
 
-        $this->showRulesModal = false;
-        $this->dispatch('notify', 'Plan de la cuenta actualizado.');
+            // Disparar evento de éxito (Alpine cierra el modal)
+            $this->dispatch('rules-saved');
+
+            $this->dispatch('show-alert', [
+                'type' => 'success',
+                'message' => 'Plan de trading actualizado correctamente.'
+            ]);
+        } catch (Exception $e) {
+            $this->logError($e, 'saveRules', 'AccountPage', "Error guardando reglas para cuenta {$this->editingAccountId}");
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al guardar las reglas.'
+            ]);
+        }
     }
+
 
     // Propiedad Computada para los trades
     public function getHistoryTradesProperty()
     {
-        return Trade::query()
-            ->where('account_id', $this->selectedAccountId)
-            ->with('tradeAsset') // Carga impaciente para optimizar
-            ->orderBy('exit_time', 'desc') // Orden por fecha de salida
-            ->paginate(10); // Paginación de 15 elementos
-    }
+        try {
+            return Trade::query()
+                ->where('account_id', $this->selectedAccountId)
+                ->with('tradeAsset') // Carga impaciente para optimizar
+                ->orderBy('exit_time', 'desc') // Orden por fecha de salida
+                ->paginate(10); // Paginación de 15 elementos
+        } catch (Exception $e) {
+            $this->logError($e, 'getHistoryTrades', 'AccountPage', "Error al obtener trades de cuenta {$this->selectedAccountId}");
 
-
-
-    /**
-     * 🔥 ESTA ES LA FUNCIÓN QUE QUERÍAS EJECUTAR
-     * Aquí pones toda la lógica post-job.
-     */
-    public function onSyncCompleted()
-    {
-        // NO actualices last_sync aquí, el Job ya lo hizo.
-        $this->updateData();
-        // Verificamos si la cuenta se ha quemado tras la sincronización
-        if ($this->selectedAccount->status === 'burned') {
-            $this->showAlert('error', __('labels.account_burned'));
-            $this->isSyncing = false;
-
-            // Opcional: Refrescar la lista de cuentas para que desaparezca o se vea el status
-            $user = Auth::user();
-            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->get();
-            $this->selectedAccount = $this->accounts->first(); // ← Array[0]
-            $this->changeCurrency();
-            $this->updateData();
-            return;
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar los trades de la cuenta. Mostrando la primera disponible.'
+            ]);
         }
-
-        $this->dispatch('timeframe-updated', timeframe: $this->selectedTimeframe);
-        $this->showAlert('success', __('labels.sync_complete_ok'));
-        Log::info("Livewire: Lógica post-sync ejecutada.");
     }
+
+
 
     private function changeCurrency()
     {
-        $isoCode = $this->selectedAccount ? $this->selectedAccount->currency : 'USD';
-        $this->currency = MoneyHelper::getSymbol($isoCode);
+        try {
+            $isoCode = $this->selectedAccount ? $this->selectedAccount->currency : 'USD';
+            $this->currency = MoneyHelper::getSymbol($isoCode);
+        } catch (Exception $e) {
+            $this->logError($e, 'changeCurrency', 'AccountPage', "Error al cambiar moneda de cuenta {$this->selectedAccountId}");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar la moneda de la cuenta. Mostrando la primera disponible.'
+            ]);
+        }
     }
 
 
     //* Para modificar el timeframe del grafico
     public function setTimeframe($timeframe) // ← NUEVO MÉTODO
     {
-        $this->selectedTimeframe = $timeframe;
-        $this->loadBalanceChart(); // ← Recarga gráfico filtrado
-        $this->dispatch('timeframe-updated', timeframe: $timeframe);
+        try {
+            $this->selectedTimeframe = $timeframe;
+            $this->loadBalanceChart(); // ← Recarga gráfico filtrado
+            $this->dispatch('timeframe-updated', timeframe: $timeframe);
+        } catch (Exception $e) {
+            $this->logError($e, 'setTimeframe', 'AccountPage', "Error al cambiar timeframe a {$timeframe}");
+
+            // Fallback seguro
+            $this->selectedTimeframe = 'all';
+            $this->loadBalanceChart();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar el timeframe. Mostrando todos los datos.'
+            ]);
+        }
     }
 
     /**
-     * Esta función es llamada automáticamente por wire:poll cada X segundos
-     * MIENTRAS $isSyncing sea true.
+     * Verifica si hubo una sincronización reciente y actualiza datos
+     * Se ejecuta cada 5 segundos desde el frontend
      */
     public function checkSyncStatus()
     {
-        $this->selectedAccount = $this->selectedAccount->fresh();
-
-        // Si el mensaje sigue siendo nuestra bandera, el Job aún no ha escrito su resultado
-        if ($this->selectedAccount->sync_error_message === 'WAITING_JOB') {
-            // Log::info("El Job sigue trabajando o en cola...");
-            return;
-        }
-
-        // Si llegamos aquí, es porque el Job terminó y cambió el mensaje (a null o al error de cURL)
-        $updatedAt = Carbon::parse($this->selectedAccount->updated_at);
-        $startTime = Carbon::parse($this->syncStartTime);
-
-        // Solo actuamos si el cambio es posterior al inicio
-        if ($updatedAt->greaterThan($startTime)) {
-
-            $this->isSyncing = false;
-
-            if ($this->selectedAccount->sync_error) {
-                $this->showAlert('error', __('labels.error_sync') . __('labels.error_sync_text'));
-                $this->updateData();
+        try {
+            // Salir si no hay cuenta seleccionada
+            if (!$this->selectedAccount) {
                 return;
             }
 
-            // Si no hay error y el mensaje ya no es WAITING_JOB, es éxito
-            $this->onSyncCompleted();
+            // Salir si el polling está deshabilitado
+            if (!$this->syncCheckEnabled) {
+                return;
+            }
+
+            // Obtener el timestamp actual de last_sync
+            $currentSync = $this->selectedAccount->last_sync;
+
+            // Si no hay sincronización registrada, salir
+            if (!$currentSync) {
+                return;
+            }
+
+            // Verificar si last_sync cambió desde la última verificación
+            if ($currentSync != $this->lastKnownSync) {
+
+                // Solo actualizar si la sincronización fue reciente (últimos 5 minutos)
+                if ($currentSync->greaterThan(now()->subMinutes(5))) {
+
+                    Log::info("🔄 Sincronización detectada para cuenta {$this->selectedAccount->id}");
+
+                    // ✅ INVALIDAR CACHÉ
+                    Cache::forget("account_stats_{$this->selectedAccount->id}");
+                    Cache::forget("balance_chart_{$this->selectedAccount->id}_all");
+                    Cache::forget("balance_chart_{$this->selectedAccount->id}_1h");
+                    Cache::forget("balance_chart_{$this->selectedAccount->id}_24h");
+                    Cache::forget("balance_chart_{$this->selectedAccount->id}_7d");
+
+                    // ✅ REFRESCAR MODELO DESDE BD
+                    $this->selectedAccount->refresh();
+
+                    // ✅ RECALCULAR TODO
+                    $this->updateData();
+
+                    // ✅ GUARDAR TIMESTAMP PARA NO REPETIR
+                    $this->lastKnownSync = $currentSync;
+
+                    // ✅ NOTIFICAR AL USUARIO
+                    $this->dispatch('show-alert', [
+                        'type' => 'success',
+                        'message' => 'Nuevas operaciones detectadas. Datos actualizados automáticamente.'
+                    ]);
+
+                    Log::info("✅ Datos actualizados para cuenta {$this->selectedAccount->id}");
+                }
+            }
+        } catch (Exception $e) {
+            Log::error('checkSyncStatus ERROR:', [
+                'message' => $e->getMessage(),
+                'account_id' => $this->selectedAccount?->id
+            ]);
+            // No mostramos error al usuario para no interrumpir la UX
         }
     }
 
-    private function formatDuration($minutes)
-    {
-        $hours = floor($minutes / 60);
-        $mins = $minutes % 60;
-        return $hours > 0 ? sprintf('%dh %02dm', $hours, $mins) : $mins . 'm';
-    }
 
 
-
-
-    public function syncSelectedAccount(): void
-    {
-        // 1. Marcamos un estado interno en la base de datos
-        $this->selectedAccount->update([
-            'sync_error' => false,
-            'sync_error_message' => 'WAITING_JOB', // <- Nuestra bandera
-        ]);
-
-        $this->isSyncing = true;
-
-        // Guardamos el momento exacto DESPUÉS del update inicial
-        $this->selectedAccount = $this->selectedAccount->fresh();
-        $this->syncStartTime = $this->selectedAccount->updated_at;
-
-        Log::info("Iniciando sync para cuenta ID: " . $this->selectedAccount->id);
-
-        SyncMt5Account::dispatch($this->selectedAccount);
-    }
 
     public function changeAccount($accountId)
     {
-        $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
-        $this->changeCurrency();
-        $this->updateData();
-        $this->resetPage();
-        $this->dispatch('timeframe-updated', timeframe: 'all');
+        try {
+            $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
+            // ✅ RESETEAR TIMESTAMP AL CAMBIAR CUENTA
+            $this->lastKnownSync = $this->selectedAccount?->last_sync;
+            $this->changeCurrency();
+            $this->updateData();
+            $this->resetPage();
+            $this->dispatch('timeframe-updated', timeframe: 'all');
+        } catch (Exception $e) {
+            $this->logError($e, 'changeAccount', 'AccountPage', "Error al cambiar a cuenta {$accountId}");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar la cuenta. Mostrando la primera disponible.'
+            ]);
+        }
     }
 
 
 
-    // * Actualizar la data
+    /**
+     * Actualiza todos los datos de la cuenta seleccionada
+     * Con DB Transaction y Caché
+     */
     private function updateData()
     {
-        if ($this->selectedAccount) {
-            $this->totalPnl = $this->selectedAccount->trades()->sum('pnl');
-            $this->initialBalance = $this->selectedAccount->initial_balance;
-
-
-            // 2. Calculamos el balance teórico
-            $theoreticalBalance = $this->initialBalance + $this->totalPnl;
-
-            if (is_null($this->selectedAccount->last_sync)) {
-                if ($this->selectedAccount->current_balance != $theoreticalBalance) {
-                    $this->selectedAccount->update([
-                        'current_balance' => $theoreticalBalance
-                    ]);
-                }
+        try {
+            if (!$this->selectedAccount) {
+                return;
             }
 
+            // ========================================
+            // 1. ACTUALIZAR BALANCE TEÓRICO (DB Transaction)
+            // ========================================
+            DB::transaction(function () {
+                $this->totalPnl = $this->selectedAccount->trades()->sum('pnl');
+                $this->initialBalance = $this->selectedAccount->initial_balance;
+                $theoreticalBalance = $this->initialBalance + $this->totalPnl;
+
+                // Solo actualizar si no hay sincronización activa
+                if (is_null($this->selectedAccount->last_sync)) {
+                    if ($this->selectedAccount->current_balance != $theoreticalBalance) {
+                        $this->selectedAccount->update([
+                            'current_balance' => $theoreticalBalance
+                        ]);
+                    }
+                }
+            });
+
+            // ========================================
+            // 2. CALCULAR ESTADÍSTICAS (Con Caché)
+            // ========================================
             $this->calculateStatistics();
+
+            // ========================================
+            // 3. CARGAR GRÁFICO (Con Caché)
+            // ========================================
             $this->loadBalanceChart();
+
+            // ========================================
+            // 4. BALANCE TOTAL Y % BENEFICIO
+            // ========================================
+            $initial = (float) $this->selectedAccount->initial_balance;
+            $current = (float) $this->selectedAccount->current_balance;
+
+            $this->totalProfitLoss = $current - $initial;
+
+            if ($initial > 0) {
+                $this->profitPercentage = ($this->totalProfitLoss / $initial) * 100;
+            } else {
+                $this->profitPercentage = 0;
+            }
+
+            // ========================================
+            // 5. ACTUALIZAR ID Y DISPARAR EVENTO
+            // ========================================
+            $this->selectedAccountId = $this->selectedAccount->id;
+            $this->dispatch('account-change', timeframe: 'all');
+        } catch (Exception $e) {
+            $this->logError($e, 'updateData', 'AccountPage', 'Error actualizando datos de cuenta');
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al cargar los datos de la cuenta. Por favor, recarga la página.'
+            ]);
         }
-        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
-        $this->dispatch('account-change', timeframe: 'all');
     }
 
     private function calculateStatistics()
     {
-        $trades = $this->selectedAccount->trades();
 
-        // Query eficiente UNA SOLA VEZ para todas las stats
-        $stats = $trades->selectRaw('
-        COUNT(*) as total_trades,
-        SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning_trades,
-        AVG(duration_minutes) as avg_duration_minutes,
-        MAX(pnl) as max_win,
-        MIN(pnl) as max_loss')->first();
+        try {
+            $action = new CalculateAccountStatistics();
+            $stats = $action->execute($this->selectedAccount);
 
-        $this->totalTrades = $stats->total_trades; // Total de Trades
-        $this->winRate = $this->totalTrades > 0 ? round(($stats->winning_trades / $this->totalTrades) * 100, 1) : 0; // % de trades ganadores
+            // Mapear resultados a propiedades públicas
+            $this->totalTrades = $stats['totalTrades'];
+            $this->winRate = $stats['winRate'];
+            $this->avgDurationMinutes = $stats['avgDurationMinutes'];
+            $this->avgDurationFormatted = $stats['avgDurationFormatted'];
+            $this->maxWin = $stats['maxWin'];
+            $this->maxLoss = $stats['maxLoss'];
+            $this->avgWinTrade = $stats['avgWinTrade'];
+            $this->avgLossTrade = $stats['avgLossTrade'];
+            $this->arr = $stats['arr'];
+            $this->topAsset = $stats['topAsset'];
+            $this->tradingDays = $stats['tradingDays'];
+            $this->grossProfit = $stats['grossProfit'];
+            $this->grossLoss = $stats['grossLoss'];
+            $this->profitFactor = $stats['profitFactor'];
+            $this->firstTradeDate = $stats['firstTradeDate'];
+            $this->accountAgeDays = $stats['accountAgeDays'];
+            $this->accountAgeFormatted = $stats['accountAgeFormatted'];
+        } catch (Exception $e) {
+            $this->logError($e, 'calculateStatistics', 'AccountPage', 'Error calculando estadísticas');
 
-        // Tiempo medio retención
-        $this->avgDurationMinutes = round($stats->avg_duration_minutes ?? 0);
-        $this->avgDurationFormatted = $this->formatDuration($this->avgDurationMinutes);
-
-        // 🆕 Ganancia y pérdida más grandes
-        $this->maxWin = $stats->max_win ?? 0;
-        $this->maxLoss = abs($stats->max_loss ?? 0); // Positivo para mostrar
-
-        // 🆕 1. SÍMBOLO MÁS OPERADO
-        $topAsset = $this->selectedAccount->trades()
-            ->join('trade_assets', 'trades.trade_asset_id', '=', 'trade_assets.id')
-            ->whereNotNull('trades.exit_time')
-            ->selectRaw('trade_assets.symbol, COUNT(*) as trade_count')
-            ->groupBy('trade_assets.id', 'trade_assets.symbol')
-            ->orderByDesc('trade_count')
-            ->first();
-
-        $this->topAsset = $topAsset ? $topAsset->symbol : 'N/A';
-
-        // 🆕 DÍAS DE TRADING (día con al menos 1 entry_time)
-        $tradingDays = $this->selectedAccount->trades()
-            ->whereNotNull('entry_time')
-            ->selectRaw('COUNT(DISTINCT DATE(entry_time)) as trading_days')
-            ->value('trading_days');
-
-        $this->tradingDays = $tradingDays ?? 0;
-
-        // 🆕 Ganancia y Pérdida MEDIA (sin ARRR)
-        $avgStats = $this->selectedAccount->trades()
-            ->whereNotNull('exit_time')
-            ->whereNotNull('pnl')
-            ->selectRaw('
-            AVG(CASE WHEN pnl > 0 THEN pnl END) as avg_win,
-            AVG(CASE WHEN pnl < 0 THEN ABS(pnl) END) as avg_loss_abs
-        ')
-            ->first();
-
-        $this->avgWinTrade = round($avgStats->avg_win ?? 0, 2);
-        $this->avgLossTrade = round($avgStats->avg_loss_abs ?? 0, 2);
-
-        // ARRR calculado a partir de medias
-        $this->arr = $this->avgLossTrade > 0 ?
-            round($this->avgWinTrade / $this->avgLossTrade, 2) : 0;
-
-        // 🆕 ANTIGÜEDAD DE LA CUENTA (días desde funded_date)
-        if ($this->selectedAccount->funded_date) {
-            $accountAgeDays = Carbon::parse($this->selectedAccount->funded_date)
-                ->diffInDays(now());
-
-            $this->accountAgeDays = $accountAgeDays;
-            $this->accountAgeFormatted = $this->formatAge($accountAgeDays);
-        } else {
-            $this->accountAgeDays = 0;
-            $this->accountAgeFormatted = 'N/A';
-        }
-
-
-        // 🆕 FACTOR DE BENEFICIO (Profit Factor)
-        $profitFactorStats = $this->selectedAccount->trades()
-            ->whereNotNull('exit_time')
-            ->whereNotNull('pnl')
-            ->selectRaw('
-            SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) as gross_profit,
-            SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END) as gross_loss
-        ')
-            ->first();
-
-        $this->grossProfit = round($profitFactorStats->gross_profit ?? 0, 2);
-        $this->grossLoss = round($profitFactorStats->gross_loss ?? 0, 2);
-
-        // Profit Factor = Gross Profit / Gross Loss
-        $this->profitFactor = $this->grossLoss > 0 ?
-            round($this->grossProfit / $this->grossLoss, 4) : 0;  // 4 decimales como 0.7892
-
-        //  Primer trade
-        $firstTrade = $this->selectedAccount->trades()
-            ->whereNotNull('entry_time')
-            ->orderBy('entry_time', 'asc')
-            ->select('entry_time')->first();
-
-        $this->firstTradeDate = $firstTrade ? Carbon::parse($firstTrade->entry_time) : null;
-
-
-        // PNL Total y % de beneficio
-        // 1. Cálculo de Beneficio/Pérdida Absoluto
-        $initial = (float) $this->selectedAccount->initial_balance;
-        $current = (float) $this->selectedAccount->current_balance;
-
-        // 1. Cálculo de Beneficio/Pérdida Absoluto
-        $this->totalProfitLoss = $current - $initial;
-
-        // 2. Cálculo de Porcentaje
-        // Fórmula: ((Actual - Inicial) / Inicial) * 100
-        if ($initial > 0) {
-            $this->profitPercentage = ($this->totalProfitLoss / $initial) * 100;
-        } else {
-            $this->profitPercentage = 0;
+            // Valores seguros por defecto
+            $this->totalTrades = 0;
+            $this->winRate = 0;
+            $this->topAsset = 'N/A';
         }
     }
 
-    private function formatAge($days)
-    {
-        // 1. Limpiamos los decimales (6.62 -> 6)
-        $days = (int) floor($days);
-
-        // 2. Lógica de Años
-        if ($days >= 365) {
-            $years = floor($days / 365);
-            $remainingDays = $days % 365;
-            return $years . 'a ' . $remainingDays . 'd';
-        }
-
-        // 3. Lógica de Meses (aprox 30 días)
-        if ($days >= 30) {
-            $months = floor($days / 30);
-            $remainingDays = $days % 30;
-            return $months . 'm ' . $remainingDays . 'd';
-        }
-
-        // 4. Días sueltos
-        return $days . ' días';
-    }
-
-
-
-
+    /**
+     * Carga datos del gráfico usando Action Class (Optimizado con SQL)
+     */
     private function loadBalanceChart()
     {
-        // 1. Configurar Fecha de Corte (Igual que antes)
-        $cutoffDate = null;
-        if ($this->selectedTimeframe !== 'all') {
-            $config = $this->timeframes[$this->selectedTimeframe];
-            if (isset($config['minutes'])) $cutoffDate = now()->subMinutes($config['minutes']);
-            elseif (isset($config['hours'])) $cutoffDate = now()->subHours($config['hours']);
-            elseif (isset($config['days'])) $cutoffDate = now()->subDays($config['days']);
-        }
+        try {
+            $action = new GenerateBalanceChartData();
+            $this->balanceChartData = $action->execute($this->selectedAccount, $this->selectedTimeframe);
+        } catch (Exception $e) {
+            $this->logError($e, 'loadBalanceChart', 'AccountPage', 'Error generando gráfico de balance');
 
-        // 2. Calcular Balance Inicial (Igual que antes)
-        if ($cutoffDate) {
-            $priorPnl = $this->selectedAccount->trades()
-                ->where('exit_time', '<', $cutoffDate)
-                ->sum('pnl');
-
-            $startBalance = $this->selectedAccount->initial_balance + $priorPnl;
-            $startLabel = $cutoffDate->format('H:i');
-        } else {
-            $startBalance = $this->selectedAccount->initial_balance;
-            $startLabel = 'Inicio';
-        }
-
-        // 3. Obtener Trades
-        $trades = $this->selectedAccount->trades()
-            ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
-            ->orderBy('exit_time', 'asc')
-            ->get();
-
-        // 4. Inicializar Arrays para las 3 Líneas
-        $labels = [$startLabel];
-        $balanceData = [(float) round($startBalance, 2)];
-        $minEquityData = [(float) round($startBalance, 2)]; // MAE (Suelo)
-        $maxEquityData = [(float) round($startBalance, 2)]; // MFE (Techo)
-
-        $runningBalance = $startBalance;
-
-        if ($trades->isNotEmpty()) {
-            // Agrupar trades según timeframe
-            $groupedTrades = $trades->groupBy(function ($trade) {
-                return match ($this->selectedTimeframe) {
-                    '1h' => $trade->exit_time->format('H:i'),
-                    '24h' => $trade->exit_time->format('H:00'),
-                    '7d' => $trade->exit_time->format('d/m H:00'),
-                    default => $trade->exit_time->format('d M'),
-                };
-            });
-
-            foreach ($groupedTrades as $timeLabel => $group) {
-
-                $intervalPnl = $group->sum('pnl');
-
-                // Inicializamos los extremos con el balance actual antes de cerrar este grupo
-                $currentMinEquity = $runningBalance;
-                $currentMaxEquity = $runningBalance;
-
-                foreach ($group as $trade) {
-                    $priceDiff = abs($trade->exit_price - $trade->entry_price);
-
-                    // Solo calculamos si hubo movimiento y tenemos datos MAE/MFE
-                    if ($priceDiff > 0 && abs($trade->pnl) > 0) {
-
-                        // MATEMÁTICAS: Calculamos cuánto vale 1 punto de precio en dinero real
-                        // Fórmula: PnL Total / Distancia Recorrida
-                        $valuePerPoint = abs($trade->pnl) / $priceDiff;
-
-                        // --- LÓGICA MAE (Riesgo / Miedo) ---
-                        // ¿Cuánto dinero llegué a ir perdiendo?
-                        if ($trade->mae_price) {
-                            $distToMae = abs($trade->entry_price - $trade->mae_price);
-                            $floatingLoss = -1 * ($distToMae * $valuePerPoint);
-
-                            // El balance más bajo posible fue mi saldo actual + la pérdida flotante máxima
-                            $potentialLow = $runningBalance + $floatingLoss;
-                            if ($potentialLow < $currentMinEquity) $currentMinEquity = $potentialLow;
-                        }
-
-                        // --- LÓGICA MFE (Potencial / Avaricia) ---
-                        // ¿Cuánto dinero llegué a ir ganando?
-                        if ($trade->mfe_price) {
-                            $distToMfe = abs($trade->entry_price - $trade->mfe_price);
-                            $floatingProfit = $distToMfe * $valuePerPoint;
-
-                            // El balance más alto posible fue mi saldo actual + la ganancia flotante máxima
-                            $potentialHigh = $runningBalance + $floatingProfit;
-                            if ($potentialHigh > $currentMaxEquity) $currentMaxEquity = $potentialHigh;
-                        }
-                    }
-                }
-
-                // Avanzamos el balance "Real" (Línea Verde)
-                $runningBalance += $intervalPnl;
-
-                // Guardamos los puntos en el gráfico
-                $labels[] = $timeLabel;
-                $balanceData[] = round($runningBalance, 2);
-
-                // Guardamos los extremos (Equity)
-                // Usamos min/max para asegurar que la línea roja no supere a la verde en caso de gaps raros
-                // y que la línea azul no esté por debajo de la verde.
-                $minEquityData[] = round(min($currentMinEquity, $runningBalance), 2);
-                $maxEquityData[] = round(max($currentMaxEquity, $runningBalance), 2);
-            }
-        } else {
-            // Línea plana si no hay trades
-            $labels[] = now()->format('H:i');
-            $balanceData[] = round($startBalance, 2);
-            $minEquityData[] = round($startBalance, 2);
-            $maxEquityData[] = round($startBalance, 2);
-        }
-
-        // 6. Empaquetar para ApexCharts
-        $this->balanceChartData = [
-            'categories' => $labels,
-            'series' => [
-                [
-                    'name' => __('labels.max_potencial'),
-                    'data' => $maxEquityData
-                ],
-                [
-                    'name' => __('labels.balance_real'),
-                    'data' => $balanceData
-                ],
-                [
-                    'name' => __('labels.min_risk'),
-                    'data' => $minEquityData
+            // Gráfico vacío seguro
+            $this->balanceChartData = [
+                'categories' => ['Inicio'],
+                'series' => [
+                    ['name' => 'Balance', 'data' => [0]]
                 ]
-            ]
-        ];
+            ];
+        }
     }
-
 
     public function showAlert($type, $message)
     {
@@ -585,200 +500,270 @@ class AccountPage extends Component
     public function insertAccount()
     {
 
-        $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
+        try {
+            $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
 
-        // 3. Determinar el Objetivo Inicial (Fase 1 o Directo a Live)
-        // Esto depende de si el programa tiene fases o es "Instant Funded"
-        $initialPhase = 1; // Por defecto empezamos en Fase 1
+            // 3. Determinar el Objetivo Inicial (Fase 1 o Directo a Live)
+            // Esto depende de si el programa tiene fases o es "Instant Funded"
+            $initialPhase = 1; // Por defecto empezamos en Fase 1
 
 
-        if ($level->program->step_count === 0) {
-            // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
-            $initialPhase = 0;
+            if ($level->program->step_count === 0) {
+                // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
+                $initialPhase = 0;
+            }
+
+            // Buscamos el objetivo correspondiente en la BD
+            $objective = $level->objectives()
+                ->where('phase_number', $initialPhase)
+                ->first();
+
+            if (!$objective) {
+                // Seguridad por si el Seeder falló o faltan datos
+                throw new Exception(__('labels.objectives_not_found'));
+            }
+
+            // 4. Crear la cuenta
+            $account = Account::create([
+                'user_id' => Auth::user()->id,
+                'name' => $this->form->name, // El nombre que puso el usuario
+                'type' => 'prop_firm',
+                'status' => 'active',
+
+                // Vinculaciones Clave
+                'program_level_id' => $level->id,
+                'program_objective_id' => $objective->id, // <--- Aquí guardamos las reglas actuales
+
+                // Datos Técnicos (MT5)
+                'platform' => $this->form->platformBroker ?? 'mt5',
+                'mt5_login' => $this->form->loginPlatform,
+                'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
+                'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
+
+                // Datos Financieros (Vienen del Nivel, no del usuario)
+                'currency' => $level->currency,
+                'initial_balance' => $level->size,
+                'current_balance' => $level->size, // Al principio son iguales
+                'sync' => $this->form->sync,
+
+                // Fechas
+            ]);
+
+            // ✅ INVALIDAR CACHÉ
+            Cache::forget("account_stats_{$account->id}");
+            Cache::forget("balance_chart_{$account->id}_all");
+            Cache::forget("balance_chart_{$account->id}_{$this->selectedTimeframe}");
+
+            $this->form->reset();
+
+            $user = Auth::user();
+            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
+            $this->selectedAccount = $account; // ← Array[0]
+            $this->changeCurrency();
+            $this->dispatch('account-created');
+            $this->updateData();
+        } catch (Exception $e) {
+            $this->logError($e, 'insertAccount', 'AccountPage', "Error al insertar cuenta");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al crear una nueva cuenta. Mostrando la primera disponible.'
+            ]);
         }
-
-        // Buscamos el objetivo correspondiente en la BD
-        $objective = $level->objectives()
-            ->where('phase_number', $initialPhase)
-            ->first();
-
-        if (!$objective) {
-            // Seguridad por si el Seeder falló o faltan datos
-            throw new \Exception(__('labels.objectives_not_found'));
-        }
-
-        // 4. Crear la cuenta
-        $account = Account::create([
-            'user_id' => Auth::user()->id,
-            'name' => $this->form->name, // El nombre que puso el usuario
-            'type' => 'prop_firm',
-            'status' => 'active',
-
-            // Vinculaciones Clave
-            'program_level_id' => $level->id,
-            'program_objective_id' => $objective->id, // <--- Aquí guardamos las reglas actuales
-
-            // Datos Técnicos (MT5)
-            'platform' => $this->form->platformBroker ?? 'mt5',
-            'mt5_login' => $this->form->loginPlatform,
-            'mt5_password' => encrypt($this->form->passwordPlatform),
-            'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
-            'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
-
-            // Datos Financieros (Vienen del Nivel, no del usuario)
-            'currency' => $level->currency,
-            'initial_balance' => $level->size,
-            'current_balance' => $level->size, // Al principio son iguales
-            'sync' => $this->form->sync,
-
-            // Fechas
-        ]);
-
-        $this->form->reset();
-
-        $user = Auth::user();
-        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-        $this->selectedAccount = $account; // ← Array[0]
-        $this->changeCurrency();
-        $this->dispatch('account-created');
-        $this->updateData();
     }
 
     public function editAccount($id)
     {
-        // 1. Buscamos la cuenta y sus relaciones
-        $account = Account::with('programLevel.program.propFirm')->findOrFail($id);
 
-        // 2. Rellenamos el Form Object
-        $this->form->name = $account->name;
-        $this->form->sync = $account->sync;
-        $this->form->platformBroker = $account->platform;
-        $this->form->loginPlatform = $account->mt5_login;
-        $this->form->server = $account->mt5_server;
-        // No enviamos la password por seguridad, si la deja vacía no se cambia
-        $this->form->passwordPlatform = '';
+        try {
+            // 1. Buscamos la cuenta y sus relaciones
+            $account = Account::with('programLevel.program.propFirm')->findOrFail($id);
 
-        // 3. Recuperamos los IDs para los Selects en Cascada
-        // Account -> Level -> Program -> Firm
-        $level = $account->programLevel;
+            // 2. Rellenamos el Form Object
+            $this->form->name = $account->name;
+            $this->form->sync = $account->sync;
+            $this->form->platformBroker = $account->platform;
+            $this->form->loginPlatform = $account->mt5_login;
+            $this->form->server = $account->mt5_server;
+            // No enviamos la password por seguridad, si la deja vacía no se cambia
+            $this->form->passwordPlatform = '';
 
-        $this->form->selectedPropFirmID = $level->program->prop_firm_id;
-        $this->form->selectedProgramID = $level->program_id;
-        $this->form->size = $level->size; // Ojo, asegúrate de que 'size' en el select sea el valor numérico
-        $this->form->programLevelID = $level->id;
+            // 3. Recuperamos los IDs para los Selects en Cascada
+            // Account -> Level -> Program -> Firm
+            $level = $account->programLevel;
 
-        // 4. Enviamos evento al Frontend para abrir modal y llenar Alpine
-        $this->dispatch('open-modal-edit', [
-            'data' => [
-                'accountId' => $account->id,
-                'name' => $this->form->name,
-                'firmId' => $this->form->selectedPropFirmID,
-                'programId' => $this->form->selectedProgramID,
-                'size' => $this->form->size,
-                'levelId' => $this->form->programLevelID,
-                'sync' => $this->form->sync,
-                'platform' => $this->form->platformBroker,
-                'login' => $this->form->loginPlatform,
-                'server' => $this->form->server
-            ]
-        ]);
+            $this->form->selectedPropFirmID = $level->program->prop_firm_id;
+            $this->form->selectedProgramID = $level->program_id;
+            $this->form->size = $level->size; // Ojo, asegúrate de que 'size' en el select sea el valor numérico
+            $this->form->programLevelID = $level->id;
+
+            // 4. Enviamos evento al Frontend para abrir modal y llenar Alpine
+            $this->dispatch('open-modal-edit', [
+                'data' => [
+                    'accountId' => $account->id,
+                    'name' => $this->form->name,
+                    'firmId' => $this->form->selectedPropFirmID,
+                    'programId' => $this->form->selectedProgramID,
+                    'size' => $this->form->size,
+                    'levelId' => $this->form->programLevelID,
+                    'sync' => $this->form->sync,
+                    'platform' => $this->form->platformBroker,
+                    'login' => $this->form->loginPlatform,
+                    'server' => $this->form->server
+                ]
+            ]);
+        } catch (Exception $e) {
+            $this->logError($e, 'editAccount', 'AccountPage', "Error al editar cuenta {$id}");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al editar la cuenta. Mostrando la primera disponible.'
+            ]);
+        }
     }
 
     public function updateAccount($id)
     {
-        // Lógica de validación y update...
-        $account = Account::find($id);
 
-        $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
+        try {
+            // Lógica de validación y update...
+            $account = Account::find($id);
 
-        $initialPhase = 1; // Por defecto empezamos en Fase 1
+            $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
 
-
-        if ($level->program->step_count === 0) {
-            // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
-            $initialPhase = 0;
-        }
-
-        // Buscamos el objetivo correspondiente en la BD
-        $objective = $level->objectives()
-            ->where('phase_number', $initialPhase)
-            ->first();
-
-        if (!$objective) {
-            // Seguridad por si el Seeder falló o faltan datos
-            throw new \Exception(__('labels.objectives_not_found'));
-        }
-
-        // ... update ...
-        $account->update([
-            'name' => $this->form->name,
-            'program_level_id' => $level->id,
-            'program_objective_id' => $objective->id,
-            'platform' => $this->form->platformBroker ?? 'mt5',
-            'mt5_login' => $this->form->loginPlatform,
-            'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
-            'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
-
-            'currency' => $level->currency,
-            'initial_balance' => $level->size,
-            'current_balance' => $level->size, // Al principio son iguales
-            'sync' => $this->form->sync,
-
-            // ... resto de campos ...
-        ]);
-        $account->save();
+            $initialPhase = 1; // Por defecto empezamos en Fase 1
 
 
-        if ($this->form->passwordPlatform) {
-            $account->mt5_password = encrypt($this->form->passwordPlatform);
+            if ($level->program->step_count === 0) {
+                // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
+                $initialPhase = 0;
+            }
+
+            // Buscamos el objetivo correspondiente en la BD
+            $objective = $level->objectives()
+                ->where('phase_number', $initialPhase)
+                ->first();
+
+            if (!$objective) {
+                // Seguridad por si el Seeder falló o faltan datos
+                throw new Exception(__('labels.objectives_not_found'));
+            }
+
+            // Calcular el nuevo current_balance basado en el cambio de initial_balance
+            $oldInitialBalance = $account->initial_balance;
+            $newInitialBalance = $level->size;
+            $balanceDifference = $newInitialBalance - $oldInitialBalance;
+
+            // Ajustar current_balance proporcionalmente
+            $newCurrentBalance = $account->current_balance + $balanceDifference;
+
+            // ... update ...
+            $account->update([
+                'name' => $this->form->name,
+                'program_level_id' => $level->id,
+                'program_objective_id' => $objective->id,
+                'platform' => $this->form->platformBroker ?? 'mt5',
+                'mt5_login' => $this->form->loginPlatform,
+                'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
+                'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
+
+                'currency' => $level->currency,
+                'initial_balance' => $level->size,
+                'current_balance' => $newCurrentBalance, // ✅ Ajustado, no reseteado
+                'sync' => $this->form->sync,
+
+                // ... resto de campos ...
+            ]);
             $account->save();
-        }
 
-        $this->dispatch('account-updated', timeframe: 'all'); // Cerrar modal y refrescar
-        $this->updateData();
+
+            // if ($this->form->passwordPlatform) {
+            //     $account->mt5_password = encrypt($this->form->passwordPlatform);
+            //     $account->save();
+            // }
+
+            // ✅ INVALIDAR CACHÉ
+            Cache::forget("account_stats_{$account->id}");
+            Cache::forget("balance_chart_{$account->id}_all");
+            Cache::forget("balance_chart_{$account->id}_1h");
+            Cache::forget("balance_chart_{$account->id}_24h");
+            Cache::forget("balance_chart_{$account->id}_7d");
+
+            $user = Auth::user();
+            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
+            $this->selectedAccount = $account; // ← Array[0]
+
+            $this->dispatch('account-updated', timeframe: 'all'); // Cerrar modal y refrescar
+            $this->updateData();
+        } catch (Exception $e) {
+            $this->logError($e, 'updateAccount', 'AccountPage', "Error al actualizar cuenta {$id}");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al actualizar la cuenta. Mostrando la primera disponible.'
+            ]);
+        }
     }
 
     public function deleteAccount($id)
     {
-        // 1. Seguridad: Verificar que sea del usuario
-        $account = Account::where('id', $id)->where('user_id', Auth::id())->first();
+        try {
+            // 1. Seguridad: Verificar que sea del usuario
+            $account = Account::where('id', $id)->where('user_id', Auth::id())->first();
 
-        if (!$account) {
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.account_not_found')]);
-            return;
+            if (!$account) {
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.account_not_found')]);
+                return;
+            }
+
+            // ✅ INVALIDAR CACHÉ ANTES DE BORRAR
+            Cache::forget("account_stats_{$account->id}");
+            Cache::forget("balance_chart_{$account->id}_all");
+            Cache::forget("balance_chart_{$account->id}_1h");
+            Cache::forget("balance_chart_{$account->id}_24h");
+            Cache::forget("balance_chart_{$account->id}_7d");
+
+            // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
+            $account->delete();
+
+            // 3. Lógica Post-Borrado
+            // Si la cuenta borrada era la seleccionada, cambiamos a la primera disponible
+            if ($this->selectedAccount && $this->selectedAccount->id == $id) {
+                $this->selectedAccount = Account::where('status', '!=', 'burned')
+                    ->where('user_id', Auth::id())
+                    ->orderBy('name')
+                    ->first();
+
+                $this->selectedAccountId = $this->selectedAccount?->id;
+            }
+
+            // 4. Refrescar datos y avisar
+            $user = Auth::user();
+            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
+            $this->selectedAccount = $this->accounts->first(); // ← Array[0]
+            $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
+            $this->changeCurrency();
+
+            $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
+            $this->dispatch('account-updated', timeframe: 'all'); // Recargar tabla y charts
+            $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_deleted')]);
+        } catch (Exception $e) {
+            $this->logError($e, 'deleteAccount', 'AccountPage', "Error al borrar cuenta {$id}");
+
+            // Fallback seguro
+            $this->selectedAccount = $this->accounts->first();
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => 'Error al borrar la cuenta. Mostrando la primera disponible.'
+            ]);
         }
-
-        // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
-        $account->delete();
-
-        // 3. Lógica Post-Borrado
-        // Si la cuenta borrada era la seleccionada, cambiamos a la primera disponible
-        if ($this->selectedAccount && $this->selectedAccount->id == $id) {
-            $this->selectedAccount = Account::where('status', '!=', 'burned')
-                ->where('user_id', Auth::id())
-                ->orderBy('name')
-                ->first();
-
-            $this->selectedAccountId = $this->selectedAccount?->id;
-        }
-
-        // 4. Refrescar datos y avisar
-        $user = Auth::user();
-        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-        $this->selectedAccount = $this->accounts->first(); // ← Array[0]
-        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
-        $this->changeCurrency();
-
-        $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
-        $this->dispatch('account-updated', timeframe: 'all'); // Recargar tabla y charts
-        $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_deleted')]);
     }
-
-
-
-
-
-
 
     public function render()
     {

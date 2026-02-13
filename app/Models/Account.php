@@ -11,6 +11,7 @@ class Account extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
+        'last_sync' => 'datetime',
         'initial_balance' => 'decimal:2',
         'current_balance' => 'decimal:2',
         'max_balance' => 'decimal:2',
