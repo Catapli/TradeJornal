@@ -22,6 +22,7 @@
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.9",
         "livewire/livewire": "^3.0",
+        "spatie/laravel-image-optimizer": "^1.8",
         "yajra/laravel-datatables-oracle": "^11.1"
     },
     "require-dev": {

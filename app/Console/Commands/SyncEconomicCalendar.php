@@ -4,99 +4,196 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\EconomicEvent;
-use Illuminate\Support\Facades\Http;
+use App\Services\RapidAPICalendarService;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class SyncEconomicCalendar extends Command
 {
-    protected $signature = 'calendar:sync'; // El nombre para ejecutarlo manualmente
-    protected $description = 'Sincroniza el calendario económico desde ForexFactory';
+    protected $signature = 'calendar:sync {--days=30 : Días hacia el futuro a sincronizar}';
+    protected $description = 'Sincroniza el calendario económico desde RapidAPI (Ultimate Economic Calendar)';
 
-    public function handle()
+    private array $majors = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'];
+    private RapidAPICalendarService $calendarService;
+
+    public function __construct(RapidAPICalendarService $calendarService)
     {
-        $this->info('Iniciando sincronización con ForexFactory...');
+        parent::__construct();
+        $this->calendarService = $calendarService;
+    }
 
-        $url = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml";
+    public function handle(): int
+    {
+        $startTime = microtime(true);
+        $this->info('🔄 Iniciando sincronización con RapidAPI Ultimate Economic Calendar...');
 
         try {
-            // Tu misma lógica HTTP Anti-Bloqueo
-            $response = Http::withoutVerifying()
-                ->withOptions(["verify" => false])
-                ->withHeaders([
-                    'User-Agent'      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language' => 'en-US,en;q=0.9',
-                    'Referer'         => 'https://www.forexfactory.com/', // Vital para saltar protecciones
-                    'Origin'          => 'https://www.forexfactory.com',
-                    'Connection'      => 'keep-alive',
-                    'Upgrade-Insecure-Requests' => '1',
-                    'Cache-Control'   => 'no-cache',
-                ])
-                ->timeout(30)
-                ->get($url);
+            $days = (int) $this->option('days');
+            $from = now()->startOfDay();
+            $to = now()->addDays($days)->endOfDay();
 
-            if ($response->failed()) {
-                $this->error('Error HTTP al conectar.');
-                return;
+            $this->info("📅 Rango: {$from->format('Y-m-d')} → {$to->format('Y-m-d')} ({$days} días)");
+            $this->info("🌍 Currencies: " . implode(', ', $this->majors));
+
+            // 🔥 Fetch eventos vía Service
+            $events = $this->calendarService->fetchEvents($from, $to, $this->majors);
+            $this->info("📦 Recibidos: {$events->count()} eventos de RapidAPI");
+
+            if ($events->isEmpty()) {
+                $this->warn('⚠️  No se recibieron eventos. Verifica la API key y los parámetros.');
+                return Command::SUCCESS;
             }
 
-            $xml = @simplexml_load_string($response->body());
-            if (!$xml) {
-                $this->error('XML inválido.');
-                return;
-            }
+            // 🔥 Procesar y guardar
+            $stats = $this->processAndSaveEvents($events);
 
-            $majors = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'];
-            $count = 0;
+            // 🔥 Métricas de performance
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            foreach ($xml->event as $item) {
-                $currency = (string)$item->country;
-                if (!in_array($currency, $majors)) continue;
+            $this->info("✅ Sincronización completada:");
+            $this->info("   • Nuevos: {$stats['created']}");
+            $this->info("   • Actualizados: {$stats['updated']}");
+            $this->info("   • Omitidos: {$stats['skipped']}");
+            $this->info("   • Duración: {$duration}ms");
 
-                // Tu lógica de parseo de fechas exacta
-                $dateString = (string)$item->date;
-                $timeString = (string)$item->time;
+            Log::info("Cron Calendario RapidAPI ejecutado", array_merge($stats, [
+                'duration_ms' => $duration,
+                'avg_per_event_ms' => $events->count() > 0 ? round($duration / $events->count(), 2) : 0,
+            ]));
 
-                try {
-                    if (str_contains($timeString, 'Day')) {
-                        $dt = Carbon::createFromFormat('m-d-Y', $dateString)->startOfDay();
-                    } else {
-                        $dt = Carbon::createFromFormat('m-d-Y g:ia', $dateString . ' ' . $timeString);
-                    }
-                } catch (\Exception $e) {
+            return Command::SUCCESS;
+        } catch (\Exception $e) {
+            $this->error('❌ Error: ' . $e->getMessage());
+            Log::error('Cron Calendario RapidAPI falló', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Procesa y guarda eventos (incremental con updateOrCreate)
+     */
+    private function processAndSaveEvents($events): array
+    {
+        $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0];
+
+        $bar = $this->output->createProgressBar($events->count());
+        $bar->start();
+
+        foreach ($events as $item) {
+            try {
+                // 1️⃣ Extraer y validar divisa
+                $currency = $this->calendarService->mapCountryToCurrency(
+                    $item['country_code'] ?? ''
+                );
+
+                if (!$currency || !in_array($currency, $this->majors)) {
+                    $stats['skipped']++;
+                    $bar->advance();
                     continue;
                 }
 
-                $impactStr = strtolower((string)$item->impact);
-                $impactMap = ['high' => 'high', 'medium' => 'medium', 'low' => 'low'];
-                $impact = $impactMap[$impactStr] ?? 'low';
+                // 2️⃣ Parsear fecha/hora
+                $datetime = $this->parseDateTime($item['datetime']);
+                if (!$datetime) {
+                    Log::warning('Fecha inválida', ['item' => $item]);
+                    $stats['skipped']++;
+                    $bar->advance();
+                    continue;
+                }
 
-                // GUARDADO SIN USER_ID
-                EconomicEvent::updateOrCreate(
-                    [
-                        // Claves para identificar si ya existe (Unique Index)
-                        'date'     => $dt->format('Y-m-d'),
-                        'time'     => $dt->format('H:i:s'),
-                        'currency' => $currency,
-                        'event'    => (string)$item->title,
-                    ],
-                    [
-                        'impact'   => $impact,
-                        'forecast' => (string)$item->forecast,
-                        'previous' => (string)$item->previous,
-                        // Al correrse diario, esto actualizará el dato real cuando salga
-                        'actual'   => (string)$item->forecast == '' ? null : (string)$item->forecast // Ojo: el XML a veces trae el actual
-                    ]
-                );
-                $count++;
+                // 3️⃣ Preparar datos según schema de TradeForge
+                $eventData = [
+                    'date' => $datetime->format('Y-m-d'),
+                    'time' => $datetime->format('H:i:s'),
+                    'currency' => $currency,
+                    'event' => $this->sanitizeEventName($item['event_name']),
+                ];
+
+                $updateData = [
+                    'impact' => $this->calendarService->mapImpactToEnum($item['impact']),
+                    'forecast' => $this->sanitizeNumeric($item['forecast']),
+                    'previous' => $this->sanitizeNumeric($item['previous']),
+                    'actual' => $this->sanitizeNumeric($item['actual']),
+                ];
+
+                // 4️⃣ updateOrCreate (respeta unique index)
+                $event = EconomicEvent::updateOrCreate($eventData, $updateData);
+
+                if ($event->wasRecentlyCreated) {
+                    $stats['created']++;
+                } else {
+                    $stats['updated']++;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error procesando evento individual', [
+                    'item' => $item,
+                    'error' => $e->getMessage()
+                ]);
+                $stats['skipped']++;
             }
 
-            $this->info("Sincronización completada: $count eventos procesados.");
-            Log::info("Cron Calendario: $count eventos.");
-        } catch (\Exception $e) {
-            $this->error('Excepción: ' . $e->getMessage());
-            Log::error('Cron Calendario Error: ' . $e->getMessage());
+            $bar->advance();
         }
+
+        $bar->finish();
+        $this->newLine(2);
+
+        return $stats;
+    }
+
+    /**
+     * Parsea datetime (múltiples formatos soportados)
+     */
+    private function parseDateTime(?string $datetime): ?Carbon
+    {
+        if (!$datetime) {
+            return null;
+        }
+
+        try {
+            // Si es timestamp numérico
+            if (is_numeric($datetime)) {
+                return Carbon::createFromTimestamp((int) $datetime);
+            }
+
+            // Si es string ISO o formato común
+            return Carbon::parse($datetime);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Sanitiza nombre del evento
+     */
+    private function sanitizeEventName(?string $name): string
+    {
+        if (!$name) {
+            return 'Unknown Event';
+        }
+
+        return trim(preg_replace('/\s+/', ' ', $name));
+    }
+
+    /**
+     * Sanitiza valores numéricos
+     */
+    private function sanitizeNumeric(?string $value): ?string
+    {
+        if ($value === null || $value === '' || $value === '-') {
+            return null;
+        }
+
+        // Quitar símbolos: %, K, M, B, commas, espacios
+        $cleaned = preg_replace('/[%KMB,\s]/', '', $value);
+
+        // Permitir negativos y decimales
+        $cleaned = preg_replace('/[^0-9.\-]/', '', $cleaned);
+
+        return is_numeric($cleaned) ? $cleaned : null;
     }
 }

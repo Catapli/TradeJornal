@@ -46,5 +46,12 @@ return [
         'monthly' => env('STRIPE_PRICE_MONTHLY'),
         'yearly' => env('STRIPE_PRICE_YEARLY'),
     ],
+    'rapidapi' => [
+        'key' => env('RAPIDAPI_KEY'),
+        'host' => env('RAPIDAPI_HOST', 'ultimate-economic-calendar.p.rapidapi.com'),
+        'base_url' => 'https://ultimate-economic-calendar.p.rapidapi.com',
+    ],
+
+
 
 ];
