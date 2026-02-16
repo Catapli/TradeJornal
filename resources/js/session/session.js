@@ -308,6 +308,11 @@ document.addEventListener("alpine:init", () => {
                         this.metrics = data.metrics;
                         this.events = data.events || [];
 
+                        // ✅ IMPORTANTE: Si sync trae más trades, resetear manual
+                        if (this.metrics.count >= this.manualTradeCount) {
+                            this.manualTradeCount = 0; // Reset porque sync prevalece
+                        }
+
                         // ✅ Actualizar timestamp de última sync
                         this.lastSyncTime = new Date();
                         this.syncErrors = 0; // Reset contador de errores

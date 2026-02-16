@@ -137,6 +137,7 @@
                                             {{ $selectedTrade->direction }}
                                         </span>
                                     </h2>
+                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $selectedTrade->account->name }}</span>
                                 </div>
                                 <div class="text-right">
                                     <span class="block text-sm font-medium text-gray-500">{{ __('labels.net_result') }}</span>

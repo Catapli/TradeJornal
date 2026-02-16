@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\JournalEntry;
 use App\Models\Trade;
+use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -13,6 +14,8 @@ use Livewire\Component;
 
 class JournalPage extends Component
 {
+
+    use WithAiLimits; // <--- 2. Usar el Trait
     #[Url(keep: true)]
     public $date;
     public $entry; // El modelo JournalEntry
@@ -418,6 +421,12 @@ class JournalPage extends Component
                 } else {
                     $this->content = $text;
                 }
+
+                // ----------------------------------------------------
+                // 2. CONSUMIR CRÉDITO (NUEVO)
+                // Solo restamos si la IA respondió bien.
+                // ----------------------------------------------------
+                $this->consumeAiCredit();
 
                 // ENVÍO SIMPLE:
                 $this->dispatch('editor-content-updated', $this->content);

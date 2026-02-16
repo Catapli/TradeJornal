@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Jobs\RecalculateStrategyStatsJob;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Trade;
@@ -291,13 +292,26 @@ class TradesPage extends Component
         if (empty($this->selectedTrades)) return;
 
         try {
-            // Inicio de lógica masiva
             $count = count($this->selectedTrades);
+            $affectedStrategyIds = [];
 
             if ($this->bulkStrategyId) {
+                // 1. Captura estrategias antiguas ANTES del update (solo las que van a cambiar)
+                $oldStrategyIds = Trade::whereIn('id', $this->selectedTrades)
+                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                    ->where('strategy_id', '!=', $this->bulkStrategyId) // Solo trades que SÍ cambian
+                    ->whereNotNull('strategy_id')
+                    ->distinct()
+                    ->pluck('strategy_id')
+                    ->toArray();
+
+                // 2. Update masivo
                 Trade::whereIn('id', $this->selectedTrades)
-                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id())) // Seguridad extra
+                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
                     ->update(['strategy_id' => $this->bulkStrategyId]);
+
+                // 3. Estrategias afectadas = antiguas + nueva
+                $affectedStrategyIds = array_unique(array_merge($oldStrategyIds, [$this->bulkStrategyId]));
             }
 
             if (!empty($this->bulkMistakes)) {
@@ -310,7 +324,15 @@ class TradesPage extends Component
                 }
             }
 
-            $this->insertLog('Bulk Update', self::COMPONENT_FORM, "Items afectados: $count");
+            // 4. Dispara recálculo en segundo plano para todas las estrategias afectadas
+            foreach ($affectedStrategyIds as $strategyId) {
+                $strategy = \App\Models\Strategy::find($strategyId);
+                if ($strategy) {
+                    \App\Jobs\RecalculateStrategyStatsJob::dispatch($strategy);
+                }
+            }
+
+            $this->insertLog('Bulk Update', self::COMPONENT_FORM, "Items: $count, Strategies recalculadas: " . count($affectedStrategyIds));
 
             // Limpieza UI (State PHP)
             $this->selectedTrades = [];
@@ -320,12 +342,13 @@ class TradesPage extends Component
 
             // Limpieza UI (Alpine) y Notificación
             $this->dispatch('close-bulk-modal');
-            $this->dispatch('notify',  __('labels.update_operations_ok'));
+            $this->dispatch('notify', __('labels.update_operations_ok'));
         } catch (\Throwable $e) {
             $this->logError($e, 'Bulk Update', self::COMPONENT_FORM, "Selected IDs: " . json_encode($this->selectedTrades));
             $this->dispatch('error', __('labels.update_operations_error'));
         }
     }
+
 
     // --- ACCIÓN DE BORRADO MASIVO ---
     public function executeBulkDelete()

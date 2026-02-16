@@ -368,6 +368,13 @@
                         <span class="text-xs font-bold uppercase text-gray-700">{{ __('labels.session_log') }}</span>
                     </div>
 
+                    <p class="mt-1 text-[10px] font-medium text-gray-500">
+                        Usos diarios:
+                        <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                            {{ $this->getAiCreditsLeft() }} / 10
+                        </span>
+                    </p>
+
                     <button class="group flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1 text-[10px] font-bold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
                             wire:click="generateAiDraft"
                             wire:loading.attr="disabled">

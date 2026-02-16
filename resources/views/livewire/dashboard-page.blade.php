@@ -62,6 +62,12 @@
                                                 <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
                                                     <i class="fa-solid fa-robot text-indigo-600"></i> {{ __('labels.intelligent_analysis') }}
                                                 </h4>
+                                                <p class="mt-1 text-[10px] font-medium text-gray-500">
+                                                    Usos diarios:
+                                                    <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                                        {{ $this->getAiCreditsLeft() }} / 10
+                                                    </span>
+                                                </p>
                                                 @if (!$aiAnalysis)
                                                     <button class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
                                                             wire:click="analyzeDayWithAi"
@@ -213,7 +219,7 @@
                                                                                  style="width: {{ $pctRed }}%">
                                                                                 <div
                                                                                      class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-rose-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/red:block">
-                                                                                    {{ __('labels.max_risk') }}: {{ number_format($maeMoney, 2) }} $
+                                                                                    {{ __('labels.max_risk') }}: {{ number_format($maeMoney, 0) }} $
                                                                                     <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-900"></div>
                                                                                 </div>
                                                                             </div>
@@ -223,7 +229,7 @@
                                                                                  style="width: {{ $pctGreen }}%">
                                                                                 <div
                                                                                      class="absolute bottom-full left-1/2 z-50 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg group-hover/green:block">
-                                                                                    {{ __('labels.max_potencial') }}: +{{ number_format($mfeMoney, 2) }} $
+                                                                                    {{ __('labels.max_potencial') }}: +{{ number_format($mfeMoney, 0) }} $
                                                                                     <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-emerald-900"></div>
                                                                                 </div>
                                                                             </div>
@@ -381,6 +387,7 @@
                                                 {{ $selectedTrade->direction }}
                                             </span>
                                         </h2>
+                                        <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $selectedTrade->account->name }}</span>
                                     </div>
                                     <div class="text-right">
                                         <span class="block text-sm font-medium text-gray-500"> {{ __('labels.net_result') }}</span>

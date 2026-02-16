@@ -223,9 +223,9 @@ class DashboardPage extends Component
         // ------------------------------------------------------
         try {
             $query = $this->getTradesQuery();
-            $dailyStats = $query->selectRaw('DATE(exit_time) as trade_date, SUM(pnl) as daily_pnl')
-                ->whereNotNull('exit_time')
-                ->groupByRaw('DATE(exit_time)')
+            $dailyStats = $query->selectRaw('DATE(entry_time) as trade_date, SUM(pnl) as daily_pnl')
+                ->whereNotNull('entry_time')
+                ->groupByRaw('DATE(entry_time)')
                 ->get();
 
             $winDays = $dailyStats->where('daily_pnl', '>', 0)->count();
@@ -328,13 +328,13 @@ class DashboardPage extends Component
         try {
             $query = $this->getTradesQuery();
             $rawStats = $query->selectRaw('
-            (CAST(EXTRACT(ISODOW FROM exit_time) AS INTEGER) - 1) as day_index,
-            CAST(EXTRACT(HOUR FROM exit_time) AS INTEGER) as hour,
+            (CAST(EXTRACT(ISODOW FROM entry_time) AS INTEGER) - 1) as day_index,
+            CAST(EXTRACT(HOUR FROM entry_time) AS INTEGER) as hour,
             SUM(pnl) as total_pnl
         ')
-                ->whereNotNull('exit_time')
-                ->whereRaw('EXTRACT(ISODOW FROM exit_time) <= 5')
-                ->groupByRaw('(CAST(EXTRACT(ISODOW FROM exit_time) AS INTEGER) - 1), CAST(EXTRACT(HOUR FROM exit_time) AS INTEGER)')
+                ->whereNotNull('entry_time')
+                ->whereRaw('EXTRACT(ISODOW FROM entry_time) <= 5')
+                ->groupByRaw('(CAST(EXTRACT(ISODOW FROM entry_time) AS INTEGER) - 1), CAST(EXTRACT(HOUR FROM entry_time) AS INTEGER)')
                 ->get();
 
             $days = [
@@ -499,9 +499,9 @@ class DashboardPage extends Component
             // 2. Obtener Trades en ese rango
             $query = $this->getTradesQuery();
             $trades = $query
-                ->whereBetween('exit_time', [$startOfCalendar, $endOfCalendar])
-                ->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl, SUM(pnl_percentage) as daily_percent')
-                ->groupByRaw('DATE(exit_time)')
+                ->whereBetween('entry_time', [$startOfCalendar, $endOfCalendar])
+                ->selectRaw('DATE(entry_time) as date, SUM(pnl) as daily_pnl, SUM(pnl_percentage) as daily_percent')
+                ->groupByRaw('DATE(entry_time)')
                 ->get()
                 ->keyBy('date');
 

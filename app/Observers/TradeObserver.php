@@ -41,6 +41,7 @@ class TradeObserver
 
     private function updateStrategy(Trade $trade): void
     {
+        Log::info("Actualizando Estrategia");
         if (!$trade->strategy_id) return;
 
         $strategy = $trade->strategy;

@@ -380,7 +380,7 @@
                                     </span>
                                     <div class="font-mono text-xs font-bold"
                                          :class="isOvertrading ? 'text-rose-600' : 'text-gray-800'">
-                                        <span x-text="metrics.count"></span>
+                                        <span x-text="Math.max(metrics.count, manualTradeCount)"></span>
                                         <span class="text-gray-400"
                                               x-show="currentAccount.limits?.max_trades">
                                             / <span x-text="currentAccount.limits?.max_trades"></span>
@@ -388,26 +388,37 @@
                                     </div>
                                 </div>
 
-                                {{-- VISUAL TRACKER (Las Balas) --}}
+                                {{-- ✅ BALAS DENTRO DEL LÍMITE (Clicables) --}}
                                 <div class="flex flex-wrap justify-center gap-2 transition-opacity duration-300"
                                      :class="isOvertrading ? 'opacity-25 blur-[1px]' : 'opacity-100'">
-                                    <template x-for="i in (currentAccount.limits?.max_trades || 5)">
-                                        <div class="flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all"
-                                             :class="i <= metrics.count ?
-                                                 (isOvertrading ? 'bg-rose-500 border-rose-500' : 'bg-indigo-600 border-indigo-600') :
-                                                 'border-gray-300'">
+                                    <template x-for="i in (currentAccount.limits?.max_trades || 5)"
+                                              :key="i">
+                                        <button class="flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all hover:scale-110 focus:outline-none active:scale-95"
+                                                @click="toggleManualTrade(i)"
+                                                type="button"
+                                                :class="{
+                                                    'bg-indigo-600 border-indigo-600': i <= Math.max(metrics.count, manualTradeCount),
+                                                    'border-gray-300 hover:border-indigo-400': i > Math.max(metrics.count, manualTradeCount)
+                                                }"
+                                                :title="'Trade #' + i">
                                             <i class="fa-solid fa-check text-[10px] text-white"
-                                               x-show="i <= metrics.count"></i>
-                                        </div>
+                                               x-show="i <= Math.max(metrics.count, manualTradeCount)"></i>
+                                        </button>
                                     </template>
+                                </div>
 
-                                    {{-- Balas extra (Violaciones) --}}
-                                    <template x-for="j in Math.max(0, metrics.count - (currentAccount.limits?.max_trades || 5))">
-                                        <div class="flex h-6 w-6 animate-bounce items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-lg">
-                                            !
+                                {{-- ✅ BALAS ROJAS (Overtrading detectado por sync - NO clicables) --}}
+                                <div class="mt-2 flex flex-wrap justify-center gap-2"
+                                     x-show="metrics.count > (currentAccount.limits?.max_trades || 5)">
+                                    <template x-for="j in (metrics.count - (currentAccount.limits?.max_trades || 5))"
+                                              :key="'over-' + j">
+                                        <div class="flex h-6 w-6 animate-pulse items-center justify-center rounded-full border-2 border-rose-500 bg-rose-500 shadow-lg">
+                                            <i class="fa-solid fa-exclamation text-[10px] font-bold text-white"></i>
                                         </div>
                                     </template>
                                 </div>
+
+
 
                                 {{-- OVERLAY DE BLOQUEO (Mensaje Crítico) --}}
                                 <div class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm transition-all"
