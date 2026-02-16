@@ -110,11 +110,7 @@ class JournalPage extends Component
         $this->mistakesSummary = $trades->pluck('mistakes')->flatten()->groupBy('name')->map->count();
     }
 
-    // --- GESTIÓN DE OBJETIVOS ---
-    public function addObjective()
-    {
-        $this->daily_objectives[] = ['done' => false, 'text' => ''];
-    }
+
 
     public function removeObjective($index)
     {

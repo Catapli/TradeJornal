@@ -171,9 +171,6 @@
                                 title="{{ __('labels.edit_global_template') }}">
                             <i class="fa-solid fa-cog text-xs"></i>
                         </button>
-                        {{-- Botón Añadir Manual (para excepciones del día) --}}
-                        <button class="text-xs font-bold text-indigo-600 hover:underline"
-                                wire:click="addObjective">{{ __('labels.add') }}</button>
                     </div>
                 </div>
                 <div class="space-y-2 p-4">
@@ -369,7 +366,7 @@
                     </div>
 
                     <p class="mt-1 text-[10px] font-medium text-gray-500">
-                        Usos diarios:
+                        Usos diarios de la IA:
                         <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                             {{ $this->getAiCreditsLeft() }} / 10
                         </span>

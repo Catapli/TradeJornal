@@ -362,8 +362,10 @@ return [
     "platform" => "Plataforma",
     "account_id" => "ID de la Cuenta",
     "enter_account_id" => "Introducir el ID de la Cuenta",
-    "save_account" => "Guardar Cuenta"
-
+    "save_account" => "Guardar Cuenta",
+    "no_objectives" => "Sin Objetivos",
+    "create_account_to_see_objectives" => "Crear Cuenta para ver Objetivos",
+    "create_first_account" => "Crea tu primera cuenta"
 
 
 

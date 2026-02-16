@@ -82,6 +82,11 @@ class DashboardPage extends Component
     private $_cachedDate = null;
     private $_recentTradesCache = null;
 
+    // 👇 NUEVO: Listener para cuando se actualiza un trade
+    protected $listeners = [
+        'trade-updated' => 'refreshRecentNotes'
+    ];
+
     public function mount()
     {
         try {
@@ -1148,6 +1153,23 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
         } catch (\Exception $e) {
             $this->logError($e, 'OpenTradeFromTable', 'DashboardPage', "Error al abrir trade desde tabla: {$tradeId}");
             $this->dispatch('notify', __('labels.error_opening_trade'));
+        }
+    }
+
+    /**
+     * Se ejecuta automáticamente cuando TradeDetailModal despacha 'trade-updated'
+     */
+    public function refreshRecentNotes()
+    {
+        try {
+            // Recargar solo las notas recientes
+            $this->loadRecentNotes();
+
+            // Opcional: Notificar al usuario (si tienes sistema de toast)
+            // $this->dispatch('notify', __('labels.notes_updated'));
+
+        } catch (Exception $e) {
+            $this->logError($e, 'RefreshRecentNotes', 'DashboardPage', 'Error al refrescar notas tras actualización');
         }
     }
 

@@ -178,72 +178,74 @@
                 </div> --}}
             </div>
 
-            {{-- 3. SINCRONIZACIÓN (Colapsable) --}}
-            <div class="space-y-4 rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-5"
-                 x-data="{ showSyncOptions: false }">
+            @if (Auth::user()->subscribed('default'))
+                {{-- 3. SINCRONIZACIÓN (Colapsable) --}}
+                <div class="space-y-4 rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-5"
+                     x-data="{ showSyncOptions: false }">
 
-                {{-- Toggle Header --}}
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                            <i class="fa-solid fa-rotate text-emerald-600"></i>
+                    {{-- Toggle Header --}}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                                <i class="fa-solid fa-rotate text-emerald-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">{{ __('labels.auto_sync') }}</h4>
+                                <p class="text-xs text-gray-500">{{ __('labels.sync_with_trading_platform') }}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-900">{{ __('labels.auto_sync') }}</h4>
-                            <p class="text-xs text-gray-500">{{ __('labels.sync_with_trading_platform') }}</p>
-                        </div>
+
+                        {{-- Toggle Switch --}}
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input class="peer sr-only"
+                                   type="checkbox"
+                                   x-model="syncronize"
+                                   @change="showSyncOptions = syncronize">
+                            <div
+                                 class="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-5">
+                            </div>
+                        </label>
                     </div>
 
-                    {{-- Toggle Switch --}}
-                    <label class="relative inline-flex cursor-pointer items-center">
-                        <input class="peer sr-only"
-                               type="checkbox"
-                               x-model="syncronize"
-                               @change="showSyncOptions = syncronize">
-                        <div
-                             class="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-5">
+                    {{-- Sync Options (Collapsed) --}}
+                    <div class="space-y-4 border-t border-emerald-100 pt-4"
+                         x-show="showSyncOptions"
+                         x-collapse>
+
+                        {{-- Plataforma --}}
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                <i class="fa-solid fa-terminal text-gray-400"></i>
+                                {{ __('labels.platform') }}
+                            </label>
+                            <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                    x-ref="platformBroker"
+                                    x-model="platformBroker">
+                                <option value="">{{ __('labels.select_platform') }}</option>
+                                <option value="mt5">MetaTrader 5</option>
+                                <option value="cTrader">cTrader</option>
+                            </select>
                         </div>
-                    </label>
-                </div>
 
-                {{-- Sync Options (Collapsed) --}}
-                <div class="space-y-4 border-t border-emerald-100 pt-4"
-                     x-show="showSyncOptions"
-                     x-collapse>
-
-                    {{-- Plataforma --}}
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
-                            <i class="fa-solid fa-terminal text-gray-400"></i>
-                            {{ __('labels.platform') }}
-                        </label>
-                        <select class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                                x-ref="platformBroker"
-                                x-model="platformBroker">
-                            <option value="">{{ __('labels.select_platform') }}</option>
-                            <option value="mt5">MetaTrader 5</option>
-                            <option value="cTrader">cTrader</option>
-                        </select>
-                    </div>
-
-                    {{-- Login ID --}}
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
-                            <i class="fa-solid fa-id-card text-gray-400"></i>
-                            {{ __('labels.account_id') }}
-                        </label>
-                        <input class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                               type="text"
-                               x-ref="loginPlatform"
-                               x-model="loginPlatform"
-                               placeholder="{{ __('labels.enter_account_id') }}">
-                        {{-- <p class="text-xs text-gray-500">
+                        {{-- Login ID --}}
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                <i class="fa-solid fa-id-card text-gray-400"></i>
+                                {{ __('labels.account_id') }}
+                            </label>
+                            <input class="w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                   type="text"
+                                   x-ref="loginPlatform"
+                                   x-model="loginPlatform"
+                                   placeholder="{{ __('labels.enter_account_id') }}">
+                            {{-- <p class="text-xs text-gray-500">
                             <i class="fa-solid fa-info-circle"></i>
                             {{ __('labels.account_id_help') }}
                         </p> --}}
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
 
         </div>
 
@@ -425,7 +427,7 @@
             <div class="mt-4 flex items-center justify-between">
                 <p class="flex items-center text-sm text-gray-600">
                     <span class="mr-2 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
-                    {{ count($accounts) }} {{ __('labels.count_brokers') }} • {{ $selectedAccount?->broker_name ?? '---' }} • {{ $selectedAccount?->phase_label ?? '---' }}
+                    {{ count($accounts) }} {{ __('labels.count_brokers') }} {{ $selectedAccount?->broker_name ?? '---' }} • {{ $selectedAccount?->phase_label ?? '---' }}
                 </p>
 
                 <div class="flex items-center gap-2">
@@ -764,7 +766,7 @@
                     <p class="text-sm text-gray-500">
                         {{ $selectedAccount->program_level->program->name ?? '' }}
                         <span class="mx-1 text-gray-300">|</span>
-                        <span class="font-semibold text-blue-600">{{ $selectedAccount->currentObjective->name }}</span>
+                        <span class="font-semibold text-blue-600">{{ $selectedAccount->currentObjective?->name ?? '' }}</span>
                     </p>
                 </div>
 
@@ -774,12 +776,29 @@
 
             {{-- GRID DE TARJETAS --}}
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {{-- Llamamos al Accessor del Modelo Account --}}
-                @foreach ($selectedAccount->objectives_progress as $obj)
-                    <x-card-objectives :objective="$obj"
-                                       :currency="$currency" />
-                @endforeach
+                @if ($selectedAccount && $selectedAccount->objectives_progress)
+                    {{-- Llamamos al Accessor del Modelo Account --}}
+                    @foreach ($selectedAccount->objectives_progress as $obj)
+                        <x-card-objectives :objective="$obj"
+                                           :currency="$currency" />
+                    @endforeach
+                @else
+                    {{-- Estado vacío elegante --}}
+                    <div class="col-span-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-12">
+                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200">
+                            <i class="fa-solid fa-bullseye text-2xl text-gray-400"></i>
+                        </div>
+                        <h3 class="mb-2 text-lg font-bold text-gray-700">{{ __('labels.no_objectives') }}</h3>
+                        <p class="mb-4 text-sm text-gray-500">{{ __('labels.create_account_to_see_objectives') }}</p>
+                        <button class="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-700"
+                                @click="$dispatch('open-modal-create')">
+                            <i class="fa-solid fa-plus"></i>
+                            {{ __('labels.create_first_account') }}
+                        </button>
+                    </div>
+                @endif
             </div>
+
 
         </div>
 

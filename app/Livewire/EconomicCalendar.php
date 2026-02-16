@@ -101,31 +101,6 @@ class EconomicCalendar extends Component
         return $currenciesToCheck->unique()->values()->toArray();
     }
 
-
-    // Método "Fake" para simular importación automática (Útil para demos)
-    // En el futuro aquí conectarías una API real como Financial Modeling Prep
-    public function importKeyEvents()
-    {
-        $presets = [
-            ['14:30', 'USD', 'CPI (YoY)', 'high'],
-            ['14:30', 'USD', 'Core PPI (MoM)', 'high'],
-            ['20:00', 'USD', 'FOMC Meeting', 'high'],
-        ];
-
-        foreach ($presets as $p) {
-            EconomicEvent::firstOrCreate([
-                'user_id' => Auth::id(),
-                'date' => $this->date,
-                'event' => $p[2]
-            ], [
-                'time' => $p[0],
-                'currency' => $p[1],
-                'impact' => $p[3]
-            ]);
-        }
-        $this->loadEvents();
-    }
-
     public function render()
     {
         return view('livewire.economic-calendar');

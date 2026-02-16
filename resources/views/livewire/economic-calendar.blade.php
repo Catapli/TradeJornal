@@ -5,13 +5,6 @@
             <i class="fa-solid fa-globe text-indigo-500"></i>
             <h3 class="text-xs font-bold uppercase text-gray-700">{{ __('labels.economics_events') }}</h3>
         </div>
-
-        {{-- Botón Importar (Simulado) --}}
-        <button class="text-[10px] font-bold text-indigo-500 hover:underline"
-                wire:click="importKeyEvents"
-                title="Cargar noticias importantes">
-            <i class="fa-solid fa-cloud-arrow-down mr-1"></i> {{ __('labels.auto') }}
-        </button>
     </div>
 
     {{-- Lista de Eventos --}}

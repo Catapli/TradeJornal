@@ -49,13 +49,15 @@
             {{-- DERECHA: USER & IDIOMA --}}
             <div class="flex items-center gap-3">
 
-                <div class="flex items-center rounded-lg">
-                    <a class="relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ease-out"
-                       href="{{ route('alerts') }}">
+                @if (Auth::user()->subscribed('default'))
+                    <div class="flex items-center rounded-lg">
+                        <a class="relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ease-out"
+                           href="{{ route('alerts') }}">
 
-                        {{-- Icono --}}
-                        <i class="fa-solid fa-bell text-lg transition-transform duration-200 group-hover:scale-110"></i> </a>
-                </div>
+                            {{-- Icono --}}
+                            <i class="fa-solid fa-bell text-lg transition-transform duration-200 group-hover:scale-110"></i> </a>
+                    </div>
+                @endif
 
                 <div class="flex items-center rounded-lg bg-gray-200 p-1"
                      x-data>

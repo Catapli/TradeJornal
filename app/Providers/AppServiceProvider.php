@@ -23,9 +23,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Fuerza https en producción para generar URLs correctas
-        // if (app()->environment('production')) {
-        //     URL::forceScheme('https');
-        // }
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
 
         if (session()->has('locale')) {
             app()->setLocale(session()->get('locale'));

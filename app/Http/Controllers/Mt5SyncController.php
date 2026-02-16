@@ -151,13 +151,6 @@ class Mt5SyncController extends Controller
         $account->current_balance = $data['balance'];
         $account->save();
 
-        // ✅ INVALIDAR CACHÉ PARA FORZAR RECÁLCULO
-        Cache::forget("account_stats_{$account->id}");
-        Cache::forget("balance_chart_{$account->id}_all");
-        Cache::forget("balance_chart_{$account->id}_1h");
-        Cache::forget("balance_chart_{$account->id}_24h");
-        Cache::forget("balance_chart_{$account->id}_7d");
-
         Log::info("✅ Sync completado para cuenta {$account->id}: {$inserted} trades insertados/actualizados");
 
         return response()->json([

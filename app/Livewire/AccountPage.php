@@ -15,7 +15,6 @@ use App\Services\Mt5Gateway;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -92,9 +91,6 @@ class AccountPage extends Component
         'all' => ['all' => true, 'format' => 'd MMM yy']  // "08 Jan 26"
     ];
 
-    protected $listeners = [
-        'echo:account.{selectedAccountId},sync.completed' => 'handleSyncCompleted'
-    ];
 
     public function mount()
     {
@@ -148,28 +144,25 @@ class AccountPage extends Component
     }
 
 
-    public function handleSyncCompleted($data)
-    {
-        try {
-            Log::info("🔔 Evento sync.completed recibido", $data);
+    // public function handleSyncCompleted($data)
+    // {
+    //     try {
+    //         Log::info("🔔 Evento sync.completed recibido", $data);
 
-            // Invalidar caché (por si acaso)
-            Cache::forget("account_stats_{$this->selectedAccountId}");
-            Cache::forget("balance_chart_{$this->selectedAccountId}_all");
 
-            // Refrescar datos
-            $this->selectedAccount->refresh(); // Recargar desde BD
-            $this->updateData();
+    //         // Refrescar datos
+    //         $this->selectedAccount->refresh(); // Recargar desde BD
+    //         $this->updateData();
 
-            // Notificar al usuario
-            $this->dispatch('show-alert', [
-                'type' => 'success',
-                'message' => "Sincronización completada: {$data['trades_inserted']} operaciones actualizadas."
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error manejando sync.completed: " . $e->getMessage());
-        }
-    }
+    //         // Notificar al usuario
+    //         $this->dispatch('show-alert', [
+    //             'type' => 'success',
+    //             'message' => "Sincronización completada: {$data['trades_inserted']} operaciones actualizadas."
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         Log::error("Error manejando sync.completed: " . $e->getMessage());
+    //     }
+    // }
 
 
     /**
@@ -303,13 +296,6 @@ class AccountPage extends Component
                 if ($currentSync->greaterThan(now()->subMinutes(5))) {
 
                     Log::info("🔄 Sincronización detectada para cuenta {$this->selectedAccount->id}");
-
-                    // ✅ INVALIDAR CACHÉ
-                    Cache::forget("account_stats_{$this->selectedAccount->id}");
-                    Cache::forget("balance_chart_{$this->selectedAccount->id}_all");
-                    Cache::forget("balance_chart_{$this->selectedAccount->id}_1h");
-                    Cache::forget("balance_chart_{$this->selectedAccount->id}_24h");
-                    Cache::forget("balance_chart_{$this->selectedAccount->id}_7d");
 
                     // ✅ REFRESCAR MODELO DESDE BD
                     $this->selectedAccount->refresh();
@@ -549,10 +535,6 @@ class AccountPage extends Component
                 // Fechas
             ]);
 
-            // ✅ INVALIDAR CACHÉ
-            Cache::forget("account_stats_{$account->id}");
-            Cache::forget("balance_chart_{$account->id}_all");
-            Cache::forget("balance_chart_{$account->id}_{$this->selectedTimeframe}");
 
             $this->form->reset();
 
@@ -680,19 +662,6 @@ class AccountPage extends Component
             ]);
             $account->save();
 
-
-            // if ($this->form->passwordPlatform) {
-            //     $account->mt5_password = encrypt($this->form->passwordPlatform);
-            //     $account->save();
-            // }
-
-            // ✅ INVALIDAR CACHÉ
-            Cache::forget("account_stats_{$account->id}");
-            Cache::forget("balance_chart_{$account->id}_all");
-            Cache::forget("balance_chart_{$account->id}_1h");
-            Cache::forget("balance_chart_{$account->id}_24h");
-            Cache::forget("balance_chart_{$account->id}_7d");
-
             $user = Auth::user();
             $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
             $this->selectedAccount = $account; // ← Array[0]
@@ -721,13 +690,6 @@ class AccountPage extends Component
                 $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.account_not_found')]);
                 return;
             }
-
-            // ✅ INVALIDAR CACHÉ ANTES DE BORRAR
-            Cache::forget("account_stats_{$account->id}");
-            Cache::forget("balance_chart_{$account->id}_all");
-            Cache::forget("balance_chart_{$account->id}_1h");
-            Cache::forget("balance_chart_{$account->id}_24h");
-            Cache::forget("balance_chart_{$account->id}_7d");
 
             // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
             $account->delete();
