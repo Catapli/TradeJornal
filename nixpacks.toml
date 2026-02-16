@@ -1,0 +1,11 @@
+[phases.build]
+# Fase de build limpia: sin tocar base de datos
+cmds = ["npm install", "npm run build", "composer install --no-dev --optimize-autoloader"]
+
+[start]
+# 1. Permisos
+# 2. Limpieza de caches locales (sin tocar DB)
+# 3. Migraciones (si hay conexión a DB, esto creará las tablas)
+# 4. Arrancar PHP-FPM forzando el archivo de config correcto (-y)
+# 5. Arrancar Nginx con tu config personalizada
+cmd = "chmod -R 777 storage bootstrap/cache && php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan migrate --force && php-fpm -y /assets/php-fpm.conf -D && nginx -c /app/nginx.conf -g 'daemon off;'"
