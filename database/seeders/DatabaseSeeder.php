@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
         //* USUARIO ADMIN
         User::factory()->create([
             'name' => 'Jordi',
-            'email' => 'jordi@gmail.com',
+            'email' => 'jordicatalina2001@gmail.com',
             'google_id' => '',
             'sync_token' => Str::random(32),
             'is_superadmin' => true,
@@ -54,7 +54,7 @@ class DatabaseSeeder extends Seeder
 
 
         //* Usuarios
-        $users = User::factory(5)->create();
+        // $users = User::factory(5)->create();
 
         // * Cuentas
 
@@ -63,23 +63,6 @@ class DatabaseSeeder extends Seeder
 
         $tenkaccountPrime = ProgramLevel::where('program_id', 5)->where('size', 10000)->where('currency', 'USD')->first();
         $tenAccountObjective = ProgramObjective::where('program_level_id', $tenkaccountPrime->id)->where('phase_number', "1")->first();
-
-
-
-        // Account::create([
-        //     'user_id' => 1,
-        //     'name' => 'Prueba Neomma 2',
-        //     'broker_name' => 'Neommaa',
-        //     'initial_balance' => 5000,
-        //     'current_balance' => 5000,
-        //     'status' => 'active',
-        //     'mt5_login' => '7730373',
-        //     'mt5_password' => encrypt('x83Vgb#mUEsF'),
-        //     'mt5_server' => 'Neomaaa-Live',
-        //     'program_level_id' => $fivekaccountPrime->id,
-        //     'program_objective_id' => $fiveAccountObjective->id,
-        //     'sync' => true
-        // ]);
 
 
         Account::create([
