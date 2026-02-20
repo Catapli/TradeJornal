@@ -255,7 +255,7 @@
 
             <button class="group flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 shadow-sm transition-all hover:border-rose-300 hover:bg-rose-50"
                     @click="step = 3">
-                <i class="fa-solid fa-power-off transition-transform duration-300 group-hover:rotate-90"></i>
+                <i class="fa-solid fa-power-off transition-transform duration-300"></i>
                 <span class="hidden sm:inline">FINALIZAR</span>
             </button>
         </div>
@@ -449,6 +449,33 @@
                                     <span x-text="isTimeValid ? 'MERCADO ABIERTO' : 'CERRADO'"></span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </template>
+                {{-- Estado vacío si no hay plan de trading --}}
+
+                <template x-if="!currentAccount.limits">
+                    <div class="border-b border-gray-100 bg-gray-50 p-4">
+                        <div class="rounded-xl border-2 border-dashed border-gray-200 bg-white p-5 text-center">
+
+                            {{-- Icono --}}
+                            <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50">
+                                <i class="fa-solid fa-scale-balanced text-indigo-400"></i>
+                            </div>
+
+                            {{-- Texto --}}
+                            <p class="text-xs font-bold text-gray-700">Sin Plan de Trading</p>
+                            <p class="mt-1 text-[10px] leading-relaxed text-gray-400">
+                                Configura límites de pérdida, objetivo diario y horario operativo para proteger tu cuenta.
+                            </p>
+
+                            {{-- CTA --}}
+                            <a class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-[10px] font-bold text-indigo-600 transition hover:bg-indigo-100"
+                               href="{{ route('cuentas') }}"
+                               target="_blank">
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                                Configurar Plan
+                            </a>
                         </div>
                     </div>
                 </template>
@@ -768,6 +795,18 @@
 
             {{-- Mood Final --}}
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+                {{-- ✅ NUEVO: Post Session Notes --}}
+                <div class="mb-6">
+                    <label class="mb-2 block text-sm font-semibold text-gray-700">
+                        <i class="fa-solid fa-pen-to-square mr-1 text-indigo-500"></i>
+                        Reflexión post-sesión
+                    </label>
+                    <textarea class="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                              x-model="postSessionNotes"
+                              placeholder="¿Qué ha ido bien? ¿Qué mejorarías? ¿Alguna lección aprendida..."
+                              rows="3"></textarea>
+                </div>
                 <p class="mb-6 text-center text-sm font-semibold text-gray-700">
                     ¿Cómo te sientes después de esta sesión?
                 </p>

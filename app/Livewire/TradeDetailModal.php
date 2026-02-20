@@ -2,408 +2,414 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\Attributes\On;
-use App\Models\Trade;
+use App\LogActions;
 use App\WithAiLimits;
-use Illuminate\Support\Carbon;
+use App\Models\Trade;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class TradeDetailModal extends Component
 {
-    use WithFileUploads; // <--- IMPORTANTE: Usar el Trait
-    use WithAiLimits; // <--- 2. Usar el Trait
-    // Ya no usamos $isOpen aquí, lo controla AlpineJS
-    public $selectedTrade = null;
+    use WithFileUploads;
+    use WithAiLimits;
+    use LogActions;
 
-    // Navegación
-    public $nextTradeId = null;
-    public $prevTradeId = null;
+    // ── PAYLOAD LIVEWIRE (lo que viaja en cada request) ──────────────────────
+    // ANTES: selectedTrade = Eloquent Model completo → ~50-100KB por request
+    // AHORA: selectedTradeId = integer               → ~4 bytes por request
+    // El modelo se rehidrata vía #[Computed] sin tocar el snapshot.
 
-    // Estado para la IA
-    public $isAnalyzingTrade = false;
+    #[Locked] public ?int    $selectedTradeId   = null;
+    #[Locked] public ?int    $prevTradeId       = null;
+    #[Locked] public ?int    $nextTradeId       = null;
+    #[Locked] public array   $contextTradeIds   = [];
+    #[Locked] public ?string $currentScreenshot = null;
 
-    // NUEVO: Propiedad para editar la nota
-    public $notes = '';
-    public $isSavingNotes = false;
+    // Propiedades que el usuario sí puede mutar desde el frontend
+    public string $notes              = '';
+    public mixed  $uploadedScreenshot = null;
+    public bool   $isAnalyzingTrade   = false;
 
-    // NUEVO: Aquí guardamos la "playlist" (lista de IDs de la tabla actual)
-    public $contextTradeIds = [];
 
-    // NUEVO: Propiedad para la subida de imagen temporal
-    public $uploadedScreenshot;
-
-    // NUEVO: Variable primitiva para controlar la vista de la imagen
-    public $currentScreenshot = null;
-
+    // ─────────────────────────────────────────────────────────────────────────
+    // COMPUTED PROPERTIES
+    // Se ejecutan una vez por request, se cachean en memoria, nunca en payload.
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Este método es llamado por AlpineJS justo después de abrir el modal visualmente.
+     * Mejora 12: El trade completo con relaciones, calculado por request.
+     *
+     * Flujo: selectedTradeId (int en payload) → trade() (query en servidor)
+     * Para invalidar la cache mid-request (tras un update): unset($this->trade)
      */
-    #[On('load-trade-data')]
-    public function loadTradeData($tradeId, $contextIds = [])
+    #[Computed]
+    public function trade(): ?Trade
     {
-        // 1. Reseteamos para mostrar el esqueleto de carga si cambiamos de trade
-        $this->selectedTrade = null;
-        $this->prevTradeId = null;
-        $this->nextTradeId = null;
-        $this->isAnalyzingTrade = false;
-        $this->notes = ''; // Resetear notas
-        $this->uploadedScreenshot = null; // Resetear input de archivo
+        if (!$this->selectedTradeId) return null;
 
-        // 2. Guardamos el contexto (la lista de IDs de la tabla donde hiciste clic)
-        // Si viene vacío, dejamos el array vacío.
-        $this->contextTradeIds = $contextIds;
-
-        // 2. Cargamos los datos reales
-        $this->loadTrade($tradeId);
-
-        // AÑADIR ESTA LÍNEA AL FINAL:
-        // Avisamos al navegador: "Ya tengo los datos, renderiza el gráfico"
-        $this->dispatch('trade-data-loaded');
+        return Trade::with(['account', 'tradeAsset', 'mistakes'])
+            ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            ->find($this->selectedTradeId);
     }
 
-    public function loadTrade($tradeId)
+    /**
+     * Mejora 9: getAiCreditsLeft() deja de ejecutarse en cada re-render.
+     * Con #[Computed], Livewire lo cachea dentro del mismo ciclo de request.
+     * En el Blade: {{ $this->aiCreditsLeft }}
+     */
+    #[Computed]
+    public function aiCreditsLeft(): int
     {
-        // Cargamos relaciones necesarias
-        $this->selectedTrade = Trade::with(['account', 'tradeAsset', 'mistakes'])->find($tradeId);
-        if ($this->selectedTrade) {
-            // Cargar la nota existente
-            $this->notes = $this->selectedTrade->notes;
-
-            // Calcular navegación (AQUÍ ESTÁ LA MAGIA)
-            // Usará el contexto si existe, o la lógica SQL si no.
-            $this->calculateNavigation();
-
-            $this->currentScreenshot = $this->selectedTrade->screenshot;
+        return $this->getAiCreditsLeft();
+    }
 
 
-            // Disparar evento para Gráfico JS
-            $this->dispatch(
-                'trade-selected',
-                path: $this->selectedTrade->chart_data_path,
-                entry: $this->selectedTrade->entry_price,
-                exit: $this->selectedTrade->exit_price,
-                direction: $this->selectedTrade->direction
-            );
+    // ─────────────────────────────────────────────────────────────────────────
+    // MÉTODOS PÚBLICOS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function loadTradeData(int $tradeId, array $contextIds = []): void
+    {
+        try {
+            // Reseteamos a primitivos. Al poner selectedTradeId = null,
+            // Livewire invalida automáticamente el computed cache de trade().
+            $this->selectedTradeId  = null;
+            $this->prevTradeId      = null;
+            $this->nextTradeId      = null;
+            $this->isAnalyzingTrade = false;
+            $this->notes            = '';
+            $this->uploadedScreenshot = null;
+            $this->contextTradeIds  = $contextIds;
+
+            $this->loadTrade($tradeId);
+        } catch (\Throwable $e) {
+            $this->logError($e, 'loadTradeData', 'TradeDetailModal', "Trade ID: {$tradeId}");
+        } finally {
+            $this->dispatch('trade-data-loaded');
+        }
+    }
+
+    public function goToPrev(): void
+    {
+        try {
+            if ($this->prevTradeId) $this->loadTrade($this->prevTradeId);
+        } catch (\Throwable $e) {
+            $this->logError($e, 'goToPrev', 'TradeDetailModal', "Prev ID: {$this->prevTradeId}");
+        } finally {
+            $this->dispatch('trade-data-loaded');
+        }
+    }
+
+    public function goToNext(): void
+    {
+        try {
+            if ($this->nextTradeId) $this->loadTrade($this->nextTradeId);
+        } catch (\Throwable $e) {
+            $this->logError($e, 'goToNext', 'TradeDetailModal', "Next ID: {$this->nextTradeId}");
+        } finally {
+            $this->dispatch('trade-data-loaded');
         }
     }
 
     /**
-     * NUEVO: Se ejecuta automáticamente cuando 'uploadedScreenshot' cambia
-     * (es decir, cuando el usuario suelta el archivo en el input).
+     * Mejora 8 aplicada: sin usleep, isSavingNotes se gestiona en finally.
+     * Mejora 12 aplicada: update directo por ID, sin rehidratar el modelo completo.
      */
-    public function updatedUploadedScreenshot()
+    public function saveNotes(string $notes = ''): void
     {
-        $this->validate([
-            'uploadedScreenshot' => 'image|max:10240', // 10MB
-        ]);
+        try {
+            if (!$this->selectedTradeId) return;
 
-        if ($this->selectedTrade) {
-            // 1. Guardar archivo físico
-            $path = $this->uploadedScreenshot->store('screenshots', 'public');
 
-            // 2. Limpieza de archivo anterior
-            if ($this->selectedTrade->screenshot && Storage::disk('public')->exists($this->selectedTrade->screenshot)) {
-                Storage::disk('public')->delete($this->selectedTrade->screenshot);
+            // Sincronizamos $this->notes por consistencia interna del componente
+            $this->notes = $notes;
+            // whereKey es semánticamente más claro que where('id', ...) 
+            // y evita cargar el modelo con relaciones solo para un update de un campo.
+            Trade::whereKey($this->selectedTradeId)->update(['notes' => $this->notes]);
+
+            // Invalidamos el computed cache para que el próximo acceso traiga datos frescos.
+            // Esto garantiza que si otra parte del blade lee $this->trade->notes, sea consistente.
+            unset($this->trade);
+
+            $this->dispatch('trade-updated');
+        } catch (\Throwable $e) {
+            $this->logError($e, 'saveNotes', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
+        }
+    }
+
+    /**
+     * Mejora 7: getMimeType() dinámico sobre el UploadedFile.
+     * Mejora 11: update directo por ID + invalidación de computed cache.
+     *            Ya no se hace un re-query completo con relaciones.
+     */
+    public function updatedUploadedScreenshot(): void
+    {
+        try {
+            $this->validate(['uploadedScreenshot' => 'required|image|max:10240']);
+
+            if (!$this->selectedTradeId) return;
+
+            // Mime real del archivo subido (inspección binaria, no extensión)
+            $mimeType = $this->uploadedScreenshot->getMimeType();
+            $path     = $this->uploadedScreenshot->store('screenshots', 'public');
+
+            // Limpieza del archivo anterior usando el primitivo local (sin re-query)
+            if ($this->currentScreenshot && Storage::disk('public')->exists($this->currentScreenshot)) {
+                Storage::disk('public')->delete($this->currentScreenshot);
             }
 
-            // 3. Actualizar Base de Datos (Esto ya lo hacías bien)
-            $this->selectedTrade->update([
-                'screenshot' => $path
-            ]);
+            // Update directo por ID
+            Trade::whereKey($this->selectedTradeId)->update(['screenshot' => $path]);
 
-            // ---------------------------------------------------------
-            // EL CAMBIO CLAVE:
-            // En lugar de refresh(), recargamos el objeto COMPLETO desde cero.
-            // Esto obliga a PHP a traer el dato fresco y las relaciones.
-            // ---------------------------------------------------------
-            $this->selectedTrade = Trade::with(['account', 'tradeAsset', 'mistakes'])
-                ->find($this->selectedTrade->id);
-            // EL FIX: Actualizamos la variable primitiva manualmente
+            // Actualizar el primitivo local para que Alpine y el Blade reflejen el cambio
             $this->currentScreenshot = $path;
 
-            // 4. Limpiar el input temporal
+            // Invalidar computed cache
+            unset($this->trade);
+
             $this->reset('uploadedScreenshot');
-
-            // 5. Opcional: Forzar un evento de navegador para asegurar que Alpine se entere
-            $this->dispatch('screenshot-updated');
-        }
-    }
-
-
-
-    // NUEVO: Función para guardar notas
-    public function saveNotes()
-    {
-        if ($this->selectedTrade) {
-            $this->isSavingNotes = true;
-
-            $this->selectedTrade->update([
-                'notes' => $this->notes
-            ]);
-
-            // Despachar evento para actualizar dashboard si es necesario
-            $this->dispatch('trade-updated');
-
-            // Simular un pequeño delay para feedback visual
-            usleep(200000);
-            $this->isSavingNotes = false;
+            $this->dispatch('screenshot-updated', mimeType: $mimeType);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e; // Re-lanzar para que Livewire gestione @error en el Blade
+        } catch (\Throwable $e) {
+            $this->logError($e, 'updatedUploadedScreenshot', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
+            $this->reset('uploadedScreenshot');
         }
     }
 
     /**
-     * Analiza el JSON del gráfico para ver qué hizo el precio DESPUÉS de la salida.
+     * Mejora 6: config() en lugar de env().
+     * Mejora 7: mime_content_type() para la imagen ya almacenada en disco.
+     * Mejora 12: accede al computed $this->trade; invalida cache post-update.
      */
-    private function analyzePostTradeContext($trade)
+    public function analyzeIndividualTrade(): void
     {
-        // Validación de archivo
-        if (!$trade->chart_data_path || !Storage::disk('public')->exists($trade->chart_data_path)) {
-            return "No hay datos de mercado disponibles posteriores al cierre para analizar.";
-        }
+        if (!$this->selectedTradeId) return;
+        if (!$this->checkAiLimit()) return;
 
-        $jsonContent = Storage::disk('public')->get($trade->chart_data_path);
-        $chartData = json_decode($jsonContent, true);
+        $this->isAnalyzingTrade = true;
 
-        // Intentar obtener velas de 5m, fallback a 1m
-        $candles = $chartData['timeframes']['5m'] ?? ($chartData['timeframes']['1m'] ?? []);
+        try {
+            // Una sola query cacheada en este request. Si ya se llamó antes, 
+            // Livewire devuelve el resultado en memoria sin re-query.
+            $trade = $this->trade;
+            if (!$trade) return;
 
-        if (empty($candles)) return "Datos de velas insuficientes.";
+            $futureAnalysis = $this->analyzePostTradeContext($trade);
 
-        $exitTimestamp = Carbon::parse($trade->exit_time)->timestamp;
-        $entryPrice = (float) $trade->entry_price;
-        $isLong = in_array(strtoupper($trade->direction), ['LONG', 'BUY']);
+            $contextoDatos = implode("\n", [
+                __('ai.labels.asset')      . ": {$trade->tradeAsset->name}",
+                __('ai.labels.type')       . ': ' . strtoupper($trade->direction),
+                __('ai.labels.entry')      . ": {$trade->entry_price} | " . __('ai.labels.exit') . ": {$trade->exit_price}",
+                __('ai.labels.result')     . ": {$trade->pnl} (Lots: {$trade->size})",
+                __('ai.labels.duration')   . ": {$trade->duration_minutes} min",
+                __('ai.labels.efficiency') . ": MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}",
+                __('ai.labels.future')     . ": {$futureAnalysis}",
+            ]);
 
-        // Configuración de análisis futuro
-        $lookForwardCandles = 30; // Mirar las siguientes 30 velas
-        $maxFavorableAfterExit = 0;
-        $foundExit = false;
-        $candlesChecked = 0;
+            $parts = [['text' => __('ai.audit_prompt', ['context' => $contextoDatos])]];
 
-        foreach ($candles as $candle) {
-            // Ignorar velas anteriores al cierre
-            if ($candle['time'] < $exitTimestamp) continue;
-
-            $foundExit = true;
-            $candlesChecked++;
-
-            // Calcular cuánto se movió a favor después de salir
-            if ($isLong) {
-                $distUp = $candle['high'] - $entryPrice;
-                if ($distUp > $maxFavorableAfterExit) $maxFavorableAfterExit = $distUp;
-            } else {
-                $distDown = $entryPrice - $candle['low'];
-                if ($distDown > $maxFavorableAfterExit) $maxFavorableAfterExit = $distDown;
+            // Adjuntar imagen con mime real del disco
+            if ($trade->screenshot && Storage::disk('public')->exists($trade->screenshot)) {
+                $parts[] = [
+                    'inline_data' => [
+                        'mime_type' => mime_content_type(Storage::disk('public')->path($trade->screenshot)),
+                        'data'      => base64_encode(Storage::disk('public')->get($trade->screenshot)),
+                    ],
+                ];
             }
 
-            if ($candlesChecked >= $lookForwardCandles) break;
-        }
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='
+                        . config('services.gemini.key'),
+                    [
+                        'contents'         => [['parts' => $parts]],
+                        'generationConfig' => ['temperature' => 0.4],
+                    ]
+                );
 
-        if (!$foundExit) return "No hay datos posteriores al cierre.";
+            if ($response->successful()) {
+                $analysisText = $response->json()['candidates'][0]['content']['parts'][0]['text'];
 
-        // --- LÓGICA DE INTERPRETACIÓN PARA LA IA ---
+                // Persistir en BD y consumir crédito solo si Gemini respondió OK
+                Trade::whereKey($this->selectedTradeId)->update(['ai_analysis' => $analysisText]);
+                $this->consumeAiCredit();
 
-        // Calculamos el MFE que el usuario SÍ capturó (o el máximo que llegó a ver antes de cerrar)
-        $originalMfe = abs($trade->mfe_price - $trade->entry_price);
-
-        // Umbral de tolerancia: Si se movió 50% más de lo que ya habías visto, es significativo
-        $threshold = $originalMfe > 0 ? ($originalMfe * 1.5) : ($entryPrice * 0.0005); // Fallback si MFE es 0 (5 pips aprox)
-
-        $pointsMoved = number_format($maxFavorableAfterExit, 5);
-
-        if ($maxFavorableAfterExit > $threshold) {
-            return "CRÍTICO: El mercado se movió fuertemente A FAVOR ({$pointsMoved} pts) después de sacarte. " .
-                "Esto indica 'DIRECCIÓN CORRECTA, STOP LOSS INCORRECTO'. Hubo un barrido de liquidez.";
-        } else {
-            return "El mercado NO hizo movimientos significativos a favor después del cierre. El análisis de dirección probablemente era incorrecto o el momentum se perdió.";
+                // Doble invalidación: trade (para mostrar ai_analysis) y aiCreditsLeft (contador)
+                unset($this->trade);
+                unset($this->aiCreditsLeft);
+            } else {
+                $this->logError(
+                    new \RuntimeException($response->body()),
+                    'analyzeIndividualTrade',
+                    'TradeDetailModal',
+                    "Gemini {$response->status()} - Trade ID: {$trade->id}"
+                );
+                $this->dispatch('notify', 'Error en Gemini: ' . $response->status());
+            }
+        } catch (\Throwable $e) {
+            $this->logError($e, 'analyzeIndividualTrade', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
+            $this->dispatch('notify', __('labels.ai_error_generic'));
+        } finally {
+            $this->isAnalyzingTrade = false;
         }
     }
 
-    public function resetModal()
+    public function resetModal(): void
     {
         $this->reset([
-            'selectedTrade',
+            'selectedTradeId',   // ← Ya no es selectedTrade
             'prevTradeId',
             'nextTradeId',
             'notes',
             'isAnalyzingTrade',
-            'contextTradeIds'
+            'isSavingNotes',
+            'contextTradeIds',
+            'currentScreenshot',
+            'uploadedScreenshot',
         ]);
+
+        // Limpiar computed cache explícitamente al resetear
+        unset($this->trade);
+        unset($this->aiCreditsLeft);
     }
 
-    private function calculateNavigation()
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MÉTODOS PRIVADOS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function loadTrade(int $tradeId): void
     {
-        $currentId = $this->selectedTrade->id;
+        // Asignar el ID activa el computed: el próximo acceso a $this->trade
+        // ejecutará la query con el nuevo ID.
+        $this->selectedTradeId = $tradeId;
 
-        // --- OPCIÓN A: NAVEGACIÓN POR CONTEXTO (PRIORIDAD) ---
-        // Si tenemos una lista de IDs cargada, nos movemos por ella.
+        $trade = $this->trade; // Una query, cacheada para el resto del request
+
+        if (!$trade) {
+            // Trade no existe o no pertenece al usuario (scope de seguridad en computed)
+            $this->selectedTradeId = null;
+            return;
+        }
+
+        // Extraer primitivos al estado de Livewire.
+        // Solo strings/nulls simples → payload mínimo.
+        $this->notes             = $trade->notes ?? '';
+        $this->currentScreenshot = $trade->screenshot;
+
+        // Trade como parámetro explícito: evita re-acceder al computed innecesariamente
+        $this->calculateNavigation($trade);
+
+        $this->dispatch(
+            'trade-selected',
+            path: $trade->chart_data_path,
+            entry: $trade->entry_price,
+            exit: $trade->exit_price,
+            direction: $trade->direction
+        );
+    }
+
+    /**
+     * Recibe el $trade como parámetro para no re-ejecutar el computed
+     * (ya fue cacheado en loadTrade() en el mismo request).
+     */
+    private function calculateNavigation(Trade $trade): void
+    {
+        $currentId = $trade->id;
+
+        // Opción A: Contexto en memoria — O(1)
         if (!empty($this->contextTradeIds)) {
-            // Buscamos en qué posición está el trade actual dentro de la lista
             $currentIndex = array_search($currentId, $this->contextTradeIds);
-
             if ($currentIndex !== false) {
-                // CAMBIO AQUÍ: Invertimos la lógica.
-
-                // Botón "Anterior" (Flecha Izquierda) -> Nos lleva al pasado (más abajo en la lista, índice mayor)
                 $this->prevTradeId = $this->contextTradeIds[$currentIndex + 1] ?? null;
-
-                // Botón "Siguiente" (Flecha Derecha) -> Nos lleva al futuro (más arriba en la lista, índice menor)
                 $this->nextTradeId = $this->contextTradeIds[$currentIndex - 1] ?? null;
-
                 return;
             }
         }
 
+        // Opción B: Fallback SQL (cubierto por índice compuesto [exit_time, id])
+        $currentDate = $trade->exit_time->format('Y-m-d');
 
-        // --- OPCIÓN B: NAVEGACIÓN FALLBACK (TU LÓGICA ANTIGUA SQL) ---
-        // Si no hay contexto (ej: recarga de página o acceso directo), usamos tu lógica original
-
-        $currentDate = $this->selectedTrade->exit_time->format('Y-m-d');
-
-        // ANTERIOR: Mismo día, salida < actual
-        $prev = Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+        $baseQuery = fn() => Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
             ->whereDate('exit_time', $currentDate)
-            ->where(function ($q) {
-                $q->where('exit_time', '<', $this->selectedTrade->exit_time)
-                    ->orWhere(function ($q2) {
-                        $q2->where('exit_time', $this->selectedTrade->exit_time)
-                            ->where('id', '<', $this->selectedTrade->id);
-                    });
-            })
-            ->orderBy('exit_time', 'desc')
-            ->orderBy('id', 'desc')
-            ->select('id')
+            ->select('id');
+
+        $prev = $baseQuery()
+            ->where(
+                fn($q) => $q
+                    ->where('exit_time', '<', $trade->exit_time)
+                    ->orWhere(
+                        fn($q2) => $q2
+                            ->where('exit_time', $trade->exit_time)
+                            ->where('id', '<', $currentId)
+                    )
+            )
+            ->orderByDesc('exit_time')->orderByDesc('id')
             ->first();
 
-        // SIGUIENTE: Mismo día, salida > actual
-        $next = Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
-            ->whereDate('exit_time', $currentDate)
-            ->where(function ($q) {
-                $q->where('exit_time', '>', $this->selectedTrade->exit_time)
-                    ->orWhere(function ($q2) {
-                        $q2->where('exit_time', $this->selectedTrade->exit_time)
-                            ->where('id', '>', $this->selectedTrade->id);
-                    });
-            })
-            ->orderBy('exit_time', 'asc')
-            ->orderBy('id', 'asc')
-            ->select('id')
+        $next = $baseQuery()
+            ->where(
+                fn($q) => $q
+                    ->where('exit_time', '>', $trade->exit_time)
+                    ->orWhere(
+                        fn($q2) => $q2
+                            ->where('exit_time', $trade->exit_time)
+                            ->where('id', '>', $currentId)
+                    )
+            )
+            ->orderBy('exit_time')->orderBy('id')
             ->first();
 
         $this->prevTradeId = $prev?->id;
         $this->nextTradeId = $next?->id;
     }
 
-    public function goToPrev()
+    private function analyzePostTradeContext(Trade $trade): string
     {
-        if ($this->prevTradeId) $this->loadTrade($this->prevTradeId);
-    }
-
-    public function goToNext()
-    {
-        if ($this->nextTradeId) $this->loadTrade($this->nextTradeId);
-    }
-
-    public function analyzeIndividualTrade()
-    {
-        // 1. Validaciones
-        if (!$this->selectedTrade) return;
-
-        // ----------------------------------------------------
-        // 1. VALIDACIÓN DE LÍMITE (NUEVO)
-        // ----------------------------------------------------
-        if (!$this->checkAiLimit()) {
-            $this->isAnalyzingTrade = false; // Apagar spinner
-            return; // Detener ejecución
+        if (!$trade->chart_data_path || !Storage::disk('public')->exists($trade->chart_data_path)) {
+            return 'No hay datos de mercado disponibles posteriores al cierre para analizar.';
         }
 
-        $this->isAnalyzingTrade = true;
-        $trade = $this->selectedTrade;
+        $chartData = json_decode(Storage::disk('public')->get($trade->chart_data_path), true);
+        $candles   = $chartData['timeframes']['5m'] ?? ($chartData['timeframes']['1m'] ?? []);
 
-        // 1. OBTENER "VISIÓN DE FUTURO" (Lo que pasó después)
-        $futureAnalysis = $this->analyzePostTradeContext($trade);
+        if (empty($candles)) return 'Datos de velas insuficientes.';
 
+        $exitTimestamp         = Carbon::parse($trade->exit_time)->timestamp;
+        $entryPrice            = (float) $trade->entry_price;
+        $isLong                = in_array(strtoupper($trade->direction), ['LONG', 'BUY']);
+        $maxFavorableAfterExit = 0;
+        $foundExit             = false;
+        $candlesChecked        = 0;
 
-        // 2. Preparar los DATOS (Traducimos también las etiquetas: Activo, Tipo, etc.)
-        // Usamos __('ai.labels.x') para que la data también esté en el idioma correcto
-        $contextoDatos = "
-        " . __('ai.labels.asset') . ": {$trade->tradeAsset->name}
-        " . __('ai.labels.type') . ": " . strtoupper($trade->direction) . "
-        " . __('ai.labels.entry') . ": {$trade->entry_price} | " . __('ai.labels.exit') . ": {$trade->exit_price}
-        " . __('ai.labels.result') . ": {$trade->pnl} (Lots: {$trade->size})
-        " . __('ai.labels.duration') . ": {$trade->duration_minutes} min
-        " . __('ai.labels.efficiency') . ": MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}
-        " . __('ai.labels.future') . ": {$futureAnalysis}
-    ";
+        foreach ($candles as $candle) {
+            if ($candle['time'] < $exitTimestamp) continue;
 
-        // 3. Obtener el PROMPT traducido e inyectarle el contexto
-        // Laravel sustituirá el marcador ':context' que pusimos en el archivo php por la variable $contextoDatos
-        $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
-        // 3. Preparar el Payload para Gemini
-        $parts = [
-            ['text' => $prompt]
-        ];
+            $foundExit = true;
+            $candlesChecked++;
 
-        // 4. Si hay imagen, la codificamos en Base64 y la adjuntamos
-        if ($trade->screenshot && \Illuminate\Support\Facades\Storage::disk('public')->exists($trade->screenshot)) {
-
-            // Obtenemos el contenido crudo del archivo
-            $imageContent = \Illuminate\Support\Facades\Storage::disk('public')->get($trade->screenshot);
-            $base64Image = base64_encode($imageContent);
-
-            // Añadimos la parte de imagen al payload
-            $parts[] = [
-                'inline_data' => [
-                    'mime_type' => 'image/png', // Asumimos PNG por el script Python
-                    'data' => $base64Image
-                ]
-            ];
+            $delta = $isLong ? ($candle['high'] - $entryPrice) : ($entryPrice - $candle['low']);
+            if ($delta > $maxFavorableAfterExit) $maxFavorableAfterExit = $delta;
+            if ($candlesChecked >= 30) break;
         }
 
+        if (!$foundExit) return 'No hay datos posteriores al cierre.';
 
+        $originalMfe = abs(($trade->mfe_price ?? 0) - $entryPrice);
+        $threshold   = $originalMfe > 0 ? ($originalMfe * 1.5) : ($entryPrice * 0.0005);
+        $pointsMoved = number_format($maxFavorableAfterExit, 5);
 
-        try {
-            $apiKey = env('GEMINI_API_KEY');
-
-            // Usamos gemini-3-flash-preview porque es Multimodal (acepta imágenes)
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [
-                        ['parts' => $parts]
-                    ],
-                    'generationConfig' => [
-                        'temperature' => 0.4, // 0.4 es ideal para análisis técnico (bajo = más lógico/estricto)
-                    ],
-                ]);
-
-            if ($response->successful()) {
-                $analysisText = $response->json()['candidates'][0]['content']['parts'][0]['text'];
-
-                // Guardamos en BD para no gastar API la próxima vez
-                $trade->update(['ai_analysis' => $analysisText]);
-
-                // ----------------------------------------------------
-                // 2. CONSUMIR CRÉDITO (NUEVO)
-                // Solo restamos si la IA respondió bien.
-                // ----------------------------------------------------
-                $this->consumeAiCredit();
-
-                // Actualizamos la propiedad local para que se vea al instante
-                $this->selectedTrade->ai_analysis = $analysisText;
-            } else {
-                // Si falla, mostramos error pero no guardamos en BD
-                $this->dispatch('notify', 'Error en Gemini: ' . $response->body()); // O un toast simple
-            }
-        } catch (\Exception $e) {
-            Log::error("Error AI Trade: " . $e->getMessage());
-        }
-
-        $this->isAnalyzingTrade = false;
+        return $maxFavorableAfterExit > $threshold
+            ? "CRÍTICO: El mercado se movió fuertemente A FAVOR ({$pointsMoved} pts) después de sacarte. Esto indica 'DIRECCIÓN CORRECTA, STOP LOSS INCORRECTO'. Hubo un barrido de liquidez."
+            : 'El mercado NO hizo movimientos significativos a favor después del cierre. El análisis de dirección probablemente era incorrecto o el momentum se perdió.';
     }
 
     public function render()

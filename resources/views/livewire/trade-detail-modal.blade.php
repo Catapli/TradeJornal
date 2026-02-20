@@ -1,22 +1,5 @@
 <div class="fixed inset-0 z-[250] overflow-y-auto"
-     x-data="{
-         open: false,
-         isLoading: false,
-         init() {
-             // 1. Al pedir abrir, mostramos skeleton y pedimos datos
-             window.addEventListener('open-trade-detail', event => {
-                 this.open = true;
-                 this.isLoading = true;
-                 // Llamamos a Livewire SIN esperar el .then()
-                 $wire.loadTradeData(event.detail.tradeId, event.detail.tradeIds);
-             });
-         },
-         close() {
-             this.open = false;
-             // Pequeño retardo para resetear el skeleton cuando ya no se ve
-             setTimeout(() => { this.isLoading = true; }, 300);
-         }
-     }"
+     x-data="tradeDetail"
      x-show="open"
      {{-- 2. ESCUCHAR EL AVISO DE PHP PARA QUITAR SKELETON --}}
      @trade-data-loaded.window="isLoading = false"
@@ -48,25 +31,52 @@
             <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                 {{-- Navegación --}}
                 <div class="flex items-center gap-3">
-                    <button class="group flex items-center font-medium text-gray-500 transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-30"
-                            wire:click="goToPrev"
-                            @if (!$prevTradeId) disabled @endif>
-                        <div class="mr-2 rounded-full bg-gray-100 p-2 transition group-hover:bg-indigo-100 group-disabled:bg-gray-50">
-                            <i class="fa-solid fa-arrow-left text-sm"></i>
+                    {{-- Botón ANTERIOR --}}
+                    <button class="group flex items-center font-medium transition disabled:cursor-not-allowed"
+                            @click="isLoading = true; $wire.goToPrev()"
+                            :disabled="!$wire.prevTradeId || isLoading"
+                            :class="$wire.prevTradeId && !isLoading ?
+                                'text-gray-500 hover:text-indigo-600' :
+                                'text-gray-300 pointer-events-none'">
+                        <div class="mr-2 rounded-full p-2 transition"
+                             :class="$wire.prevTradeId && !isLoading ?
+                                 'bg-gray-100 group-hover:bg-indigo-100' :
+                                 'bg-gray-50'">
+                            <i class="fa-solid fa-arrow-left text-sm transition"
+                               :class="$wire.prevTradeId && !isLoading ?
+                                   'text-gray-500 group-hover:text-indigo-600' :
+                                   'text-gray-300'"></i>
                         </div>
-                        <span class="text-sm font-bold">{{ __('labels.previous') }}</span>
+                        <span class="text-sm font-bold transition"
+                              :class="$wire.prevTradeId && !isLoading ? 'text-gray-600' : 'text-gray-300'">
+                            {{ __('labels.previous') }}
+                        </span>
                     </button>
 
                     <div class="mx-2 hidden h-4 w-px bg-gray-200 sm:block"></div>
 
-                    <button class="group flex items-center font-medium text-gray-500 transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-30"
-                            wire:click="goToNext"
-                            @if (!$nextTradeId) disabled @endif>
-                        <span class="mr-2 text-sm font-bold">{{ __('labels.next') }}</span>
-                        <div class="rounded-full bg-gray-100 p-2 transition group-hover:bg-indigo-100 group-disabled:bg-gray-50">
-                            <i class="fa-solid fa-arrow-right text-sm"></i>
+                    {{-- Botón SIGUIENTE --}}
+                    <button class="group flex items-center font-medium transition disabled:cursor-not-allowed"
+                            @click="isLoading = true; $wire.goToNext()"
+                            :disabled="!$wire.nextTradeId || isLoading"
+                            :class="$wire.nextTradeId && !isLoading ?
+                                'text-gray-500 hover:text-indigo-600' :
+                                'text-gray-300 pointer-events-none'">
+                        <span class="mr-2 text-sm font-bold transition"
+                              :class="$wire.nextTradeId && !isLoading ? 'text-gray-600' : 'text-gray-300'">
+                            {{ __('labels.next') }}
+                        </span>
+                        <div class="rounded-full p-2 transition"
+                             :class="$wire.nextTradeId && !isLoading ?
+                                 'bg-gray-100 group-hover:bg-indigo-100' :
+                                 'bg-gray-50'">
+                            <i class="fa-solid fa-arrow-right text-sm transition"
+                               :class="$wire.nextTradeId && !isLoading ?
+                                   'text-gray-500 group-hover:text-indigo-600' :
+                                   'text-gray-300'"></i>
                         </div>
                     </button>
+
                 </div>
 
                 {{-- Botón Cerrar (Alpine Directo) --}}
@@ -106,7 +116,7 @@
                 <div x-show="!isLoading"
                      style="display: none;">
 
-                    @if (!$selectedTrade)
+                    @if (!$this->trade)
                         {{-- Fallback de Livewire (por si hay un micro-lapso sin datos) --}}
                         <div class="w-full animate-pulse space-y-6">
                             <div class="flex justify-between">
@@ -125,26 +135,26 @@
                         {{-- CONTENIDO DE LA OPERACIÓN --}}
                         <div wire:loading.class="opacity-50 pointer-events-none"
                              wire:target="goToPrev, goToNext"
-                             wire:key="trade-content-{{ $selectedTrade->id }}">
+                             wire:key="trade-content-{{ $this->trade->id }}">
 
                             {{-- 1. CABECERA TRADE --}}
                             <div class="mb-4 flex items-end justify-between">
                                 <div>
-                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ticket #{{ $selectedTrade->ticket ?? 'N/A' }}</span>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ticket #{{ $this->trade->ticket ?? 'N/A' }}</span>
                                     <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
-                                        {{ $selectedTrade->tradeAsset->name ?? 'N/A' }}
-                                        <span class="{{ $selectedTrade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
-                                            {{ $selectedTrade->direction }}
+                                        {{ $this->trade->tradeAsset->name ?? 'N/A' }}
+                                        <span class="{{ $this->trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
+                                            {{ $this->trade->direction }}
                                         </span>
                                     </h2>
-                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $selectedTrade->account->name }}</span>
+                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $this->trade->account->name }}</span>
                                 </div>
                                 <div class="text-right">
                                     <span class="block text-sm font-medium text-gray-500">{{ __('labels.net_result') }}</span>
                                     {{--  --}}
-                                    <span class="{{ $selectedTrade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-4xl font-black"
-                                          x-text="$store.viewMode.format({{ $selectedTrade->pnl }}, {{ $selectedTrade->pnl_percentage ?? 0 }})">
-                                        {{ $selectedTrade->pnl >= 0 ? '+' : '' }}{{ number_format($selectedTrade->pnl, 2) }} $
+                                    <span class="{{ $this->trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-4xl font-black"
+                                          x-text="$store.viewMode.format({{ $this->trade->pnl }}, {{ $this->trade->pnl_percentage ?? 0 }})">
+                                        {{ $this->trade->pnl >= 0 ? '+' : '' }}{{ number_format($this->trade->pnl, 2) }} $
                                     </span>
                                 </div>
                             </div>
@@ -155,8 +165,8 @@
                                 {{-- MISTAKE SELECTOR --}}
                                 {{-- Al estar bajo x-show, Livewire NO PIERDE la referencia a este componente --}}
                                 <div class="col-span-3">
-                                    <livewire:mistake-selector :trade="$selectedTrade"
-                                                               :wire:key="'mistake-'.$selectedTrade->id" />
+                                    <livewire:mistake-selector :trade="$this->trade"
+                                                               :wire:key="'mistake-'.$this->trade->id" />
                                 </div>
 
                                 {{-- COLUMNA DATOS --}}
@@ -166,16 +176,16 @@
                                         <dl class="space-y-4 text-sm">
                                             <div class="flex justify-between border-b border-gray-200 pb-2">
                                                 <dt class="text-gray-500">{{ __('labels.entry_exit') }}</dt>
-                                                <dd class="font-mono font-bold text-gray-900">{{ $selectedTrade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400"></i> {{ $selectedTrade->exit_price }}</dd>
+                                                <dd class="font-mono font-bold text-gray-900">{{ $this->trade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400"></i> {{ $this->trade->exit_price }}</dd>
                                             </div>
                                             <div class="flex justify-between border-b border-gray-200 pb-2">
                                                 <dt class="text-gray-500">{{ __('labels.timetable') }}</dt>
                                                 {{-- Después (CORRECTO) --}}
                                                 <dd class="text-right font-mono font-bold text-gray-900">
-                                                    {{ \Carbon\Carbon::parse($selectedTrade->entry_time)->format('H:i') }}
-                                                    @if ($selectedTrade->exit_time)
-                                                        - {{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('H:i') }}
-                                                        <span class="block text-[10px] font-normal text-gray-400">{{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('d M Y') }}</span>
+                                                    {{ \Carbon\Carbon::parse($this->trade->entry_time)->format('H:i') }}
+                                                    @if ($this->trade->exit_time)
+                                                        - {{ \Carbon\Carbon::parse($this->trade->exit_time)->format('H:i') }}
+                                                        <span class="block text-[10px] font-normal text-gray-400">{{ \Carbon\Carbon::parse($this->trade->exit_time)->format('d M Y') }}</span>
                                                     @else
                                                         <span class="text-xs text-yellow-500">({{ __('labels.open') }})</span>
                                                     @endif
@@ -183,19 +193,24 @@
                                             </div>
                                             <div class="flex justify-between border-b border-gray-200 pb-2">
                                                 <dt class="text-gray-500">{{ __('labels.volume') }}</dt>
-                                                <dd class="font-bold text-gray-900">{{ $selectedTrade->size }} {{ __('labels.lots') }}</dd>
+                                                <dd class="font-bold text-gray-900">{{ $this->trade->size }} {{ __('labels.lots') }}</dd>
+                                            </div>
+
+                                            <div class="flex justify-between border-b border-gray-200 pb-2">
+                                                <dt class="text-gray-500">{{ __('labels.pips_moved') }}</dt>
+                                                <dd class="font-bold text-gray-900">{{ $this->trade->pips_traveled }} {{ __('labels.pips') }}</dd>
                                             </div>
 
                                             {{-- BARRA MAE/MFE --}}
                                             <div class="flex justify-between">
                                                 <dt class="text-gray-500">{{ __('labels.execution') }}</dt>
                                                 <dd class="w-32 font-medium text-gray-900">
-                                                    @if ($selectedTrade->mae_price && $selectedTrade->mfe_price)
+                                                    @if ($this->trade->mae_price && $this->trade->mfe_price)
                                                         @php
                                                             // 1. Distancias Absolutas
-                                                            $distMae = abs($selectedTrade->entry_price - $selectedTrade->mae_price);
-                                                            $distMfe = abs($selectedTrade->entry_price - $selectedTrade->mfe_price);
-                                                            $distReal = abs($selectedTrade->entry_price - $selectedTrade->exit_price);
+                                                            $distMae = abs($this->trade->entry_price - $this->trade->mae_price);
+                                                            $distMfe = abs($this->trade->entry_price - $this->trade->mfe_price);
+                                                            $distReal = abs($this->trade->entry_price - $this->trade->exit_price);
 
                                                             // 2. Rango Visual
                                                             $totalRange = $distMae + $distMfe;
@@ -205,7 +220,7 @@
                                                             $pctGreen = ($distMfe / $totalRange) * 100;
 
                                                             // 3. Posición Marcador
-                                                            $isBetterThanEntry = $selectedTrade->direction == 'long' ? $selectedTrade->exit_price >= $selectedTrade->entry_price : $selectedTrade->exit_price <= $selectedTrade->entry_price;
+                                                            $isBetterThanEntry = $this->trade->direction == 'long' ? $this->trade->exit_price >= $this->trade->entry_price : $this->trade->exit_price <= $this->trade->entry_price;
 
                                                             if ($isBetterThanEntry) {
                                                                 $markerPos = $pctRed + ($distReal / $totalRange) * 100;
@@ -223,12 +238,12 @@
                                                             // y no sirve para calcular el valor del punto matemáticamente.
                                                             if ($distReal > 0.0002) {
                                                                 // Cálculo exacto basado en lo que pasó
-                                                                $valuePerPoint = abs($selectedTrade->pnl) / $distReal;
+                                                                $valuePerPoint = abs($this->trade->pnl) / $distReal;
                                                             } else {
                                                                 // FALLBACK: Estimación basada en Lotes (Size)
                                                                 // Asumimos estándar Forex (100k unidades).
                                                                 // Si operas Índices/Crypto esto será una aproximación, pero mucho mejor que 0 o Infinito.
-                                                                $valuePerPoint = $selectedTrade->size * 100000;
+                                                                $valuePerPoint = $this->trade->size * 100000;
                                                             }
 
                                                             // Aplicamos el valor del punto a las distancias MAE/MFE
@@ -270,232 +285,243 @@
                                         </dl>
                                     </div>
 
-                                    <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm transition-all focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2">
+                                    <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm transition-all focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2"
+                                         x-data="{
+                                             notes: '',
+                                             saving: false,
+                                             saved: false,
+                                             async save() {
+                                                 if (this.saving) return;
+                                                 this.saving = true;
+                                                 this.saved = false;
+                                                 try {
+                                                     await this.$wire.saveNotes(this.notes);
+                                                     this.saved = true;
+                                                     setTimeout(() => this.saved = false, 2500);
+                                                 } finally {
+                                                     this.saving = false;
+                                                 }
+                                             }
+                                         }">
                                         <div class="mb-2 flex items-center justify-between">
                                             <h4 class="flex items-center gap-2 text-xs font-bold uppercase text-yellow-700">
                                                 <i class="fa-regular fa-note-sticky"></i> {{ __('labels.session_notes') }}
                                             </h4>
 
-                                            {{-- Indicador de Guardado --}}
-                                            <div class="text-xs font-medium text-yellow-600 transition-opacity duration-500"
-                                                 x-data="{ saved: false }"
-                                                 x-init="@this.on('trade-updated', () => {
-                                                     saved = true;
-                                                     setTimeout(() => saved = false, 2000)
-                                                 })">
+                                            {{-- Indicador 100% Alpine: sin wire:loading, sin isSavingNotes en PHP --}}
+                                            <div class="flex items-center gap-1 text-xs font-medium text-yellow-600">
                                                 <span x-show="saved"
-                                                      x-transition><i class="fa-solid fa-check"></i> {{ __('labels.saved') }}</span>
-                                                <span wire:loading
-                                                      wire:target="saveNotes"><i class="fa-solid fa-circle-notch fa-spin"></i> {{ __('labels.saving') }}</span>
+                                                      x-transition
+                                                      style="display:none">
+                                                    <i class="fa-solid fa-check"></i> {{ __('labels.saved') }}
+                                                </span>
+                                                <span x-show="saving"
+                                                      x-transition
+                                                      style="display:none">
+                                                    <i class="fa-solid fa-circle-notch fa-spin"></i> {{ __('labels.saving') }}
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {{-- Textarea con Auto-Guardado al perder el foco (blur) --}}
+                                        {{-- x-model en lugar de wire:model: Alpine gestiona el valor localmente --}}
+                                        {{-- @blur dispara save(): en ese momento, .defer sube notes + llama saveNotes en 1 request --}}
                                         <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 placeholder-yellow-800/50 focus:ring-0"
-                                                  wire:model="notes"
-                                                  wire:blur="saveNotes"
+                                                  x-model="notes"
+                                                  @blur="save()"
                                                   rows="4"
-                                                  placeholder="{{ __('labels.placeholder_notes') }}"></textarea>
+                                                  placeholder="{{ __('labels.placeholder_notes') }}">
+    </textarea>
                                     </div>
                                 </div>
 
                                 {{-- COLUMNA GRÁFICO + IA --}}
                                 <div class="space-y-6 lg:col-span-2">
 
-                                    <template x-if="!isLoading">
-                                        {{-- 
+                                    {{-- <template x-if="!isLoading"> --}}
+                                    {{-- 
         1. Usamos 'data-*' para pasar valores de PHP a JS sin errores de sintaxis.
         2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
     --}}
-                                        <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                             data-path="{{ $selectedTrade?->chart_data_path }}"
-                                             data-entry="{{ $selectedTrade?->entry_price }}"
-                                             data-exit="{{ $selectedTrade?->exit_price }}"
-                                             data-dir="{{ $selectedTrade?->direction }}"
-                                             x-data="chartViewer('{{ $selectedTrade?->chart_data_path ? 'chart' : 'image' }}')"
-                                             {{-- DATOS SEGUROS (PHP -> HTML) --}}
-                                             {{-- EVENTO NATIVO (Se encarga de escuchar cambios si el modal no se recarga) --}}
-                                             @trade-selected.window="load($event.detail.path, $event.detail.entry, $event.detail.exit, $event.detail.direction)"
-                                             {{-- INICIALIZACIÓN (Solo el retardo y la carga inicial) --}}
-                                             x-init="setTimeout(() => {
-                                                 // Leemos los atributos data- definidos arriba
-                                                 // Esto ocurre 100ms después de crearse el HTML para asegurar que el gráfico tenga ancho
-                                                 if ($el.dataset.path) {
-                                                     load(
-                                                         $el.dataset.path,
-                                                         $el.dataset.entry,
-                                                         $el.dataset.exit,
-                                                         $el.dataset.dir
-                                                     );
-                                                 }
-                                             }, 100);">
+                                    <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
+                                         data-path="{{ $this->trade?->chart_data_path }}"
+                                         data-entry="{{ $this->trade?->entry_price }}"
+                                         data-exit="{{ $this->trade?->exit_price }}"
+                                         data-dir="{{ $this->trade?->direction }}"
+                                         x-show="!isLoading"
+                                         x-transition:enter="transition ease-out duration-200"
+                                         x-transition:enter-start="opacity-0"
+                                         x-transition:enter-end="opacity-100"
+                                         style="display:none"
+                                         x-data="chartViewer({{ $this->trade?->chart_data_path ? '\'chart\'' : '\'image\'' }})"
+                                         @trade-selected.window="load(event.detail.path, event.detail.entry, event.detail.exit, event.detail.direction)"
+                                         x-init="setTimeout(() => { if ($el.dataset.path) load($el.dataset.path, $el.dataset.entry, $el.dataset.exit, $el.dataset.dir) }, 100)">
 
-                                            {{-- BARRA DE HERRAMIENTAS (Sin cambios) --}}
-                                            <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
-                                                 wire:ignore>
-                                                @if ($selectedTrade?->chart_data_path)
-                                                    <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
-                                                        <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 transition-all hover:text-white"
-                                                                @click="changeTimeframe(tf)"
-                                                                :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
-                                                                x-text="tf.toUpperCase()"></button>
-                                                    </template>
-                                                    <div class="mx-1 h-3 w-px bg-gray-600"></div>
-                                                    {{-- BOTÓN VOLUMEN --}}
-                                                    <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                            @click="toggleVol()"
-                                                            :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
-                                                            title="{{ __('labels.show_hide_volume') }}">
+                                        {{-- BARRA DE HERRAMIENTAS (Sin cambios) --}}
+                                        <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
+                                             wire:ignore>
+                                            @if ($this->trade?->chart_data_path)
+                                                <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
+                                                    <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 transition-all hover:text-white"
+                                                            @click="changeTimeframe(tf)"
+                                                            :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
+                                                            x-text="tf.toUpperCase()"></button>
+                                                </template>
+                                                <div class="mx-1 h-3 w-px bg-gray-600"></div>
+                                                {{-- BOTÓN VOLUMEN --}}
+                                                <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                        @click="toggleVol()"
+                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        title="{{ __('labels.show_hide_volume') }}">
 
-                                                        {{-- Icono de barras (FontAwesome o SVG manual) --}}
-                                                        <i class="fa-solid fa-chart-column"></i>
-                                                        <span>VOL</span>
-                                                    </button>
-                                                    {{-- BOTÓN EMA --}}
-                                                    <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                            @click="toggleEma()"
-                                                            :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
-                                                            title="{{ __('labels.show_hide_ema') }}">
+                                                    {{-- Icono de barras (FontAwesome o SVG manual) --}}
+                                                    <i class="fa-solid fa-chart-column"></i>
+                                                    <span>VOL</span>
+                                                </button>
+                                                {{-- BOTÓN EMA --}}
+                                                <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
+                                                        @click="toggleEma()"
+                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        title="{{ __('labels.show_hide_ema') }}">
 
-                                                        {{-- Icono de línea --}}
-                                                        <i class="fa-solid fa-wave-square"></i>
-                                                        <span>EMA 50</span>
-                                                    </button>
+                                                    {{-- Icono de línea --}}
+                                                    <i class="fa-solid fa-wave-square"></i>
+                                                    <span>EMA 50</span>
+                                                </button>
 
-                                                    {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
-                                                    <div class="flex-grow"></div>
-                                                @endif
-                                                {{-- BOTÓN PANTALLA COMPLETA --}}
-                                                {{-- LADO DERECHO: TOGGLE VISTA (Siempre visible) --}}
-                                                <div class="flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm">
-                                                    {{-- Botón Ver Gráfico --}}
-                                                    @if ($selectedTrade?->chart_data_path)
-                                                        <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
-                                                                @click="activeTab = 'chart'"
-                                                                :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
-                                                            <i class="fa-solid fa-chart-line"></i>
-                                                            <span class="hidden sm:inline">Chart</span>
-                                                        </button>
-                                                    @endif
-
-                                                    {{-- Botón Ver Captura --}}
+                                                {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
+                                                <div class="flex-grow"></div>
+                                            @endif
+                                            {{-- BOTÓN PANTALLA COMPLETA --}}
+                                            {{-- LADO DERECHO: TOGGLE VISTA (Siempre visible) --}}
+                                            <div class="flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm">
+                                                {{-- Botón Ver Gráfico --}}
+                                                @if ($this->trade?->chart_data_path)
                                                     <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
-                                                            @click="activeTab = 'image'"
-                                                            :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
-                                                        <i class="fa-solid fa-image"></i>
-                                                        <span class="hidden sm:inline">Screenshot</span>
+                                                            @click="activeTab = 'chart'"
+                                                            :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                        <i class="fa-solid fa-chart-line"></i>
+                                                        <span class="hidden sm:inline">Chart</span>
                                                     </button>
+                                                @endif
 
-                                                    <div class="mx-1 h-3 w-px bg-gray-600"></div>
+                                                {{-- Botón Ver Captura --}}
+                                                <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
+                                                        @click="activeTab = 'image'"
+                                                        :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                    <i class="fa-solid fa-image"></i>
+                                                    <span class="hidden sm:inline">Screenshot</span>
+                                                </button>
 
-                                                    <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
-                                                            @click="toggleFullscreen()"
-                                                            :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
+                                                <div class="mx-1 h-3 w-px bg-gray-600"></div>
 
-                                                        {{-- Icono Cambiante --}}
-                                                        <template x-if="!isFullscreen">
-                                                            <i class="fa-solid fa-expand"></i>
-                                                        </template>
-                                                        <template x-if="isFullscreen">
-                                                            <i class="fa-solid fa-compress"></i>
-                                                        </template>
-                                                    </button>
-                                                </div>
+                                                <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
+                                                        @click="toggleFullscreen()"
+                                                        :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
 
+                                                    {{-- Icono Cambiante --}}
+                                                    <template x-if="!isFullscreen">
+                                                        <i class="fa-solid fa-expand"></i>
+                                                    </template>
+                                                    <template x-if="isFullscreen">
+                                                        <i class="fa-solid fa-compress"></i>
+                                                    </template>
+                                                </button>
                                             </div>
 
-                                            {{-- CONTENEDOR GRÁFICO --}}
-                                            <div id="firstContainer"
-                                                 class="h-full w-full bg-gray-900"
-                                                 wire:ignore
-                                                 x-show="activeTab === 'chart'"
-                                                 x-ref="chartContainer"></div>
+                                        </div>
 
-                                            {{-- 2. CONTENEDOR IMAGEN / UPLOAD --}}
-                                            <div class="absolute inset-0 z-10 flex h-full w-full flex-col items-center justify-center bg-gray-900"
-                                                 x-show="activeTab === 'image'"
-                                                 x-transition:enter="transition ease-out duration-200"
-                                                 x-transition:enter-start="opacity-0 scale-95"
-                                                 x-transition:enter-end="opacity-100 scale-100"
-                                                 style="display: none;">
+                                        {{-- CONTENEDOR GRÁFICO --}}
+                                        <div id="firstContainer"
+                                             class="h-full w-full bg-gray-900"
+                                             wire:ignore
+                                             x-show="activeTab === 'chart'"
+                                             x-ref="chartContainer"></div>
 
-                                                {{-- 
+                                        {{-- 2. CONTENEDOR IMAGEN / UPLOAD --}}
+                                        <div class="absolute inset-0 z-10 flex h-full w-full flex-col items-center justify-center bg-gray-900"
+                                             x-show="activeTab === 'image'"
+                                             x-transition:enter="transition ease-out duration-200"
+                                             x-transition:enter-start="opacity-0 scale-95"
+                                             x-transition:enter-end="opacity-100 scale-100"
+                                             style="display: none;">
+
+                                            {{-- 
        IMPORTANTE: Esta wire:key cambia cuando se sube la foto.
        Esto obliga a Livewire a repintar todo el bloque sí o sí.
     --}}
-                                                <div class="h-full w-full"
-                                                     wire:key="media-box-{{ $selectedTrade->id }}-{{ $currentScreenshot ? 'img' : 'drop' }}">
+                                            <div class="h-full w-full"
+                                                 wire:key="media-box-{{ $this->trade->id }}-{{ $currentScreenshot ? 'img' : 'drop' }}">
 
-                                                    @if ($currentScreenshot)
-                                                        {{-- CASO A: YA HAY IMAGEN --}}
-                                                        <div class="group relative h-full w-full">
-                                                            {{-- Añadimos un timestamp a la URL para evitar caché del navegador si cambias la imagen --}}
-                                                            <img class="h-full w-full object-contain"
-                                                                 src="{{ Storage::url($currentScreenshot) }}?t={{ time() }}"
-                                                                 alt="Trade Screenshot">
+                                                @if ($currentScreenshot)
+                                                    {{-- CASO A: YA HAY IMAGEN --}}
+                                                    <div class="group relative h-full w-full">
+                                                        {{-- Añadimos un timestamp a la URL para evitar caché del navegador si cambias la imagen --}}
+                                                        <img class="h-full w-full object-contain"
+                                                             src="{{ Storage::url($currentScreenshot) }}?t={{ time() }}"
+                                                             alt="Trade Screenshot">
 
-                                                            {{-- Overlay para cambiar imagen --}}
-                                                            <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
-                                                                 x-show="!isFullscreen">
-                                                                <label class="cursor-pointer rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20">
-                                                                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i> {{ __('labels.change_image') }}
-                                                                    {{-- IMPORTANTE: wire:model.live --}}
-                                                                    <input class="hidden"
-                                                                           type="file"
-                                                                           wire:model.live="uploadedScreenshot"
-                                                                           accept="image/*">
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                    @else
-                                                        {{-- CASO B: NO HAY IMAGEN (DROPZONE) --}}
-                                                        <div class="flex h-full w-full flex-col items-center justify-center p-8 text-center"
-                                                             x-data="{ isDropping: false }"
-                                                             @dragover.prevent="isDropping = true"
-                                                             @dragleave.prevent="isDropping = false"
-                                                             {{-- Evento JS Manual --}}
-                                                             @drop.prevent="isDropping = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }))">
-
-                                                            {{-- IMPORTANTE: wire:model.live --}}
-                                                            <input class="hidden"
-                                                                   type="file"
-                                                                   x-ref="fileInput"
-                                                                   wire:model.live="uploadedScreenshot"
-                                                                   accept="image/*">
-
-                                                            <label class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-all"
-                                                                   :class="isDropping ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-indigo-500 hover:bg-gray-800'"
-                                                                   @click="$refs.fileInput.click()">
-
-                                                                <div wire:loading.remove
-                                                                     wire:target="uploadedScreenshot">
-                                                                    <div class="mb-4 rounded-full bg-gray-800 p-4 text-indigo-500 shadow-lg transition-transform group-hover:scale-110">
-                                                                        <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
-                                                                    </div>
-                                                                    <h3 class="mb-1 text-lg font-bold text-white">{{ __('labels.upload_screenshot') }}</h3>
-                                                                    <p class="text-xs text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
-                                                                </div>
-
-                                                                <div class="text-center"
-                                                                     wire:loading
-                                                                     wire:target="uploadedScreenshot">
-                                                                    <i class="fa-solid fa-circle-notch fa-spin mb-3 text-3xl text-indigo-500"></i>
-                                                                    <p class="text-sm font-bold text-white">{{ __('labels.uploading') }}...</p>
-                                                                </div>
+                                                        {{-- Overlay para cambiar imagen --}}
+                                                        <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                                                             x-show="!isFullscreen">
+                                                            <label class="cursor-pointer rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20">
+                                                                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> {{ __('labels.change_image') }}
+                                                                {{-- IMPORTANTE: wire:model.live --}}
+                                                                <input class="hidden"
+                                                                       type="file"
+                                                                       wire:model.live="uploadedScreenshot"
+                                                                       accept="image/*">
                                                             </label>
                                                         </div>
-                                                    @endif
-                                                </div>
-                                            </div>
+                                                    </div>
+                                                @else
+                                                    {{-- CASO B: NO HAY IMAGEN (DROPZONE) --}}
+                                                    <div class="flex h-full w-full flex-col items-center justify-center p-8 text-center"
+                                                         x-data="{ isDropping: false }"
+                                                         @dragover.prevent="isDropping = true"
+                                                         @dragleave.prevent="isDropping = false"
+                                                         {{-- Evento JS Manual --}}
+                                                         @drop.prevent="isDropping = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }))">
 
-                                            {{-- LOADING OVERLAY --}}
-                                            <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90"
-                                                 x-show="loading"
-                                                 x-transition>
-                                                <i class="fa-solid fa-circle-notch fa-spin mb-2 text-2xl text-indigo-500"></i>
+                                                        {{-- IMPORTANTE: wire:model.live --}}
+                                                        <input class="hidden"
+                                                               type="file"
+                                                               x-ref="fileInput"
+                                                               wire:model.live="uploadedScreenshot"
+                                                               accept="image/*">
+
+                                                        <label class="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-all"
+                                                               :class="isDropping ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-indigo-500 hover:bg-gray-800'"
+                                                               @click="$refs.fileInput.click()">
+
+                                                            <div wire:loading.remove
+                                                                 wire:target="uploadedScreenshot">
+                                                                <div class="mb-4 rounded-full bg-gray-800 p-4 text-indigo-500 shadow-lg transition-transform group-hover:scale-110">
+                                                                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                                                                </div>
+                                                                <h3 class="mb-1 text-lg font-bold text-white">{{ __('labels.upload_screenshot') }}</h3>
+                                                                <p class="text-xs text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
+                                                            </div>
+
+                                                            <div class="text-center"
+                                                                 wire:loading
+                                                                 wire:target="uploadedScreenshot">
+                                                                <i class="fa-solid fa-circle-notch fa-spin mb-3 text-3xl text-indigo-500"></i>
+                                                                <p class="text-sm font-bold text-white">{{ __('labels.uploading') }}...</p>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
-                                    </template>
+
+                                        {{-- LOADING OVERLAY --}}
+                                        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90"
+                                             x-show="loading"
+                                             x-transition>
+                                            <i class="fa-solid fa-circle-notch fa-spin mb-2 text-2xl text-indigo-500"></i>
+                                        </div>
+                                    </div>
+                                    {{-- </template> --}}
                                     {{-- IA --}}
                                     @if (Auth::user()->subscribed('default'))
                                         <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
@@ -507,11 +533,11 @@
                                                     {{-- CONTADOR VISUAL --}}
                                                     <p class="mt-1 text-[10px] font-medium text-gray-500">
                                                         Usos diarios:
-                                                        <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                                                            {{ $this->getAiCreditsLeft() }} / 10
+                                                        <span class="{{ $this->aiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                                            {{ $this->aiCreditsLeft() }} / 10
                                                         </span>
                                                     </p>
-                                                    @if (!$selectedTrade->ai_analysis)
+                                                    @if (!$this->trade->ai_analysis)
                                                         <p class="mt-1 text-xs text-indigo-600">
                                                             {{ __('labels.explain_analyze_mentor') }}
                                                         </p>
@@ -519,13 +545,13 @@
                                                 </div>
 
 
-                                                @if (!$selectedTrade->ai_analysis)
+                                                @if (!$this->trade->ai_analysis)
                                                     <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                                                             wire:click="analyzeIndividualTrade"
                                                             wire:loading.attr="disabled">
                                                         <span wire:loading.remove
                                                               wire:target="analyzeIndividualTrade">
-                                                            {{ $this->getAiCreditsLeft() > 0 ? __('labels.analyze_trade') : 'Límite alcanzado' }}
+                                                            {{ $this->aiCreditsLeft() > 0 ? __('labels.analyze_trade') : 'Límite alcanzado' }}
                                                         </span>
                                                         <span class="flex items-center gap-2"
                                                               wire:loading
@@ -560,9 +586,9 @@
                                             </div>
 
 
-                                            @if ($selectedTrade->ai_analysis)
+                                            @if ($this->trade->ai_analysis)
                                                 <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800">
-                                                    {!! Str::markdown($selectedTrade->ai_analysis) !!}
+                                                    {!! Str::markdown($this->trade->ai_analysis) !!}
                                                 </div>
                                                 <div class="mt-2 text-right">
                                                     <button class="text-[10px] text-indigo-400 underline hover:text-indigo-600"

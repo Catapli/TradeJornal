@@ -52,6 +52,10 @@ return [
         'base_url' => 'https://ultimate-economic-calendar.p.rapidapi.com',
     ],
 
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+
 
 
 ];

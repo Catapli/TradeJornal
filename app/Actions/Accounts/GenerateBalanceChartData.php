@@ -4,7 +4,6 @@ namespace App\Actions\Accounts;
 
 use App\Models\Account;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class GenerateBalanceChartData
@@ -18,13 +17,6 @@ class GenerateBalanceChartData
      */
     public function execute(Account $account, string $timeframe = 'all'): array
     {
-        $cacheKey = "balance_chart_{$account->id}_{$timeframe}";
-
-        // Caché de 3 minutos para el gráfico
-        if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
-        }
-
         // ========================================
         // 1. FECHA DE CORTE SEGÚN TIMEFRAME
         // ========================================
@@ -49,16 +41,13 @@ class GenerateBalanceChartData
         // ========================================
         // 3. FORMATO DE AGRUPACIÓN (CRÍTICO)
         // ========================================
-        // Usamos DATE_TRUNC o TO_CHAR según el timeframe
-
         $groupFormat = match ($timeframe) {
-            '1h' => "TO_CHAR(exit_time, 'HH24:MI')",      // Agrupa por minuto (ej: "14:30")
-            '24h' => "TO_CHAR(exit_time, 'HH24:00')",     // Agrupa por hora (ej: "14:00")
-            '7d' => "TO_CHAR(exit_time, 'DD/MM HH24:00')", // Agrupa por día+hora (ej: "08/02 14:00")
-            default => "TO_CHAR(exit_time, 'DD Mon')",     // Agrupa por día (ej: "08 Feb")
+            '1h' => "TO_CHAR(exit_time, 'HH24:MI')",
+            '24h' => "TO_CHAR(exit_time, 'HH24:00')",
+            '7d' => "TO_CHAR(exit_time, 'DD/MM HH24:00')",
+            default => "TO_CHAR(exit_time, 'DD Mon')",
         };
 
-        // También necesitamos un campo para ordenar correctamente
         $orderField = match ($timeframe) {
             '1h' => "DATE_TRUNC('minute', exit_time)",
             '24h' => "DATE_TRUNC('hour', exit_time)",
@@ -67,28 +56,28 @@ class GenerateBalanceChartData
         };
 
         // ========================================
-        // 4. QUERY AGRUPADA (CORREGIDA)
+        // 4. QUERY AGRUPADA
         // ========================================
         $groupedData = DB::table('trades')
             ->selectRaw("
-            {$groupFormat} as time_label,
-            {$orderField} as order_time,
-            SUM(pnl) as interval_pnl,
-            SUM(CASE 
-                WHEN mae_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
-                THEN -1 * (ABS(entry_price - mae_price) * ABS(pnl) / ABS(exit_price - entry_price))
-                ELSE 0 
-            END) as total_floating_loss,
-            SUM(CASE 
-                WHEN mfe_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
-                THEN (ABS(entry_price - mfe_price) * ABS(pnl) / ABS(exit_price - entry_price))
-                ELSE 0 
-            END) as total_floating_profit
-        ")
+                {$groupFormat} as time_label,
+                {$orderField} as order_time,
+                SUM(pnl) as interval_pnl,
+                SUM(CASE 
+                    WHEN mae_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
+                    THEN -1 * (ABS(entry_price - mae_price) * ABS(pnl) / ABS(exit_price - entry_price))
+                    ELSE 0 
+                END) as total_floating_loss,
+                SUM(CASE 
+                    WHEN mfe_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
+                    THEN (ABS(entry_price - mfe_price) * ABS(pnl) / ABS(exit_price - entry_price))
+                    ELSE 0 
+                END) as total_floating_profit
+            ")
             ->where('account_id', $account->id)
             ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
             ->whereNotNull('exit_time')
-            ->groupByRaw("{$groupFormat}, {$orderField}") // ✅ Ahora agrupa correctamente
+            ->groupByRaw("{$groupFormat}, {$orderField}")
             ->orderBy('order_time', 'asc')
             ->get();
 
@@ -108,11 +97,9 @@ class GenerateBalanceChartData
                 $runningBalance += $point->interval_pnl;
 
                 // Equity Mínima con MAE (Línea Roja - Riesgo)
-                // Usamos el mínimo de todos los trades del intervalo
                 $minEquity = $runningBalance + ($point->total_floating_loss ?? 0);
 
                 // Equity Máxima con MFE (Línea Azul - Potencial)
-                // Usamos el máximo de todos los trades del intervalo
                 $maxEquity = $runningBalance + ($point->total_floating_profit ?? 0);
 
                 // Agregar puntos
@@ -132,7 +119,7 @@ class GenerateBalanceChartData
         // ========================================
         // 6. ESTRUCTURA FINAL PARA APEXCHARTS
         // ========================================
-        $result = [
+        return [
             'categories' => $labels,
             'series' => [
                 [
@@ -149,13 +136,7 @@ class GenerateBalanceChartData
                 ]
             ]
         ];
-
-        // Cachear 3 minutos
-        Cache::put($cacheKey, $result, now()->addMinutes(3));
-
-        return $result;
     }
-
 
     /**
      * Calcula la fecha de corte según el timeframe

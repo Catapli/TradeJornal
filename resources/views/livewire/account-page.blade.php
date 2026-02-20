@@ -34,11 +34,10 @@
     </div>
 
     {{-- ? Loading --}}
-    <div class="fixed inset-0 z-[9999]"
-         wire:loading
-         wire:target='updatedSelectedAccountId,openRules, insertAccount, updateAccount, deleteAccount, changeAccount'>
+    {{-- <div class="fixed inset-0 z-[9999]"
+         wire:loading>
         <x-loader></x-loader>
-    </div>
+    </div> --}}
 
     <x-confirm-modal />
 
@@ -238,10 +237,20 @@
                                    x-ref="loginPlatform"
                                    x-model="loginPlatform"
                                    placeholder="{{ __('labels.enter_account_id') }}">
-                            {{-- <p class="text-xs text-gray-500">
-                            <i class="fa-solid fa-info-circle"></i>
-                            {{ __('labels.account_id_help') }}
-                        </p> --}}
+
+                        </div>
+                        {{-- ✅ BOTÓN DESCARGA EXE - SOLO MT5 --}}
+                        <div class="mt-3 flex items-center gap-2"
+                             x-show="platformBroker === 'mt5'">
+                            <a class="group flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:scale-[1.02] hover:from-emerald-600 hover:to-green-700 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-200"
+                               href="{{ asset('agents/TradeForgeAgent.exe') }}"
+                               download="TradeForgeAgent.exe"
+                               target="_blank">
+                                <i class="fa-solid fa-download text-lg transition-transform duration-300"></i>
+                                <span>{{ __('labels.download_mt5_agent') }}</span>
+                            </a>
+
+
                         </div>
                     </div>
                 </div>
@@ -834,6 +843,8 @@
                                 scope="col">{{ __('labels.time_in_out') }}</th>
                             <th class="px-6 py-4 text-center"
                                 scope="col">{{ __('labels.volume') }}</th>
+                            <th class="px-6 py-4 text-center"
+                                scope="col">{{ __('labels.pips') }}</th>
                             <th class="px-6 py-4 text-left"
                                 scope="col">{{ __('labels.prices_in_out') }}</th>
                             <th class="px-6 py-4 text-right"
@@ -901,7 +912,14 @@
                                     </span>
                                 </td>
 
-                                {{-- COLUMNA 4: PRECIOS (APILADO) --}}
+                                {{-- COLUMNA 4: PIPS --}}
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    <span class="inline-block rounded bg-gray-100 px-2 py-1 font-mono text-xs font-bold text-gray-700">
+                                        {{ $trade->pips_traveled }}
+                                    </span>
+                                </td>
+
+                                {{-- COLUMNA 5: PRECIOS (APILADO) --}}
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <div class="flex flex-col gap-1.5">
                                         {{-- Entrada --}}
@@ -921,7 +939,7 @@
                                     </div>
                                 </td>
 
-                                {{-- 4. PNL --}}
+                                {{-- 6. PNL --}}
                                 <td class="whitespace-nowrap px-6 py-4 text-right"
                                     x-data>
                                     <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-sm font-black"

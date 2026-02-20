@@ -4,6 +4,7 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CollabListController;
 use App\Http\Controllers\ListsController;
+use App\Http\Controllers\Mt5SyncController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReasonController;
 use App\Http\Controllers\TownController;
@@ -29,3 +30,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/mt5-sync', [App\Http\Controllers\Mt5SyncController::class, 'sync']);
 
 Route::post('/mt5-reset', [App\Http\Controllers\Mt5SyncController::class, 'resetSync']);
+
+// routes/api.php
+Route::post('/mt5-refresh-charts', [Mt5SyncController::class, 'refreshCharts']);
+
+Route::post('/mt5-update-chart', [Mt5SyncController::class, 'updateChart']);

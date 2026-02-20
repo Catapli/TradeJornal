@@ -28,6 +28,7 @@ class Trade extends Model
         'entry_time' => 'datetime',
         'exit_time' => 'datetime',
         'executions_data' => 'array',
+        'pips_traveled' => 'decimal:2',
     ];
 
     public function account(): BelongsTo

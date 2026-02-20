@@ -43,6 +43,7 @@ return new class extends Migration
 
             // MFE: Maximum Favorable Excursion (El mejor precio/ganancia máxima latente)
             $table->decimal('mfe_price', 16, 8)->nullable();
+            $table->decimal('pips_traveled', 10, 2)->nullable();
 
 
             $table->index(['account_id', 'position_id']);

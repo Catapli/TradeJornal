@@ -42,6 +42,7 @@ document.addEventListener("alpine:init", () => {
             manualTradeCount: 0,
             ghostMode: false,
             events: [],
+            postSessionNotes: "",
 
             // ✅ NUEVO: Estado del polling inteligente
             isSyncing: false,
@@ -423,6 +424,7 @@ document.addEventListener("alpine:init", () => {
                 const url = await this.$wire.closeSession(
                     this.metrics,
                     endMood,
+                    this.postSessionNotes,
                 );
                 if (url) window.location.href = url;
             },

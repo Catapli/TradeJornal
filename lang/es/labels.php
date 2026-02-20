@@ -365,7 +365,13 @@ return [
     "save_account" => "Guardar Cuenta",
     "no_objectives" => "Sin Objetivos",
     "create_account_to_see_objectives" => "Crear Cuenta para ver Objetivos",
-    "create_first_account" => "Crea tu primera cuenta"
+    "create_first_account" => "Crea tu primera cuenta",
+    "pips" => "Pips",
+    "pips_moved" => "Pips Movidos",
+    "download_mt5_agent" => "Descargar Agente MT5",
+    "mt5_agent_info" => "Descarga el agente desktop para sincronizar automáticamente tus operaciones de MT5",
+
+
 
 
 

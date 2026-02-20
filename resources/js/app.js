@@ -37,6 +37,7 @@ import "./session/session.js";
 import "./session_history/session_history.js";
 import "./propfirms/propfirms.js";
 import "./reports/reports.js";
+import "./trade_detail/trade_detail.js";
 
 document.addEventListener("alpine:init", () => {
     // Store Global de Preferencias

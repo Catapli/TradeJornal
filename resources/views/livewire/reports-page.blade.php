@@ -163,14 +163,14 @@
 
         <div class="col-span-12 space-y-6 lg:col-span-3">
 
-            {{-- TARJETA 1: LABORATORIO DE ESTRATEGIA --}}
-            <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <div class="mb-5 flex items-center justify-between">
+            {{-- TARJETA 1: LABORATORIO DE ESTRATEGIA (VERSIÓN FINAL) --}}
+            <div class="rounded-2xl border border-gray-100 bg-white shadow-sm">
+                {{-- Header --}}
+                <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                     <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
                         <i class="fa-solid fa-flask text-indigo-600"></i> Laboratorio
                     </h3>
 
-                    {{-- Botón Resetear (Instantáneo) --}}
                     <button class="flex items-center gap-1 text-xs text-gray-500 transition hover:text-red-600"
                             @click="resetAllScenarios()"
                             x-show="hasActiveScenarios()"
@@ -187,196 +187,225 @@
                     </button>
                 </div>
 
-                <div class="space-y-6">
+                {{-- Tabs Navigation (Solo 2) --}}
+                <div class="flex border-b border-gray-200">
+                    <button class="flex-1 border-b-2 px-4 py-3 text-xs font-bold uppercase transition"
+                            @click="activeTab = 'mechanical'"
+                            :class="activeTab === 'mechanical' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                        <i class="fa-solid fa-gears mr-1"></i> Mecánico
+                    </button>
+                    <button class="flex-1 border-b-2 px-4 py-3 text-xs font-bold uppercase transition"
+                            @click="activeTab = 'discipline'"
+                            :class="activeTab === 'discipline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                        <i class="fa-solid fa-brain mr-1"></i> Disciplina
+                    </button>
+                </div>
 
-                    {{-- SECCIÓN A: RE-INGENIERÍA MECÁNICA (SL/TP) --}}
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                        <label class="mb-3 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Simulador Mecánico
-                        </label>
+                {{-- Tab Content --}}
+                <div class="p-6">
+                    {{-- TAB 1: SIMULADOR MECÁNICO --}}
+                    <div class="space-y-4"
+                         x-show="activeTab === 'mechanical'"
+                         x-transition>
+                        <p class="text-[10px] leading-tight text-gray-400">
+                            Recalcula resultados usando SL/TP fijos en puntos. Basado en tus datos MAE/MFE reales.
+                        </p>
+
                         <div class="grid grid-cols-2 gap-3">
                             {{-- Fixed SL --}}
                             <div>
                                 <label class="mb-1 block text-[10px] font-bold text-gray-500">Fixed SL</label>
                                 <div class="relative">
-                                    <input class="w-full rounded-lg border-gray-200 bg-white py-1.5 pl-2 pr-7 text-xs font-bold text-rose-600 placeholder-gray-300 focus:border-rose-500 focus:ring-rose-500"
+                                    <input class="w-full rounded-lg border-gray-200 bg-white py-2 pl-2 pr-12 text-xs font-bold text-rose-600 placeholder-gray-300 focus:border-rose-500 focus:ring-rose-500"
                                            type="number"
+                                           step="0.1"
                                            x-model="scenarios.fixed_sl"
                                            @input="onScenarioChange()"
                                            placeholder="Ej: 15">
-                                    <span class="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">pts</span>
+                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">pts</span>
                                 </div>
                             </div>
+
                             {{-- Fixed TP --}}
                             <div>
                                 <label class="mb-1 block text-[10px] font-bold text-gray-500">Fixed TP</label>
                                 <div class="relative">
-                                    <input class="w-full rounded-lg border-gray-200 bg-white py-1.5 pl-2 pr-7 text-xs font-bold text-emerald-600 placeholder-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                                    <input class="w-full rounded-lg border-gray-200 bg-white py-2 pl-2 pr-12 text-xs font-bold text-emerald-600 placeholder-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                            type="number"
+                                           step="0.1"
                                            x-model="scenarios.fixed_tp"
                                            @input="onScenarioChange()"
                                            placeholder="Ej: 30">
-                                    <span class="absolute right-2 top-1.5 text-[10px] font-bold text-gray-400">pts</span>
+                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">pts</span>
                                 </div>
                             </div>
                         </div>
-                        <p class="mt-2 text-[10px] leading-tight text-slate-400">
-                            Recalcula resultados usando tus datos MAE/MFE reales.
-                        </p>
+
+                        <div class="rounded-lg bg-blue-50 p-3 text-[10px] leading-relaxed text-blue-800">
+                            <i class="fa-solid fa-info-circle mr-1"></i>
+                            El simulador usa <strong>MAE (peor precio)</strong> y <strong>MFE (mejor precio)</strong> para determinar si habrías tocado el SL o TP fijo.
+                        </div>
                     </div>
 
-                    {{-- SECCIÓN B: FILTROS DE COMPORTAMIENTO --}}
-                    <div>
-                        <label class="mb-3 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Filtros de Disciplina
-                        </label>
-
-                        {{-- Select Fatiga --}}
-                        <div class="mb-4">
+                    {{-- TAB 2: FILTROS DE DISCIPLINA --}}
+                    <div class="space-y-4"
+                         x-show="activeTab === 'discipline'"
+                         x-transition>
+                        {{-- Fatiga --}}
+                        <div>
+                            <label class="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                Control de Fatiga
+                            </label>
                             <select class="w-full rounded-lg border-gray-200 text-xs font-bold text-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
                                     x-model="scenarios.max_daily_trades"
                                     @change="onScenarioChange()">
-                                <option value="">Fatiga: Todas las operaciones</option>
+                                <option value="">Todas las operaciones</option>
                                 <option value="1">Solo la 1ª del día (Sniper)</option>
                                 <option value="2">Max 2 trades/día</option>
                                 <option value="3">Max 3 trades/día</option>
+                                <option value="4">Max 4 trades/día</option>
                             </select>
                         </div>
 
-                        {{-- Grid de Toggles --}}
-                        <div class="grid grid-cols-1 gap-y-3">
-
-                            {{-- Row 1: Viernes / Peores --}}
-                            <div class="flex items-center justify-between">
-                                <label class="flex cursor-pointer items-center gap-2">
-                                    <div class="relative inline-block w-8 select-none align-middle">
-                                        <input class="peer sr-only"
-                                               type="checkbox"
-                                               x-model="scenarios.no_fridays"
-                                               @change="onScenarioChange()" />
-                                        <div
-                                             class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full">
-                                        </div>
-                                    </div>
-                                    <span class="text-xs font-medium text-gray-600">Sin Viernes</span>
+                        {{-- Días de la semana --}}
+                        <div>
+                            <label class="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                Días Excluidos
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
+                                       :class="isDayExcluded(1) ? 'border-indigo-500 bg-indigo-50' : ''">
+                                    <input class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                           type="checkbox"
+                                           :checked="isDayExcluded(1)"
+                                           @change="toggleDay(1)">
+                                    <span class="text-xs font-medium text-gray-700">Lunes</span>
                                 </label>
 
-                                <label class="flex cursor-pointer items-center gap-2">
-                                    <span class="text-xs font-medium text-gray-600">Sin 5 peores</span>
-                                    <div class="relative inline-block w-8 select-none align-middle">
-                                        <input class="peer sr-only"
-                                               type="checkbox"
-                                               x-model="scenarios.remove_worst"
-                                               @change="onScenarioChange()" />
-                                        <div
-                                             class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full">
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-
-                            {{-- Row 2: Dirección (Long/Short) --}}
-                            <div class="flex items-center justify-between border-t border-gray-50 pt-3">
-                                <label class="flex cursor-pointer items-center gap-2">
-                                    <div class="relative inline-block w-8 select-none align-middle">
-                                        <input class="peer sr-only"
-                                               type="checkbox"
-                                               x-model="scenarios.only_longs"
-                                               @change="onScenarioChange()" />
-                                        <div
-                                             class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full">
-                                        </div>
-                                    </div>
-                                    <span class="text-xs font-medium text-gray-600">Solo Longs</span>
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
+                                       :class="isDayExcluded(2) ? 'border-indigo-500 bg-indigo-50' : ''">
+                                    <input class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                           type="checkbox"
+                                           :checked="isDayExcluded(2)"
+                                           @change="toggleDay(2)">
+                                    <span class="text-xs font-medium text-gray-700">Martes</span>
                                 </label>
 
-                                <label class="flex cursor-pointer items-center gap-2">
-                                    <span class="text-xs font-medium text-gray-600">Solo Shorts</span>
-                                    <div class="relative inline-block w-8 select-none align-middle">
-                                        <input class="peer sr-only"
-                                               type="checkbox"
-                                               x-model="scenarios.only_shorts"
-                                               @change="onScenarioChange()" />
-                                        <div
-                                             class="peer h-4 w-8 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all peer-checked:bg-rose-500 peer-checked:after:translate-x-full">
-                                        </div>
-                                    </div>
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
+                                       :class="isDayExcluded(3) ? 'border-indigo-500 bg-indigo-50' : ''">
+                                    <input class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                           type="checkbox"
+                                           :checked="isDayExcluded(3)"
+                                           @change="toggleDay(3)">
+                                    <span class="text-xs font-medium text-gray-700">Miércoles</span>
+                                </label>
+
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
+                                       :class="isDayExcluded(4) ? 'border-indigo-500 bg-indigo-50' : ''">
+                                    <input class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                           type="checkbox"
+                                           :checked="isDayExcluded(4)"
+                                           @change="toggleDay(4)">
+                                    <span class="text-xs font-medium text-gray-700">Jueves</span>
+                                </label>
+
+                                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
+                                       :class="isDayExcluded(5) ? 'border-indigo-500 bg-indigo-50' : ''">
+                                    <input class="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                           type="checkbox"
+                                           :checked="isDayExcluded(5)"
+                                           @change="toggleDay(5)">
+                                    <span class="text-xs font-medium text-gray-700">Viernes</span>
                                 </label>
                             </div>
                         </div>
-                    </div>
 
-                    {{-- BOTÓN APLICAR SIMULACIÓN --}}
-                    <div class="border-t border-gray-100 pt-4">
-                        <button class="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition"
-                                @click="applyScenarios()"
-                                :disabled="!hasUnsavedChanges || isApplying"
-                                :class="{
-                                    'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md': hasUnsavedChanges && !isApplying,
-                                    'bg-gray-200 text-gray-400 cursor-not-allowed': !hasUnsavedChanges || isApplying
-                                }">
-
-                            {{-- Loading Spinner --}}
-                            <svg class="h-4 w-4 animate-spin"
-                                 x-show="isApplying"
-                                 fill="none"
-                                 viewBox="0 0 24 24">
-                                <circle class="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        stroke-width="4"></circle>
-                                <path class="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-
-                            {{-- Icono normal --}}
-                            <svg class="h-4 w-4"
-                                 x-show="!isApplying"
-                                 fill="currentColor"
-                                 viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                      clip-rule="evenodd" />
-                            </svg>
-
-                            <span x-text="isApplying ? 'Aplicando...' : 'Aplicar Simulación'"></span>
-                        </button>
-                    </div>
-
-                    {{-- SECCIÓN C: RESULTADO IMPACTO --}}
-                    @if ($this->simulatedData['stats'])
-                        <div class="border-t border-gray-100 pt-4">
-                            @php
-                                // ✅ FIX: Crear copias locales ANTES de usar end()
-                                $realCurve = $this->realCurve;
-                                $simulatedCurve = $this->simulatedData['curve'];
-
-                                $totalReal = !empty($realCurve) ? end($realCurve)['y'] : 0;
-                                $totalSim = !empty($simulatedCurve) ? end($simulatedCurve)['y'] : 0;
-                                $diffTotal = $totalSim - $totalReal;
-                            @endphp
-
-                            <div class="{{ $diffTotal > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100' }} rounded-xl border p-3 text-center">
-                                <div class="{{ $diffTotal > 0 ? 'text-emerald-400' : 'text-rose-400' }} text-[10px] font-bold uppercase">
-                                    Diferencia Total
-                                </div>
-                                <div class="{{ $diffTotal > 0 ? 'text-emerald-700' : 'text-rose-700' }} text-lg font-black">
-                                    {{ $diffTotal > 0 ? '+' : '' }}{{ number_format($diffTotal, 2) }} €
-                                </div>
-                                @if ($this->realStats['expectancy'] != 0)
-                                    <div class="mt-1 text-[10px] font-medium opacity-70">
-                                        Mejora del sistema: <strong>{{ round((($this->simulatedData['stats']['expectancy'] - $this->realStats['expectancy']) / abs($this->realStats['expectancy'])) * 100) }}%</strong>
+                        {{-- Toggles compactos --}}
+                        <div class="space-y-2 border-t border-gray-100 pt-4">
+                            <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
+                                <span class="text-xs font-medium text-gray-700">Solo operaciones Long</span>
+                                <div class="relative inline-block h-5 w-9 select-none align-middle">
+                                    <input class="peer sr-only"
+                                           type="checkbox"
+                                           x-model="scenarios.only_longs"
+                                           @change="onScenarioChange()" />
+                                    <div
+                                         class="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-4">
                                     </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endif
+                                </div>
+                            </label>
 
+                            <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
+                                <span class="text-xs font-medium text-gray-700">Solo operaciones Short</span>
+                                <div class="relative inline-block h-5 w-9 select-none align-middle">
+                                    <input class="peer sr-only"
+                                           type="checkbox"
+                                           x-model="scenarios.only_shorts"
+                                           @change="onScenarioChange()" />
+                                    <div
+                                         class="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-rose-500 peer-checked:after:translate-x-4">
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
+                                <span class="text-xs font-medium text-gray-700">Eliminar 5 peores trades</span>
+                                <div class="relative inline-block h-5 w-9 select-none align-middle">
+                                    <input class="peer sr-only"
+                                           type="checkbox"
+                                           x-model="scenarios.remove_worst"
+                                           @change="onScenarioChange()" />
+                                    <div
+                                         class="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-4">
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Footer: Botón Aplicar --}}
+                <div class="border-t border-gray-100 px-6 py-4">
+                    <button class="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition"
+                            @click="applyScenarios()"
+                            :disabled="!hasUnsavedChanges || isApplying"
+                            :class="{
+                                'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md': hasUnsavedChanges && !isApplying,
+                                'bg-gray-200 text-gray-400 cursor-not-allowed': !hasUnsavedChanges || isApplying
+                            }">
+
+                        {{-- Loading Spinner --}}
+                        <svg class="h-4 w-4 animate-spin"
+                             x-show="isApplying"
+                             fill="none"
+                             viewBox="0 0 24 24">
+                            <circle class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"></circle>
+                            <path class="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+
+                        {{-- Icono normal --}}
+                        <svg class="h-4 w-4"
+                             x-show="!isApplying"
+                             fill="currentColor"
+                             viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clip-rule="evenodd" />
+                        </svg>
+
+                        <span x-text="isApplying ? 'Aplicando...' : 'Aplicar Simulación'"></span>
+                    </button>
                 </div>
             </div>
+
+
 
             {{-- TARJETA 2: CALIDAD DEL SISTEMA (SQN) --}}
             <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">

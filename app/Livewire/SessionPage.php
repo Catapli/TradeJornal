@@ -601,7 +601,7 @@ class SessionPage extends Component
     /**
      * ✅ OPTIMIZADO: Sin validación de trades abiertos (solo cerrados se sincronizan)
      */
-    public function closeSession($metrics, $endMood)
+    public function closeSession($metrics, $endMood, $postSessionNotes = '')
     {
         try {
             if (!$this->sessionId) {
@@ -647,6 +647,12 @@ class SessionPage extends Component
                 $metrics = $data['metrics'] ?? ['count' => 0, 'pnl' => 0, 'pnl_percent' => 0];
             }
 
+            // ✅ VALIDACIÓN: Notas no demasiado largas
+            $postSessionNotes = trim($postSessionNotes);
+            if (strlen($postSessionNotes) > 2000) {
+                $postSessionNotes = substr($postSessionNotes, 0, 2000);
+            }
+
             // ✅ TRANSACCIÓN ATÓMICA
             DB::beginTransaction();
 
@@ -659,6 +665,7 @@ class SessionPage extends Component
                 'total_trades' => $metrics['count'] ?? 0,
                 'session_pnl' => $metrics['pnl'] ?? 0,
                 'session_pnl_percent' => $metrics['pnl_percent'] ?? 0,
+                'post_session_notes'    => $postSessionNotes ?: null, // ✅ NUEVO
                 'status' => 'closed'
             ]);
 

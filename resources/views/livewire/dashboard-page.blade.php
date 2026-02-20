@@ -426,6 +426,11 @@
                                                     <dd class="font-bold text-gray-900">{{ $selectedTrade->size }} {{ __('labels.lots') }}</dd>
                                                 </div>
 
+                                                <div class="flex justify-between border-b border-gray-200 pb-2">
+                                                    <dt class="text-gray-500">{{ __('labels.pips_moved') }}</dt>
+                                                    <dd class="font-bold text-gray-900">{{ $selectedTrade->pips_traveled }} {{ __('labels.pips') }}</dd>
+                                                </div>
+
                                                 {{-- BARRA MAE/MFE --}}
                                                 <div class="flex justify-between">
                                                     <dt class="text-gray-500">{{ __('labels.execution') }}</dt>
@@ -433,9 +438,9 @@
                                                         @if ($selectedTrade->mae_price && $selectedTrade->mfe_price)
                                                             @php
                                                                 // 1. Distancias Absolutas
-                                                                $distMae = abs($trade->entry_price - $trade->mae_price);
-                                                                $distMfe = abs($trade->entry_price - $trade->mfe_price);
-                                                                $distReal = abs($trade->entry_price - $trade->exit_price);
+                                                                $distMae = abs($selectedTrade->entry_price - $selectedTrade->mae_price);
+                                                                $distMfe = abs($selectedTrade->entry_price - $selectedTrade->mfe_price);
+                                                                $distReal = abs($selectedTrade->entry_price - $selectedTrade->exit_price);
 
                                                                 // 2. Rango Visual
                                                                 $totalRange = $distMae + $distMfe;
@@ -445,7 +450,7 @@
                                                                 $pctGreen = ($distMfe / $totalRange) * 100;
 
                                                                 // 3. Posición Marcador
-                                                                $isBetterThanEntry = $trade->direction == 'long' ? $trade->exit_price >= $trade->entry_price : $trade->exit_price <= $trade->entry_price;
+                                                                $isBetterThanEntry = $selectedTrade->direction == 'long' ? $selectedTrade->exit_price >= $selectedTrade->entry_price : $selectedTrade->exit_price <= $selectedTrade->entry_price;
 
                                                                 if ($isBetterThanEntry) {
                                                                     $markerPos = $pctRed + ($distReal / $totalRange) * 100;
@@ -463,12 +468,12 @@
                                                                 // y no sirve para calcular el valor del punto matemáticamente.
                                                                 if ($distReal > 0.0002) {
                                                                     // Cálculo exacto basado en lo que pasó
-                                                                    $valuePerPoint = abs($trade->pnl) / $distReal;
+                                                                    $valuePerPoint = abs($selectedTrade->pnl) / $distReal;
                                                                 } else {
                                                                     // FALLBACK: Estimación basada en Lotes (Size)
                                                                     // Asumimos estándar Forex (100k unidades).
                                                                     // Si operas Índices/Crypto esto será una aproximación, pero mucho mejor que 0 o Infinito.
-                                                                    $valuePerPoint = $trade->size * 100000;
+                                                                    $valuePerPoint = $selectedTrade->size * 100000;
                                                                 }
 
                                                                 // Aplicamos el valor del punto a las distancias MAE/MFE

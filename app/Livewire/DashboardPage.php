@@ -835,6 +835,7 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
                     'mae_price',
                     'mfe_price',
                     'mood',             // Por si lo usas
+                    'pips_traveled'
                 ])
                 ->find($tradeId);
 
@@ -1162,6 +1163,7 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
     public function refreshRecentNotes()
     {
         try {
+
             // Recargar solo las notas recientes
             $this->loadRecentNotes();
 

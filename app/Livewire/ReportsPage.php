@@ -21,11 +21,11 @@ class ReportsPage extends Component
     public $accountId = 'all';
 
     public $scenarios = [
-        'no_fridays' => false,
         'only_longs' => false,
         'only_shorts' => false,
         'remove_worst' => false,
         'max_daily_trades' => null,
+        'exclude_days' => [],
         'fixed_sl' => null,
         'fixed_tp' => null,
     ];
@@ -219,13 +219,13 @@ class ReportsPage extends Component
     private function hasActiveScenarios()
     {
         return in_array(true, [
-            $this->scenarios['no_fridays'],
             $this->scenarios['only_longs'],
             $this->scenarios['only_shorts'],
             $this->scenarios['remove_worst']
         ]) || !empty($this->scenarios['max_daily_trades'])
             || !empty($this->scenarios['fixed_sl'])
-            || !empty($this->scenarios['fixed_tp']);
+            || !empty($this->scenarios['fixed_tp'])
+            || !empty($this->scenarios['exclude_days']);
     }
 
     // ============================================
@@ -309,7 +309,7 @@ class ReportsPage extends Component
             if ($simTrades->count() < 5) {
                 $this->dispatch('show-alert', [
                     'type' => 'warning',
-                    'message' => "⚠️ Solo quedan {$simTrades->count()} trades después de aplicar los filtros. Los resultados pueden no ser significativos."
+                    'message' => "⚠️ Solo quedan {$simTrades->count()} trades después de aplicar los filtros."
                 ]);
             }
 
@@ -326,12 +326,12 @@ class ReportsPage extends Component
                 exception: $e,
                 action: 'Error en simulatedData',
                 form: 'ReportsPage',
-                description: 'Fallo al calcular simulación. Escenarios: ' . json_encode($this->scenarios)
+                description: 'Fallo al calcular simulación'
             );
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al calcular la simulación. Revisa los parámetros.'
+                'message' => 'Error al calcular la simulación.'
             ]);
 
             return ['curve' => [], 'stats' => null];

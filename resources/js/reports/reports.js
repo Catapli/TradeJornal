@@ -7,42 +7,47 @@ document.addEventListener("alpine:init", () => {
         showAlert: false,
         typeAlert: "info",
         bodyAlert: "",
+        activeTab: "mechanical",
 
         // --- ESTADO DE ESCENARIOS (Alpine es la fuente de verdad) ---
         scenarios: {
-            no_fridays: false,
-            only_longs: false,
-            only_shorts: false,
-            remove_worst: false,
-            max_daily_trades: null,
+            // Mecánicos (volvemos a los antiguos)
             fixed_sl: null,
             fixed_tp: null,
+
+            // Días (0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab)
+            exclude_days: [],
+
+            // Comportamiento
+            remove_worst: false,
+            max_daily_trades: null,
+            only_longs: false,
+            only_shorts: false,
         },
 
         // --- CONTROL DE CAMBIOS PENDIENTES ---
         hasUnsavedChanges: false, // Badge de "Cambios pendientes"
         isApplying: false, // Loading state del botón
+        showAdvancedFilters: false, // Accordion para filtros avanzados
 
         /**
          * Inicialización del componente
          */
         init() {
-            // Listener para alertas desde Livewire
             window.addEventListener("show-alert", (e) => {
                 const data = e.detail[0] || e.detail;
                 this.triggerAlert(data.message, data.type);
             });
 
-            // 👇 SINCRONIZACIÓN INICIAL: Alpine ← Livewire
-            // Al cargar, Alpine debe reflejar el estado de Livewire
+            // Sincronización inicial
             this.scenarios = {
-                no_fridays: this.$wire.scenarios.no_fridays,
-                only_longs: this.$wire.scenarios.only_longs,
-                only_shorts: this.$wire.scenarios.only_shorts,
-                remove_worst: this.$wire.scenarios.remove_worst,
-                max_daily_trades: this.$wire.scenarios.max_daily_trades,
                 fixed_sl: this.$wire.scenarios.fixed_sl,
                 fixed_tp: this.$wire.scenarios.fixed_tp,
+                exclude_days: this.$wire.scenarios.exclude_days || [],
+                remove_worst: this.$wire.scenarios.remove_worst,
+                max_daily_trades: this.$wire.scenarios.max_daily_trades,
+                only_longs: this.$wire.scenarios.only_longs,
+                only_shorts: this.$wire.scenarios.only_shorts,
             };
         },
 
@@ -55,6 +60,26 @@ document.addEventListener("alpine:init", () => {
         },
 
         /**
+         * Toggle día de la semana (checkbox múltiple)
+         */
+        toggleDay(dayNumber) {
+            const index = this.scenarios.exclude_days.indexOf(dayNumber);
+            if (index > -1) {
+                this.scenarios.exclude_days.splice(index, 1);
+            } else {
+                this.scenarios.exclude_days.push(dayNumber);
+            }
+            this.onScenarioChange();
+        },
+
+        /**
+         * Verifica si un día está excluido
+         */
+        isDayExcluded(dayNumber) {
+            return this.scenarios.exclude_days.includes(dayNumber);
+        },
+
+        /**
          * Aplica los cambios: Sincroniza Alpine → Livewire
          * Se ejecuta al hacer click en "Aplicar Simulación"
          */
@@ -62,16 +87,9 @@ document.addEventListener("alpine:init", () => {
             this.isApplying = true;
 
             try {
-                // Sincronizar Alpine → Livewire
                 this.$wire.scenarios = this.scenarios;
-
-                // Esperar a que Livewire procese (esto fuerza el re-render)
                 await this.$wire.$refresh();
-
-                // Reset de estado
                 this.hasUnsavedChanges = false;
-
-                // Alerta de éxito
                 this.triggerAlert(
                     "✅ Simulación aplicada correctamente",
                     "success",
@@ -89,15 +107,14 @@ document.addEventListener("alpine:init", () => {
          */
         resetAllScenarios() {
             this.scenarios = {
-                no_fridays: false,
-                only_longs: false,
-                only_shorts: false,
-                remove_worst: false,
-                max_daily_trades: null,
                 fixed_sl: null,
                 fixed_tp: null,
+                exclude_days: [],
+                remove_worst: false,
+                max_daily_trades: null,
+                only_longs: false,
+                only_shorts: false,
             };
-
             this.hasUnsavedChanges = true;
         },
 
@@ -106,13 +123,13 @@ document.addEventListener("alpine:init", () => {
          */
         hasActiveScenarios() {
             return (
-                this.scenarios.no_fridays ||
                 this.scenarios.only_longs ||
                 this.scenarios.only_shorts ||
                 this.scenarios.remove_worst ||
                 this.scenarios.max_daily_trades ||
                 this.scenarios.fixed_sl ||
-                this.scenarios.fixed_tp
+                this.scenarios.fixed_tp ||
+                this.scenarios.exclude_days.length > 0
             );
         },
 
@@ -121,13 +138,13 @@ document.addEventListener("alpine:init", () => {
          */
         countActiveScenarios() {
             let count = 0;
-            if (this.scenarios.no_fridays) count++;
             if (this.scenarios.only_longs) count++;
             if (this.scenarios.only_shorts) count++;
             if (this.scenarios.remove_worst) count++;
             if (this.scenarios.max_daily_trades) count++;
             if (this.scenarios.fixed_sl) count++;
             if (this.scenarios.fixed_tp) count++;
+            if (this.scenarios.exclude_days.length > 0) count++;
             return count;
         },
 
@@ -151,6 +168,7 @@ document.addEventListener("alpine:init", () => {
             this.showAlert = false;
         },
     }));
+
     // 1. EQUITY CHART
     Alpine.data("equityChart", (initialReal, initialSim) => ({
         chart: null,
