@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Models\Zone;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
@@ -41,13 +42,14 @@ class DatabaseSeeder extends Seeder
 
         //! DATOS PRODUCCION
         //* USUARIO ADMIN
-        User::factory()->create([
+        User::create([
             'name' => 'Jordi',
             'email' => 'jordicatalina2001@gmail.com',
             'google_id' => '',
             'sync_token' => Str::random(32),
             'is_superadmin' => true,
             "role_id" => 1,
+            "password" => Hash::make('C4t4pl101#23')
         ]);
 
         //? DATOS FALSOS
