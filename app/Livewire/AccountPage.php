@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\LogActions;
 use App\MoneyHelper;
 use App\Jobs\SyncAccountTrades;
 use App\Jobs\SyncMt5Account;
@@ -27,6 +28,7 @@ class AccountPage extends Component
 {
 
     use WithPagination;
+    use LogActions;
 
     public $accounts;
     public $showCreateModal = false;
