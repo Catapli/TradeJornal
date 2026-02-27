@@ -2,11 +2,14 @@
 
 namespace App\Livewire;
 
+use App\LogActions;
 use App\Models\JournalEntry;
 use App\Models\Trade;
+use App\Models\TradingObjective;
 use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Url;
@@ -16,6 +19,8 @@ class JournalPage extends Component
 {
 
     use WithAiLimits; // <--- 2. Usar el Trait
+    use LogActions;
+
     #[Url(keep: true)]
     public $date;
     public $entry; // El modelo JournalEntry
@@ -30,93 +35,131 @@ class JournalPage extends Component
 
     // --- DATOS SOLO LECTURA ---
     public $dayTrades = [];
+    public $dayTradesIds = [];
     public $dayPnL = 0;
     public $mistakesSummary = [];
 
     // Propiedad para controlar qué mes estamos viendo en el mini-calendario
     public $calendarRef;
 
-    public function mount($date = null)
+    public function mount(?string $date = null): void
     {
-        // Si no hay fecha en URL, hoy.
-        $this->date = $this->date ?? Carbon::today()->format('Y-m-d');
-        // Inicializamos la referencia del calendario con la fecha seleccionada
-        $this->calendarRef = Carbon::parse($this->date);
-
-        $this->loadData();
+        try {
+            $this->date = $date ?? Carbon::today()->format('Y-m-d');
+            $this->calendarRef = Carbon::parse($this->date);
+            $this->loadData();
+        } catch (\Exception $e) {
+            $this->logError($e, 'mount', 'JournalPage', 'Error al montar el componente Journal');
+            // Estado mínimo seguro para que Blade no explote
+            $this->dayTrades      = collect();
+            $this->daily_objectives = [];
+            $this->mistakesSummary = collect();
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));
+        }
     }
 
-    public function loadData()
+    // ✅ DESPUÉS
+    public function loadData(): void
     {
-        // 1. Buscamos si YA existe la entrada para este día
-        $this->entry = JournalEntry::where('user_id', Auth::id())
-            ->where('date', $this->date)
-            ->first();
+        try {
+            // 1. Buscar entrada existente
+            $this->entry = JournalEntry::where('user_id', Auth::id())
+                ->where('date', $this->date)
+                ->first();
 
-        if ($this->entry) {
-            // CASO A: El día YA existía. Cargamos lo que había guardado (Historial)
-            $this->pre_market_mood = $this->entry->pre_market_mood;
-            $this->pre_market_notes = $this->entry->pre_market_notes;
-            $this->content = $this->entry->content;
+            if ($this->entry) {
+                // CASO A: El día YA existe
+                $this->pre_market_mood  = $this->entry->pre_market_mood;
+                $this->pre_market_notes = $this->entry->pre_market_notes;
+                $this->content        = $this->entry->content;
 
-            // Convertimos JSON a Array si hace falta
-            $dbObjs = $this->entry->daily_objectives;
-            if (is_string($dbObjs)) $dbObjs = json_decode($dbObjs, true);
+                $dbObjs = $this->entry->daily_objectives;
+                $this->daily_objectives = is_string($dbObjs)
+                    ? json_decode($dbObjs, true)
+                    : ($dbObjs ?? []);
+            } else {
+                // CASO B: Día nuevo — cargamos plantilla
+                $this->entry = new JournalEntry([
+                    'user_id' => Auth::id(),
+                    'date'    => $this->date,
+                ]);
+                $this->pre_market_mood  = null;
+                $this->pre_market_notes = '';
+                $this->content        = '';
 
-            $this->daily_objectives = $dbObjs ?? [];
-        } else {
-            // CASO B: Es un día NUEVO. Cargamos la PLANTILLA Global.
+                $templates = TradingObjective::where('user_id', Auth::id())
+                    ->where('is_active', true)
+                    ->get();
 
-            // Creamos la instancia en memoria (sin guardar aún en BD para no ensuciar si no escribe nada)
-            $this->entry = new JournalEntry([
-                'user_id' => Auth::id(),
-                'date' => $this->date
-            ]);
+                $this->daily_objectives = $templates->count() > 0
+                    ? $templates->map(fn($rule) => ['text' => $rule->text, 'done' => false])->toArray()
+                    : [['text' => __('labels.set_tour_rules'), 'done' => false]];
+            }
 
-            $this->pre_market_mood = null;
-            $this->pre_market_notes = '';
-            $this->content = '';
-
-            // AQUÍ LA MAGIA: Traemos los objetivos activos del usuario
-            $templates = \App\Models\TradingObjective::where('user_id', Auth::id())
-                ->where('is_active', true)
+            // 3. Cargar Trades — MEJORA 18 incluida: eager load tradeAsset
+            $trades = Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->whereDate('exit_time', $this->date)
+                ->with(['mistakes', 'tradeAsset'])  // ← tradeAsset añadido (Mejora 18)
+                ->orderBy('exit_time', 'asc')
                 ->get();
 
-            if ($templates->count() > 0) {
-                // Formateamos para el JSON del día: ['text' => '...', 'done' => false]
-                $this->daily_objectives = $templates->map(function ($rule) {
-                    return ['text' => $rule->text, 'done' => false];
-                })->toArray();
-            } else {
-                // Si el usuario no ha configurado reglas aún
-                $this->daily_objectives = [['text' => __('labels.set_tour_rules'), 'done' => false]];
-            }
+            $this->dayTrades    = $trades;
+            $this->dayPnL       = $trades->sum('pnl');
+            $this->dayTradesIds  = $trades->pluck('id')->toArray(); // ← (Mejora 16: evita query duplicada)
+
+            // 4. Resumen de errores
+            $this->mistakesSummary = $trades
+                ->pluck('mistakes')
+                ->flatten()
+                ->groupBy('name')
+                ->map->count();
+        } catch (\Exception $e) {
+            $this->logError($e, 'loadData', 'JournalPage', "Error cargando datos del día {$this->date}");
+            // Retorno seguro: colecciones vacías para que Blade no falle
+            $this->entry           = new JournalEntry();
+            $this->dayTrades       = collect();
+            $this->dayTradesIds     = [];
+            $this->dayPnL          = 0;
+            $this->daily_objectives = [];
+            $this->mistakesSummary = collect();
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));
         }
-
-        // 3. Cargar Trades del día (CORREGIDO Y ORDENADO)
-        $trades = Trade::whereHas('account', function ($query) {
-            $query->where('user_id', Auth::id());
-        })
-            ->whereDate('exit_time', $this->date)
-            ->with('mistakes')
-            ->orderBy('exit_time', 'asc') // <--- CAMBIO: Orden Ascendente (Antigua -> Nueva)
-            ->get();
-
-        $this->dayTrades = $trades;
-        $this->dayPnL = $trades->sum('pnl');
-
-        // 4. Resumen de Errores (Mistakes)
-        // Solo funcionará si ya implementaste la relación 'mistakes' en el modelo Trade
-        $this->mistakesSummary = $trades->pluck('mistakes')->flatten()->groupBy('name')->map->count();
     }
 
 
-
-    public function removeObjective($index)
+    /**
+     * Abre el detalle de un trade con contexto de paginación
+     * Los IDs de contexto son los trades de la página actual visible
+     */
+    public function openTradeDetail(int $tradeId): void
     {
-        unset($this->daily_objectives[$index]);
-        $this->daily_objectives = array_values($this->daily_objectives); // Reindexar
+        try {
+            // MEJORA 16: Usamos $dayTradeIds ya calculado en loadData() → 0 queries extra
+            $this->dispatch(
+                'open-trade-detail',
+                tradeId: $tradeId,
+                tradeIds: $this->dayTradesIds
+            );
+        } catch (\Exception $e) {
+            $this->logError($e, 'openTradeDetail', 'JournalPage', "Error abriendo trade {$tradeId}");
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_opening_trade'));
+        }
     }
+
+
+
+
+    // ✅ DESPUÉS
+    public function removeObjective(int $index): void
+    {
+        try {
+            unset($this->daily_objectives[$index]);
+            $this->daily_objectives = array_values($this->daily_objectives);
+        } catch (\Exception $e) {
+            $this->logError($e, 'removeObjective', 'JournalPage', "Error eliminando objetivo índice {$index}");
+        }
+    }
+
 
     // --- NAVEGACIÓN ---
     public function prevDay()
@@ -132,45 +175,85 @@ class JournalPage extends Component
     public $newRuleText = ''; // Input para nueva regla
     public $userRules = []; // Lista para mostrar en el modal
 
-    // Abrir modal y cargar reglas
-    public function openRulesManager()
+    // ✅ DESPUÉS
+    public function openRulesManager(): void
     {
-        $this->userRules = \App\Models\TradingObjective::where('user_id', Auth::id())->get();
-        $this->showRulesModal = true;
+        try {
+            $this->userRules      = TradingObjective::where('user_id', Auth::id())->get();
+            $this->showRulesModal = true;
+        } catch (\Exception $e) {
+            $this->logError($e, 'openRulesManager', 'JournalPage', 'Error cargando el gestor de reglas');
+            $this->userRules = collect();
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_rules'));
+        }
     }
 
-    // Crear nueva regla maestra
-    public function addMasterRule()
+
+    // ✅ DESPUÉS
+    public function addMasterRule(string $text): void
     {
-        if (empty($this->newRuleText)) return;
+        try {
+            $text = trim($text);
 
-        \App\Models\TradingObjective::create([
-            'user_id' => Auth::id(),
-            'text' => $this->newRuleText,
-            'is_active' => true
-        ]);
+            if (empty($text) || mb_strlen($text) > 200) return;
 
-        $this->newRuleText = '';
-        $this->openRulesManager(); // Recargar lista
-        // Opcional: Si es el día de hoy y no habías empezado, recargar los objetivos del día actual
-        if (!$this->entry->exists) $this->loadData();
+            TradingObjective::create([
+                'user_id'   => Auth::id(),
+                'text'      => $text,
+                'is_active' => true,
+            ]);
+
+            $this->openRulesManager();
+
+            if (! $this->entry->exists) {
+                $this->loadData();
+            }
+        } catch (\Exception $e) {
+            $this->logError($e, 'addMasterRule', 'JournalPage', 'Error creando nueva regla maestra');
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_saving_rules'));
+        }
     }
+
+
 
     // Borrar/Desactivar regla maestra
-    public function deleteMasterRule($id)
+    // ✅ DESPUÉS
+    public function deleteMasterRule(int $id): void
     {
-        \App\Models\TradingObjective::destroy($id);
-        $this->openRulesManager();
+        try {
+            TradingObjective::where('id', $id)
+                ->where('user_id', Auth::id())
+                ->delete();
+
+            $this->openRulesManager();
+        } catch (\Exception $e) {
+            $this->logError($e, 'deleteMasterRule', 'JournalPage', "Error eliminando regla {$id}");
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_deleting_rule'));
+        }
     }
 
+
     // Toggle Activo/Inactivo
-    public function toggleMasterRule($id)
+    // ✅ DESPUÉS
+    public function toggleMasterRule(int $id): void
     {
-        $rule = \App\Models\TradingObjective::find($id);
-        $rule->is_active = !$rule->is_active;
-        $rule->save();
-        $this->openRulesManager();
+        try {
+            $rule = TradingObjective::where('id', $id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $rule) return;
+
+            $rule->is_active = ! $rule->is_active;
+            $rule->save();
+
+            $this->openRulesManager();
+        } catch (\Exception $e) {
+            $this->logError($e, 'toggleMasterRule', 'JournalPage', "Error toggling regla {$id}");
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_toggling_rule'));
+        }
     }
+
 
     public function calculateDiscipline()
     {
@@ -247,25 +330,44 @@ class JournalPage extends Component
     }
 
     // --- GUARDADO ---
-    public function save()
+    // ✅ DESPUÉS — save() completo con try-catch + DB::transaction
+    public function save(): void
     {
-        $calculatedScore = $this->calculateDiscipline();
+        try {
+            $calculatedScore = $this->calculateDiscipline();
 
-        // Usamos updateOrCreate para manejar tanto creación como edición
-        $this->entry = JournalEntry::updateOrCreate(
-            ['user_id' => Auth::id(), 'date' => $this->date],
-            [
-                'pre_market_mood' => $this->pre_market_mood,
-                'pre_market_notes' => $this->pre_market_notes,
-                'daily_objectives' => $this->daily_objectives, // Aquí se guarda la copia del día
-                'content' => $this->content,
-                'discipline_score' => $calculatedScore,
-            ]
-        );
+            DB::transaction(function () use ($calculatedScore) {
+                $this->entry = JournalEntry::updateOrCreate(
+                    // Clave de búsqueda — identifica el registro único
+                    [
+                        'user_id' => Auth::id(),
+                        'date'    => $this->date,
+                    ],
+                    // Valores a crear/actualizar
+                    [
+                        'pre_market_mood'  => $this->pre_market_mood,
+                        'pre_market_notes' => $this->pre_market_notes,
+                        'daily_objectives' => $this->daily_objectives,
+                        'content'          => $this->content,
+                        'discipline_score' => $calculatedScore,
+                    ]
+                );
+            });
 
+            $this->insertLog(
+                action: 'save',
+                form: 'JournalPage',
+                description: "Journal guardado para la fecha {$this->date}",
+                type: 'info'
+            );
 
-        $this->showAlert('success', __('labels.journal_updated'));
+            $this->dispatch('show-alert', type: 'success', message: __('labels.journal_updated'));
+        } catch (\Exception $e) {
+            $this->logError($e, 'save', 'JournalPage', "Error guardando journal del día {$this->date}");
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_saving_journal'));
+        }
     }
+
 
     public function showAlert($type, $message)
     {
@@ -276,58 +378,82 @@ class JournalPage extends Component
     }
 
 
-    // Navegación del Mini-Calendario (Solo visual)
-    public function prevMonth()
+    // ✅ DESPUÉS
+    public function prevMonth(): void
     {
-        $this->calendarRef->subMonth();
+        try {
+            $this->calendarRef->subMonth();
+        } catch (\Exception $e) {
+            $this->logError($e, 'prevMonth', 'JournalPage', 'Error navegando mes anterior');
+        }
     }
 
-    public function nextMonth()
+    public function nextMonth(): void
     {
-        $this->calendarRef->addMonth();
+        try {
+            $this->calendarRef->addMonth();
+        } catch (\Exception $e) {
+            $this->logError($e, 'nextMonth', 'JournalPage', 'Error navegando mes siguiente');
+        }
     }
+
 
     // Propiedad Computada del Calendario (Optimizada)
-    public function getMiniCalendarProperty()
+    // ✅ DESPUÉS
+    public function getMiniCalendarProperty(): array
     {
-        $start = $this->calendarRef->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY);
-        $end = $this->calendarRef->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
+        try {
+            $start = $this->calendarRef->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY);
+            $end   = $this->calendarRef->copy()->endOfMonth()->endOfWeek(Carbon::MONDAY);
 
-        // Días con entrada escrita
-        $entries = JournalEntry::where('user_id', Auth::id())
-            ->whereBetween('date', [$start, $end])
-            ->whereNotNull('content') // Solo si escribieron algo
-            ->pluck('date')
-            ->toArray();
+            $entries = JournalEntry::where('user_id', Auth::id())
+                ->whereBetween('date', [$start, $end])
+                ->whereNotNull('content')
+                ->pluck('date')
+                ->toArray();
 
-        // Formatear fechas de la DB para comparar string con string
-        $entries = array_map(fn($d) => substr($d, 0, 10), $entries);
+            // Normalizar fechas a string Y-m-d para comparación segura
+            $entries = array_map(fn($d) => substr($d, 0, 10), $entries);
 
-        $days = [];
-        $curr = $start->copy();
+            $days = [];
+            $curr = $start->copy();
 
-        while ($curr <= $end) {
-            $dateStr = $curr->format('Y-m-d');
-            $days[] = [
-                'date' => $dateStr,
-                'day' => $curr->day,
-                'is_current_month' => $curr->month === $this->calendarRef->month,
-                'is_today' => $curr->isToday(),
-                'is_selected' => $dateStr === $this->date,
-                'has_entry' => in_array($dateStr, $entries),
-            ];
-            $curr->addDay();
+            while ($curr <= $end) {
+                $dateStr = $curr->format('Y-m-d');
+                $days[]  = [
+                    'date'            => $dateStr,
+                    'day'             => $curr->day,
+                    'is_current_month' => $curr->month === $this->calendarRef->month,
+                    'is_today'        => $curr->isToday(),
+                    'is_selected'     => $dateStr === $this->date,
+                    'has_entry'       => in_array($dateStr, $entries),
+                ];
+                $curr->addDay();
+            }
+
+            return $days;
+        } catch (\Exception $e) {
+            $this->logError($e, 'getMiniCalendar', 'JournalPage', 'Error generando mini-calendario');
+            return []; // Blade itera sobre array vacío — sin crash
         }
-        return $days;
     }
+
 
     // MÉTODO NUEVO: Cambiar día sin recarga
-    public function selectDate($date)
+    // ✅ DESPUÉS
+    public function selectDate(string $date): void
     {
-        $this->date = $date;
-        $this->calendarRef = Carbon::parse($date); // Sincronizar calendario
-        $this->loadData(); // Recargar todos los datos de ese día
+        try {
+            $this->date        = $date;
+            $this->calendarRef = Carbon::parse($date);
+            $this->loadData();
+        } catch (\Exception $e) {
+            $this->logError($e, 'selectDate', 'JournalPage', "Error seleccionando fecha {$date}");
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));
+        }
     }
+
+
 
     // Añade esto en JournalPage.php
     // Asegúrate de importar: use Illuminate\Support\Facades\Http; use Illuminate\Support\Facades\Log;
@@ -340,18 +466,13 @@ class JournalPage extends Component
             return;
         }
 
-        // // 2. Preparar el Contexto para la IA
-        // $mood = $this->pre_market_mood ? ucfirst($this->pre_market_mood) : __('labels.no_registered');
-        // $pnl = number_format($this->dayPnL, 2);
-        // $totalTrades = count($this->dayTrades);
-
-        // // Resumen de Trades y Errores
-        // $tradesContext = collect($this->dayTrades)->map(function ($t) {
-        //     $mistakes = $t->mistakes->pluck('name')->join(', ');
-        //     $errorStr = $mistakes ? "(Errores: $mistakes)" : __('labels.clean_execution');
-        //     $result = $t->pnl >= 0 ? __('labels.profit') : __('labels.loss');
-        //     return "- {$t->exit_time->format('H:i')}: {$t->tradeAsset->name} ({$t->direction}) | $result {$t->pnl}$ | $errorStr";
-        // })->join("\n");
+        // ----------------------------------------------------
+        // 2. VALIDACIÓN DE LÍMITE (NUEVO)
+        // ----------------------------------------------------
+        if (!$this->checkAiLimit()) {
+            $this->dispatch('show-alert', __('labels.limit_ai_reached'));
+            return; // Detener ejecución
+        }
 
         // 2. Preparar Contexto de Datos
         // Usamos las etiquetas traducidas de ai.labels
@@ -429,8 +550,8 @@ class JournalPage extends Component
                 $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.draft_generated_ok')]);
             }
         } catch (\Exception $e) {
-            Log::error("Error IA Journal: " . $e->getMessage());
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_conect_IA')]);
+            $this->logError($e, 'generateAiDraft', 'JournalPage', 'Error llamada a Gemini para borrador IA');
+            $this->dispatch('show-alert', type: 'error', message: __('labels.error_conect_IA'));
         }
     }
 

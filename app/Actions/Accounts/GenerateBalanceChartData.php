@@ -60,20 +60,20 @@ class GenerateBalanceChartData
         // ========================================
         $groupedData = DB::table('trades')
             ->selectRaw("
-                {$groupFormat} as time_label,
-                {$orderField} as order_time,
-                SUM(pnl) as interval_pnl,
-                SUM(CASE 
-                    WHEN mae_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
-                    THEN -1 * (ABS(entry_price - mae_price) * ABS(pnl) / ABS(exit_price - entry_price))
-                    ELSE 0 
-                END) as total_floating_loss,
-                SUM(CASE 
-                    WHEN mfe_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
-                    THEN (ABS(entry_price - mfe_price) * ABS(pnl) / ABS(exit_price - entry_price))
-                    ELSE 0 
-                END) as total_floating_profit
-            ")
+    {$groupFormat} as time_label,
+    {$orderField} as order_time,
+    SUM(pnl) as interval_pnl,
+    SUM(CASE 
+        WHEN mae_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
+        THEN -1 * (ABS(entry_price - mae_price) * ABS(pnl) / ABS(exit_price - entry_price)) - pnl
+        ELSE 0 
+    END) as total_floating_loss,
+    SUM(CASE 
+        WHEN mfe_price IS NOT NULL AND ABS(exit_price - entry_price) > 0 
+        THEN (ABS(entry_price - mfe_price) * ABS(pnl) / ABS(exit_price - entry_price)) - pnl
+        ELSE 0 
+    END) as total_floating_profit
+")
             ->where('account_id', $account->id)
             ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
             ->whereNotNull('exit_time')

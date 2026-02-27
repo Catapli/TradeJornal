@@ -18,10 +18,10 @@
      
          // Texto dinámico
          get label() {
-             if (this.selected.includes('all')) return 'Todas las cuentas';
+             if (this.selected.includes('all')) return '{{ __('labels.all_accounts') }}';
              if (this.selected.length === 0) return '{{ $placeholder }}';
-             if (this.selected.length === 1) return this.selected.length + ' cuenta seleccionada';
-             return this.selected.length + ' cuentas seleccionadas';
+             if (this.selected.length === 1) return this.selected.length + ' {{ __('labels.account_selected') }}';
+             return this.selected.length + ' {{ __('labels.accounts_selected') }}';
          },
      
      
@@ -100,7 +100,7 @@
                        @change="toggle('all')">
                 <div class="flex flex-col">
                     <span class="text-sm font-bold text-gray-800 dark:text-white">
-                        TODAS
+                        {{ __('labels.all_m') }}
                     </span>
                 </div>
             </label>
@@ -127,7 +127,7 @@
 
             @if (count($options) === 0)
                 <div class="px-4 py-3 text-center text-sm text-gray-500">
-                    No hay cuentas disponibles
+                    {{ __('labels.not_accounts_available') }}
                 </div>
             @endif
 
@@ -136,7 +136,7 @@
                 <button class="w-full rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         type="button"
                         @click="open = false; $wire.$refresh()">
-                    Aplicar Filtros
+                    {{ __('labels.apply_filters') }}
                 </button>
             </div>
         </div>

@@ -53,7 +53,7 @@ class ReportsPage extends Component
 
                 $this->dispatch('show-alert', [
                     'type' => 'error',
-                    'message' => '⚠️ La cuenta seleccionada no existe o no tienes permisos para verla.'
+                    'message' => __('labels.account_not_found_lab')
                 ]);
 
                 return;
@@ -108,7 +108,7 @@ class ReportsPage extends Component
 
                     $this->dispatch('show-alert', [
                         'type' => 'error',
-                        'message' => 'Error de seguridad detectado. Se ha reseteado la selección.'
+                        'message' => __('labels.unexpected_error')
                     ]);
                 }
             }
@@ -162,7 +162,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => '❌ Error al cargar los datos. Por favor, recarga la página.'
+                'message' => __('labels.error_loading_data')
             ]);
 
             return collect();
@@ -204,7 +204,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'warning',
-                'message' => '⚠️ No se pudo obtener el balance. Usando valor por defecto.'
+                'message' => __('labels.error_obtaining_balance')
             ]);
 
             return 10000;
@@ -257,7 +257,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar la curva de capital.'
+                'message' => __('labels.error_generating_curve')
             ]);
 
             return [];
@@ -283,7 +283,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al calcular las estadísticas del sistema.'
+                'message' => __('labels.error_calculating_stats')
             ]);
 
             return null;
@@ -309,7 +309,7 @@ class ReportsPage extends Component
             if ($simTrades->count() < 5) {
                 $this->dispatch('show-alert', [
                     'type' => 'warning',
-                    'message' => "⚠️ Solo quedan {$simTrades->count()} trades después de aplicar los filtros."
+                    'message' => __('labels.only_x_trades_before_filters', ['count' => $$simTrades->count()])
                 ]);
             }
 
@@ -331,7 +331,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al calcular la simulación.'
+                'message' => __('labels.error_calculating_sim')
             ]);
 
             return ['curve' => [], 'stats' => null];
@@ -357,7 +357,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el análisis por hora.'
+                'message' => __('labels.error_generating_analyze_by_hour')
             ]);
 
             return [];
@@ -383,7 +383,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el análisis por sesión.'
+                'message' => __('labels.error_generating_analyze_by_sesion')
             ]);
 
             return [];
@@ -405,7 +405,7 @@ class ReportsPage extends Component
             if ($tradesWithMAE->isEmpty()) {
                 $this->dispatch('show-alert', [
                     'type' => 'info',
-                    'message' => 'ℹ️ Tus trades no tienen datos de MAE/MFE. El gráfico de eficiencia no está disponible.'
+                    'message' => __('labels.trades_no_mfe_mae')
                 ]);
 
                 return [];
@@ -422,7 +422,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el análisis de eficiencia.'
+                'message' => __('labels.error_generate_efficiency_analisis')
             ]);
 
             return [];
@@ -448,7 +448,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el histograma de distribución.'
+                'message' => __('labels.error_generating_histograma')
             ]);
 
             return [];
@@ -492,7 +492,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el perfil del trader.'
+                'message' => __('labels.error_generating_profile_trader')
             ]);
 
             return [
@@ -526,7 +526,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al calcular el riesgo de ruina.'
+                'message' => __('labels.error_calculating_risk')
             ]);
 
             return null;
@@ -552,7 +552,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al generar el ranking de errores.'
+                'message' => __('labels.error_generating_errors')
             ]);
 
             return [];
@@ -574,7 +574,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar el listado de cuentas.'
+                'message' => __('labels.error_loading_list_accounts')
             ]);
 
             return collect();
@@ -605,7 +605,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => '💥 Error crítico al cargar la página. Por favor, contacta con soporte.'
+                'message' => __('labels.critic_error_loading_page')
             ]);
 
             return view('livewire.reports-page');

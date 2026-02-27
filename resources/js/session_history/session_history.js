@@ -81,10 +81,7 @@ document.addEventListener("alpine:init", () => {
                 this.detail = data;
             } catch (error) {
                 this.hasError = true;
-                this.triggerAlert(
-                    "Error de conexión al cargar la sesión.",
-                    "error",
-                );
+                this.triggerAlert(this.$e("error_loading_sesion"), "error");
             } finally {
                 this.isLoading = false;
             }

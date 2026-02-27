@@ -6,37 +6,118 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Computed;
 use App\Models\Strategy;
-use App\LogActions; // ✅ Trait importado
+use App\LogActions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB; // Para transacciones si fuera necesario
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PlaybookPage extends Component
 {
     use WithFileUploads;
-    use LogActions; // ✅ Uso del Trait
+    use LogActions;
 
-    // ✅ SOLO el archivo (Alpine no puede manejar files)
+    // ── Solo Livewire puede manejar el file upload ──────────────────────────
     public $photo;
 
-    // ✅ Filtros
-    public $search = '';
-    public $sortBy = 'stats_total_pnl'; // 'stats_total_pnl', 'stats_winrate', 'created_at'
-    public $sortDir = 'desc';
+    // ── Filtros del listado ─────────────────────────────────────────────────
+    public string $search  = '';
+    public string $sortBy  = 'stats_total_pnl';
+    public string $sortDir = 'desc';
 
-    // ✅ Computed para cargar estrategias (solo lectura BD)
+    // ── Propiedades del formulario (vinculadas al modal) ────────────────────
+    // Necesitan vivir en Livewire para que @error() funcione en Blade
+    public string  $formName        = '';
+    public ?string $formDescription = null;
+    public string  $formTimeframe   = '';
+    public string  $formColor       = '#4F46E5';
+    public bool    $formIsmain      = false;
+    public array   $formRules       = [];
+
+    // ───────────────────────────────────────────────────────────────────────
+    // REGLAS DE VALIDACIÓN CENTRALIZADAS
+    // ───────────────────────────────────────────────────────────────────────
+
+    protected function strategyValidationRules(): array
+    {
+        return [
+            'photo'           => 'nullable|image|max:2048',
+            'formName'        => 'required|string|max:255',
+            'formTimeframe'   => 'required|string|max:10',
+            'formColor'       => ['required', 'regex:/^#[a-fA-F0-9]{6}$/'],
+            'formDescription' => 'nullable|string|max:1000',
+            'formRules'       => 'nullable|array',
+            'formRules.*'     => 'string|max:500',
+        ];
+    }
+
+    protected function strategyValidationMessages(): array
+    {
+        return [
+            'formName.required'      => __('labels.name_required_strategy'),
+            'formName.max'           => __('labels.name_too_long'),
+            'formTimeframe.required' => __('labels.timeframe_required'),
+            'formColor.required'     => __('labels.color_required'),
+            'formColor.regex'        => __('labels.color_invalid'),
+            'photo.image'            => __('labels.photo_invalid'),
+            'photo.max'              => __('labels.photo_too_large'),
+        ];
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // HELPERS FORMULARIO — llamados desde Alpine para preparar el modal
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Carga los datos de una estrategia en las propiedades del formulario.
+     * Alpine lo llama antes de abrir el modal de edición.
+     */
+    public function loadForEdit(int $strategyId): void
+    {
+        try {
+            $strategy = Strategy::where('user_id', Auth::id())->findOrFail($strategyId);
+
+            $this->formName        = $strategy->name;
+            $this->formDescription = $strategy->description;
+            $this->formTimeframe   = $strategy->timeframe;
+            $this->formColor       = $strategy->color;
+            $this->formIsmain      = (bool) $strategy->is_main;
+            $this->formRules       = is_array($strategy->rules)
+                ? $strategy->rules
+                : (json_decode($strategy->rules, true) ?? []);
+
+            $this->resetErrorBag();
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Load For Edit', 'PlaybookPage', "Failed to load strategy ID: {$strategyId}");
+            $this->dispatch('show-alert', message: __('labels.error_loading_strategy'), type: 'error');
+        }
+    }
+
+    /**
+     * Limpia el formulario para la creación. Alpine lo llama al abrir el modal de creación.
+     */
+    public function resetStrategyForm(): void
+    {
+        $this->formName        = '';
+        $this->formDescription = null;
+        $this->formTimeframe   = '';
+        $this->formColor       = '#4F46E5';
+        $this->formIsmain      = false;
+        $this->formRules       = [];
+        $this->reset('photo');
+        $this->resetErrorBag();
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // COMPUTED
+    // ───────────────────────────────────────────────────────────────────────
+
     #[Computed]
     public function strategies()
     {
-        // En métodos de lectura (Computed) generalmente no ponemos try-catch 
-        // porque si fallan, la vista entera suele romperse y Livewire lo maneja.
-        // Pero si quisieras blindarlo, deberías retornar una colección vacía en caso de error.
         try {
             return Strategy::where('user_id', Auth::id())
-                // 🔎 Filtro de Búsqueda
-                ->when($this->search, function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%');
-                })
+                ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))
                 ->select([
                     'id',
                     'name',
@@ -46,7 +127,6 @@ class PlaybookPage extends Component
                     'image_path',
                     'rules',
                     'is_main',
-                    // ✅ Stats ya calculadas
                     'stats_total_trades',
                     'stats_winning_trades',
                     'stats_total_pnl',
@@ -54,19 +134,19 @@ class PlaybookPage extends Component
                     'stats_max_drawdown_pct',
                     'stats_expectancy',
                     'stats_avg_rr',
-                    'stats_by_day_of_week', // JSON
-                    'stats_by_hour',        // JSON
+                    'stats_by_day_of_week',
+                    'stats_by_hour',
                     'stats_best_win_streak',
                     'stats_worst_loss_streak',
                     'stats_avg_mae_pct',
-                    'stats_avg_mfe_pct'
+                    'stats_avg_mfe_pct',
                 ])
                 ->orderByDesc('is_main')
-                ->when($this->sortBy === 'stats_winrate', function ($q) {
-                    $q->orderByRaw('(stats_winning_trades / NULLIF(stats_total_trades, 0)) ' . $this->sortDir);
-                }, function ($q) {
-                    $q->orderBy($this->sortBy, $this->sortDir);
-                })
+                ->when(
+                    $this->sortBy === 'stats_winrate',
+                    fn($q) => $q->orderByRaw('(stats_winning_trades / NULLIF(stats_total_trades, 0)) ' . $this->sortDir),
+                    fn($q) => $q->orderBy($this->sortBy, $this->sortDir)
+                )
                 ->get()
                 ->map(function ($strategy) {
                     $strategy->stats_winrate = $strategy->stats_total_trades > 0
@@ -77,18 +157,20 @@ class PlaybookPage extends Component
                         ? Storage::url($strategy->image_path)
                         : null;
 
-                    // ✅ Decodificar JSONs para pasarlos como objetos a Alpine
                     $strategy->chart_data = [
-                        'days' => is_string($strategy->stats_by_day_of_week) ? json_decode($strategy->stats_by_day_of_week, true) : ($strategy->stats_by_day_of_week ?? []),
-                        'hours' => is_string($strategy->stats_by_hour) ? json_decode($strategy->stats_by_hour, true) : ($strategy->stats_by_hour ?? []),
+                        'days'  => is_string($strategy->stats_by_day_of_week)
+                            ? json_decode($strategy->stats_by_day_of_week, true)
+                            : ($strategy->stats_by_day_of_week ?? []),
+                        'hours' => is_string($strategy->stats_by_hour)
+                            ? json_decode($strategy->stats_by_hour, true)
+                            : ($strategy->stats_by_hour ?? []),
                     ];
 
                     return $strategy;
                 });
-        } catch (\Exception $e) {
-            // Log silencioso para no romper la UI, pero avisar al dev
+        } catch (\Throwable $e) {
             $this->logError($e, 'Read Strategies', 'PlaybookPage', 'Error loading computed strategies');
-            return collect(); // Retornar colección vacía para que el frontend no pete
+            return collect();
         }
     }
 
@@ -97,35 +179,34 @@ class PlaybookPage extends Component
         return view('livewire.playbook-page');
     }
 
-    // ============================================
-    // ✅ MÉTODOS DE ACCIÓN (Blindados con Logs)
-    // ============================================
+    // ───────────────────────────────────────────────────────────────────────
+    // CREAR ESTRATEGIA
+    // ───────────────────────────────────────────────────────────────────────
 
-    public function createStrategy($data)
+    public function createStrategy(): void
     {
+        // validate() lanza ValidationException si falla.
+        // Livewire la captura automáticamente y puebla $errors en Blade.
+        // El modal NO se cierra porque 'strategy-saved' no se emite.
+        $this->validate(
+            $this->strategyValidationRules(),
+            $this->strategyValidationMessages()
+        );
+
         try {
-            $this->validate([
-                'photo' => 'nullable|image|max:2048',
-            ]);
-
-            // Validación manual del payload de Alpine
-            $this->validateStrategyData($data);
-
-            // Transacción DB para asegurar integridad si algo falla a mitad
-            DB::transaction(function () use ($data) {
-                // Si marca como principal, desmarcar las demás
-                if ($data['is_main']) {
+            DB::transaction(function () {
+                if ($this->formIsmain) {
                     Strategy::where('user_id', Auth::id())->update(['is_main' => false]);
                 }
 
                 $strategyData = [
-                    'user_id' => Auth::id(),
-                    'name' => $data['name'],
-                    'description' => $data['description'] ?? null,
-                    'timeframe' => $data['timeframe'],
-                    'color' => $data['color'],
-                    'rules' => $data['rules'] ?? [],
-                    'is_main' => $data['is_main'],
+                    'user_id'     => Auth::id(),
+                    'name'        => $this->formName,
+                    'description' => $this->formDescription,
+                    'timeframe'   => $this->formTimeframe,
+                    'color'       => $this->formColor,
+                    'rules'       => $this->formRules,
+                    'is_main'     => $this->formIsmain,
                 ];
 
                 if ($this->photo) {
@@ -134,7 +215,6 @@ class PlaybookPage extends Component
 
                 $strategy = Strategy::create($strategyData);
 
-                // ✅ Log de Éxito (Auditoría)
                 $this->insertLog(
                     action: 'Create Strategy',
                     form: 'PlaybookPage',
@@ -143,55 +223,48 @@ class PlaybookPage extends Component
                 );
             });
 
-            $this->reset('photo');
-            $this->dispatch('show-alert', message: 'Playbook creado correctamente.', type: 'success');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Errores de validación no son bugs del sistema, no los logueamos como 'error' critico
-            // Opcional: Log info
-            $this->dispatch('show-alert', message: $e->getMessage(), type: 'error');
-            throw $e; // Re-lanzar para que Livewire muestre errores en inputs si usas wire:model
-        } catch (\Throwable  $e) {
-            // ❌ Log de Error Crítico
-            $this->logError(
-                exception: $e,
-                action: 'Create Strategy',
-                form: 'PlaybookPage',
-                description: 'Failed to create strategy payload: ' . json_encode($data)
-            );
-
-            $this->dispatch('show-alert', message: 'Error al crear la estrategia. El equipo técnico ha sido notificado.', type: 'error');
+            $this->resetStrategyForm();
+            // 'strategy-saved' es el único trigger para cerrar el modal en Alpine.
+            // Si validate() falló, nunca llegamos aquí → modal sigue abierto.
+            $this->dispatch('strategy-saved');
+            $this->dispatch('show-alert', message: __('labels.strategy_created_ok'), type: 'success');
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Create Strategy', 'PlaybookPage', 'Failed to create strategy');
+            $this->dispatch('show-alert', message: __('labels.error_creating_strategy'), type: 'error');
         }
     }
 
-    public function updateStrategy($data)
+    // ───────────────────────────────────────────────────────────────────────
+    // ACTUALIZAR ESTRATEGIA
+    // ───────────────────────────────────────────────────────────────────────
+
+    public function updateStrategy(int $strategyId): void
     {
+        $this->validate(
+            $this->strategyValidationRules(),
+            $this->strategyValidationMessages()
+        );
+
         try {
-            $strategy = Strategy::where('user_id', Auth::id())->findOrFail($data['strategy_id']);
+            $strategy = Strategy::where('user_id', Auth::id())->findOrFail($strategyId);
 
-            $this->validate([
-                'photo' => 'nullable|image|max:2048',
-            ]);
-
-            $this->validateStrategyData($data);
-
-            DB::transaction(function () use ($data, $strategy) {
-                if ($data['is_main']) {
+            DB::transaction(function () use ($strategy) {
+                if ($this->formIsmain) {
                     Strategy::where('user_id', Auth::id())
                         ->where('id', '!=', $strategy->id)
                         ->update(['is_main' => false]);
                 }
 
                 $strategyData = [
-                    'name' => $data['name'],
-                    'description' => $data['description'] ?? null,
-                    'timeframe' => $data['timeframe'],
-                    'color' => $data['color'],
-                    'rules' => $data['rules'] ?? [],
-                    'is_main' => $data['is_main'],
+                    'name'        => $this->formName,
+                    'description' => $this->formDescription,
+                    'timeframe'   => $this->formTimeframe,
+                    'color'       => $this->formColor,
+                    'rules'       => $this->formRules,
+                    'is_main'     => $this->formIsmain,
                 ];
 
                 if ($this->photo) {
-                    // Borrar foto anterior
                     if ($strategy->image_path) {
                         Storage::disk('public')->delete($strategy->image_path);
                     }
@@ -200,7 +273,6 @@ class PlaybookPage extends Component
 
                 $strategy->update($strategyData);
 
-                // ✅ Log de Éxito
                 $this->insertLog(
                     action: 'Update Strategy',
                     form: 'PlaybookPage',
@@ -209,24 +281,24 @@ class PlaybookPage extends Component
                 );
             });
 
-            $this->reset('photo');
-            $this->dispatch('show-alert', message: 'Playbook actualizado correctamente.', type: 'success');
-        } catch (\Exception $e) {
-            $this->logError(
-                exception: $e,
-                action: 'Update Strategy',
-                form: 'PlaybookPage',
-                description: 'Failed to update strategy ID: ' . ($data['strategy_id'] ?? 'unknown')
-            );
-            $this->dispatch('show-alert', message: 'Error al actualizar. Inténtalo de nuevo.', type: 'error');
+            $this->resetStrategyForm();
+            $this->dispatch('strategy-saved');
+            $this->dispatch('show-alert', message: __('labels.strategy_update_ok'), type: 'success');
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Update Strategy', 'PlaybookPage', "Failed to update strategy ID: {$strategyId}");
+            $this->dispatch('show-alert', message: __('labels.error_updating_strategy'), type: 'error');
         }
     }
 
-    public function deleteStrategy($id)
+    // ───────────────────────────────────────────────────────────────────────
+    // BORRAR ESTRATEGIA
+    // ───────────────────────────────────────────────────────────────────────
+
+    public function deleteStrategy(int $id): void
     {
         try {
             $strategy = Strategy::where('user_id', Auth::id())->findOrFail($id);
-            $name = $strategy->name; // Guardar nombre para log
+            $name = $strategy->name;
 
             if ($strategy->image_path) {
                 Storage::disk('public')->delete($strategy->image_path);
@@ -234,7 +306,6 @@ class PlaybookPage extends Component
 
             $strategy->delete();
 
-            // ✅ Log de Acción
             $this->insertLog(
                 action: 'Delete Strategy',
                 form: 'PlaybookPage',
@@ -242,49 +313,62 @@ class PlaybookPage extends Component
                 type: 'warning'
             );
 
-            $this->dispatch('show-alert', message: 'Playbook eliminado.', type: 'success');
-        } catch (\Exception $e) {
-            $this->logError(
-                exception: $e,
-                action: 'Delete Strategy',
-                form: 'PlaybookPage',
-                description: "Failed to delete strategy ID: {$id}"
-            );
-            $this->dispatch('show-alert', message: 'No se pudo eliminar la estrategia.', type: 'error');
+            $this->dispatch('show-alert', message: __('labels.strategy_deleted'), type: 'success');
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Delete Strategy', 'PlaybookPage', "Failed to delete strategy ID: {$id}");
+            $this->dispatch('show-alert', message: __('labels.error_deleting_strategy'), type: 'error');
         }
     }
 
-    public function duplicateStrategy($id)
+    // ───────────────────────────────────────────────────────────────────────
+    // DUPLICAR ESTRATEGIA
+    // ───────────────────────────────────────────────────────────────────────
+
+    public function duplicateStrategy(int $id): void
     {
         try {
             DB::transaction(function () use ($id) {
-                $strategy = Strategy::where('user_id', Auth::id())->findOrFail($id);
-
+                $strategy    = Strategy::where('user_id', Auth::id())->findOrFail($id);
                 $newStrategy = $strategy->replicate();
-                $newStrategy->name = $strategy->name . ' (Copia)';
+
+                $newStrategy->name    = $strategy->name . ' (Copia)';
                 $newStrategy->is_main = false;
 
-                // Reset de Stats
-                $newStrategy->stats_total_trades = 0;
-                $newStrategy->stats_winning_trades = 0;
-                $newStrategy->stats_losing_trades = 0;
-                $newStrategy->stats_total_pnl = 0;
-                $newStrategy->stats_gross_profit = 0;
-                $newStrategy->stats_gross_loss = 0;
-                $newStrategy->stats_profit_factor = null;
-                $newStrategy->stats_avg_win = null;
-                $newStrategy->stats_avg_loss = null;
-                $newStrategy->stats_expectancy = null;
-                $newStrategy->stats_avg_rr = null;
-                $newStrategy->stats_max_drawdown_pct = null;
-                $newStrategy->stats_sharpe_ratio = null;
-                $newStrategy->stats_avg_mae_pct = null;
-                $newStrategy->stats_avg_mfe_pct = null;
-                $newStrategy->stats_by_day_of_week = null;
-                $newStrategy->stats_by_hour = null;
-                $newStrategy->stats_best_win_streak = 0;
-                $newStrategy->stats_worst_loss_streak = 0;
-                $newStrategy->stats_last_calculated_at = null;
+                // Reset stats numéricas a 0
+                foreach (
+                    [
+                        'stats_total_trades',
+                        'stats_winning_trades',
+                        'stats_losing_trades',
+                        'stats_total_pnl',
+                        'stats_gross_profit',
+                        'stats_gross_loss',
+                        'stats_best_win_streak',
+                        'stats_worst_loss_streak',
+                    ] as $field
+                ) {
+                    $newStrategy->$field = 0;
+                }
+
+                // Reset stats calculadas a null
+                foreach (
+                    [
+                        'stats_profit_factor',
+                        'stats_avg_win',
+                        'stats_avg_loss',
+                        'stats_expectancy',
+                        'stats_avg_rr',
+                        'stats_max_drawdown_pct',
+                        'stats_sharpe_ratio',
+                        'stats_avg_mae_pct',
+                        'stats_avg_mfe_pct',
+                        'stats_by_day_of_week',
+                        'stats_by_hour',
+                        'stats_last_calculated_at',
+                    ] as $field
+                ) {
+                    $newStrategy->$field = null;
+                }
 
                 $newStrategy->save();
 
@@ -296,71 +380,43 @@ class PlaybookPage extends Component
                 );
             });
 
-            $this->dispatch('show-alert', message: 'Estrategia duplicada.', type: 'success');
-        } catch (\Exception $e) {
-            $this->logError(
-                exception: $e,
-                action: 'Duplicate Strategy',
-                form: 'PlaybookPage',
-                description: "Failed to duplicate strategy ID: {$id}"
-            );
-            $this->dispatch('show-alert', message: 'Error al duplicar la estrategia.', type: 'error');
+            $this->dispatch('show-alert', message: __('labels.duplicate_strategy_ok'), type: 'success');
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Duplicate Strategy', 'PlaybookPage', "Failed to duplicate strategy ID: {$id}");
+            $this->dispatch('show-alert', message: __('labels.error_duplicate_strategy'), type: 'error');
         }
     }
 
-    public function loadStrategyDetails($strategyId)
+    // ───────────────────────────────────────────────────────────────────────
+    // CARGAR DETALLE DE ESTRATEGIA (para modal de análisis)
+    // ───────────────────────────────────────────────────────────────────────
+
+    public function loadStrategyDetails(int $strategyId): array
     {
         try {
-            $trades = \App\Models\Trade::where('strategy_id', $strategyId)
+            // Verificación de ownership antes de cualquier consulta
+            $strategy = Strategy::where('user_id', Auth::id())->findOrFail($strategyId);
+
+            return \App\Models\Trade::where('strategy_id', $strategy->id)
                 ->latest('exit_time')
                 ->take(100)
                 ->get()
-                ->map(function ($t) {
-                    return [
-                        'id' => $t->id,
-                        'ticket' => $t->ticket,
-                        'entry_time' => $t->entry_time ? $t->entry_time->format('Y-m-d H:i') : '-',
-                        'exit_time' => $t->exit_time ? $t->exit_time->format('Y-m-d H:i') : '-',
-                        'direction' => ucfirst($t->direction),
-                        'pnl' => (float) $t->pnl,
-                        'duration' => $t->duration_minutes . ' min',
-                        'screenshot_url' => $t->screenshot ? Storage::url($t->screenshot) : null,
-                        'day_iso' => $t->exit_time ? $t->exit_time->format('N') : null,
-                        'hour' => $t->exit_time ? $t->exit_time->format('H') : null,
-                    ];
-                });
-
-            return $trades;
-        } catch (\Exception $e) {
-            $this->logError(
-                exception: $e,
-                action: 'Load Strategy Details',
-                form: 'PlaybookPage',
-                description: "Failed to load details for Strategy ID: {$strategyId}"
-            );
-
-            // Retornamos array vacío para que el frontend no rompa al iterar
+                ->map(fn($t) => [
+                    'id'             => $t->id,
+                    'ticket'         => $t->ticket,
+                    'entry_time'     => $t->entry_time?->format('Y-m-d H:i') ?? '-',
+                    'exit_time'      => $t->exit_time?->format('Y-m-d H:i') ?? '-',
+                    'direction'      => ucfirst($t->direction),
+                    'pnl'            => (float) $t->pnl,
+                    'duration'       => $t->duration_minutes . ' min',
+                    'screenshot_url' => $t->screenshot ? Storage::url($t->screenshot) : null,
+                    'day_iso'        => $t->exit_time?->format('N'),
+                    'hour'           => $t->exit_time?->format('H'),
+                ])
+                ->toArray();
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Load Strategy Details', 'PlaybookPage', "Failed to load details for Strategy ID: {$strategyId}");
             return [];
-        }
-    }
-
-    // ============================================
-    // Helper de validación
-    // ============================================
-    private function validateStrategyData($data)
-    {
-        // No necesitamos try-catch aquí porque la excepción se captura 
-        // en el método padre (create/update) que llama a este helper.
-        if (empty($data['name']) || strlen($data['name']) > 255) {
-            throw new \Exception('El nombre es requerido y no puede superar 255 caracteres.');
-        }
-
-        if (empty($data['timeframe']) || strlen($data['timeframe']) > 10) {
-            throw new \Exception('El timeframe es requerido.');
-        }
-
-        if (!preg_match('/^#[a-fA-F0-9]{6}$/', $data['color'])) {
-            throw new \Exception('El color debe ser un código hexadecimal válido.');
         }
     }
 }

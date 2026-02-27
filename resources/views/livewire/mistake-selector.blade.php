@@ -7,13 +7,13 @@
 
         <div class="flex items-center gap-3">
             <h4 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-800">
-                <i class="fa-solid fa-bug"></i> Auditoría de Errores
+                <i class="fa-solid fa-bug"></i> {{ __('labels.errors_audit') }}
             </h4>
 
             {{-- Badge de aviso IA (Solo si hay sugerencias) --}}
             @if (count($suggestions) > 0)
                 <span class="inline-flex animate-pulse items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                    <i class="fa-solid fa-lightbulb"></i> {{ count($suggestions) }} sugerencias
+                    <i class="fa-solid fa-lightbulb"></i> {{ count($suggestions) }} {{ __('labels.suggestions') }}
                 </span>
             @endif
         </div>
@@ -34,14 +34,14 @@
         @if (count($suggestions) > 0)
             <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
                 <p class="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-amber-800">
-                    <i class="fa-solid fa-user-secret text-sm"></i> Análisis de Patrones detectados:
+                    <i class="fa-solid fa-user-secret text-sm"></i> {{ __('labels.analysis_detected_patterns') }}
                 </p>
                 <ul class="space-y-1.5">
                     @foreach ($suggestions as $suggestion)
                         <li class="flex items-start gap-2 text-xs text-amber-900">
                             <i class="fa-solid fa-arrow-right mt-0.5 text-amber-600"></i>
                             <span>
-                                Posible <strong class="font-bold">{{ $suggestion['name'] }}</strong>:
+                                {{ __('labels.posible') }} <strong class="font-bold">{{ $suggestion['name'] }}</strong>:
                                 <span class="font-medium text-amber-800/80">{{ $suggestion['reason'] }}</span>
                             </span>
                         </li>
@@ -95,7 +95,7 @@
                     @endforeach
                 </div>
                 <p class="text-xs font-medium text-gray-400">
-                    {{ count($selectedMistakes) }} errores confirmados
+                    {{ count($selectedMistakes) }} {{ __('labels.confirmed_errors') }}
                 </p>
             </div>
         @endif

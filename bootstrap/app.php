@@ -9,6 +9,7 @@ use App\Http\Middleware\TrustProxies;           // <-- añade esto
 use Illuminate\Support\Facades\URL;              // <-- si vas a usar forceScheme
 use Illuminate\Support\Str;                      // <-- opcional para comprobar cabeceras
 use Illuminate\Http\Request;                     // <-- si quisieras usar constantes de headers
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -36,5 +37,12 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            if ($response->getStatusCode() === 419) {
+                return redirect()->back()
+                    ->withInput($request->except('password'))
+                    ->withErrors(['session' => 'Tu sesión ha expirado. Por favor, inténtalo de nuevo.']);
+            }
+            return $response;
+        });
     })->create();

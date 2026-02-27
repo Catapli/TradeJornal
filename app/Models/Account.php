@@ -38,11 +38,11 @@ class Account extends Model
     public function getStatusFormattedAttribute(): string
     {
         return match ($this->status) {
-            'phase_1' => 'Fase 1',
-            'phase_2' => 'Fase 2',
-            'active' => 'Activa',
-            'burned' => 'Quemada',
-            default => 'Desconocida'
+            'phase_1' => __('labels.phase_1'),
+            'phase_2' => __('labels.phase_2'),
+            'active' => __('labels.activa'),
+            'burned' => __('labels.burned'),
+            default => __('labels.unknown')
         };
     }
 
@@ -52,7 +52,7 @@ class Account extends Model
         if ($this->type === 'personal') {
             // Podrías mirar si el broker es "Demo" o "Real" si tienes ese campo,
             // pero por defecto devolvemos "Personal".
-            return 'Cuenta Personal';
+            return __('labels.personal_account');
         }
 
         // CASO 2: Prop Firm (Depende del objetivo vinculado)
@@ -63,16 +63,16 @@ class Account extends Model
 
             // Opción B: Lógica personalizada basada en el número de fase (Más flexible para traducir)
             return match ($this->currentObjective->phase_number) {
-                1 => 'Fase 1 (Evaluación)',
-                2 => 'Fase 2 (Verificación)',
-                3 => 'Fase 3',
-                0 => 'Account Funded (Live)', // El 0 suele usarse para la cuenta real
-                default => 'Fase ' . $this->currentObjective->phase_number,
+                1 => __('labels.phase_1_evaluation'),
+                2 => __('labels.phase_2_verification'),
+                3 => __('labels.phase_3'),
+                0 => __('labels.account_funded'), // El 0 suele usarse para la cuenta real
+                default => __('labels.phase') . $this->currentObjective->phase_number,
             };
         }
 
         // CASO 3: Error de configuración (Prop firm sin objetivo)
-        return 'Sin Objetivo Asignado';
+        return __('labels.without_objective');
     }
 
     public function getHardRulesAttribute()
@@ -103,7 +103,7 @@ class Account extends Model
             $currentProfit = $currentBalance - $initial;
 
             $results[] = [
-                'type' => 'profit_target',
+                'type' => __('labels.profit_target'),
                 'label' => 'Profit Target (' . $objective->profit_target_percent . '%)',
                 'target_value' => $target,
                 // Si estás en negativo, el progreso hacia el target es 0, no negativo
@@ -143,7 +143,7 @@ class Account extends Model
 
             $results[] = [
                 'type' => 'max_daily_loss',
-                'label' => 'Pérdida Diaria (' . $objective->max_daily_loss_percent . '%)',
+                'label' => __('labels.loss_daily') . $objective->max_daily_loss_percent . '%)',
                 'target_value' => $limit,
                 'current_value' => $currentDailyDrawdown,
                 'status' => $currentDailyDrawdown >= $limit ? 'failed' : 'passing',
@@ -164,7 +164,7 @@ class Account extends Model
 
             $results[] = [
                 'type' => 'max_total_loss',
-                'label' => 'Pérdida Total (' . $objective->max_total_loss_percent . '%)',
+                'label' => __('labels.loss_total') . $objective->max_total_loss_percent . '%)',
                 'target_value' => $limit,
                 'current_value' => $currentTotalDrawdown,
                 'status' => $currentTotalDrawdown >= $limit ? 'failed' : 'passing',
@@ -191,7 +191,7 @@ class Account extends Model
 
             $results[] = [
                 'type' => 'min_trading_days',
-                'label' => 'Días Rentables (>0.3%)',
+                'label' => __('labels.profitable_days'),
                 'target_value' => $objective->min_trading_days,
                 'current_value' => $profitableDays,
                 'status' => $profitableDays >= $objective->min_trading_days ? 'passed' : 'ongoing',

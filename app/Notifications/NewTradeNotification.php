@@ -32,16 +32,16 @@ class NewTradeNotification extends Notification
             // -- WIN (Refuerzo Positivo) --
             $type = "success";
             $titles = [
-                "¡Take Profit Golpeado! 🎯",
-                "¡Caja Registradora! 💸",
-                "Excelente Ejecución 🚀",
-                "Sincronización Completada ✅"
+                __('labels.tp_hit'),
+                __('labels.cash_register'),
+                __('labels.excelent_execution'),
+                __('labels.sync_complete')
             ];
             $messages = [
-                "Has sumado +{$amount} en {$symbol}. Gran lectura del mercado.",
-                "El plan se ha cumplido. +{$amount} a la cuenta.",
-                "Paciencia pagada. +{$amount}. Mantén la humildad.",
-                "Ejecución limpia en {$symbol}. Sumas +{$amount}."
+                __('labels.sum_mssg', ['amount' => $amount, 'symbol' => $symbol]),
+                __('labels.mssg_tp_1', ['amount' => $amount]),
+                __('labels.mssg_tp_2', ['amount' => $amount]),
+                __('labels.mssg_tp_3', ['symbol' => $symbol, 'amount' => $amount]),
             ];
 
             // Selección aleatoria
@@ -51,16 +51,16 @@ class NewTradeNotification extends Notification
             // -- LOSS (Refuerzo de Disciplina/Calma) --
             $type = "error";
             $titles = [
-                "Stop Loss Protegiendo 🛡️",
-                "Costo del Negocio 📉",
-                "Disciplina Mantenida 🧠",
-                "Sincronización Completada ✅"
+                __('labels.title_sl_1'),
+                __('labels.title_sl_2'),
+                __('labels.title_sl_3'),
+                __('labels.sync_complete')
             ];
             $messages = [
-                "Pérdida controlada de -{$amount} en {$symbol}. Respira y sigue.",
-                "El SL te ha protegido de un daño mayor (-{$amount}). Bien gestionado.",
-                "No persigas el precio. Acepta los -{$amount} y espera la siguiente oportunidad.",
-                "El mercado tiene la razón. -{$amount}. Mantén la calma y revisa el análisis."
+                __('labels.mssg_sl_1', ['amount' => $amount, 'symbol' => $symbol]),
+                __('labels.mssg_sl_2', ['amount' => $amount]),
+                __('labels.mssg_sl_3', ['amount' => $amount]),
+                __('labels.mssg_sl_4', ['amount' => $amount]),
             ];
 
             $title = $titles[array_rand($titles)];

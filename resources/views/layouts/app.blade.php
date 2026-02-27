@@ -34,6 +34,23 @@
 
     <livewire:trade-detail-modal />
 
+    <!-- En tu layout, antes de </body> -->
+    <script>
+        // Refresca el token cada 30 minutos (antes del timeout de sesión)
+        setInterval(async () => {
+            const {
+                token
+            } = await fetch('/csrf-refresh').then(r => r.json());
+            // Actualiza el token en Livewire v3
+            if (window.livewireScriptConfig) {
+                window.livewireScriptConfig.csrf = token;
+            }
+            // Actualiza el meta tag si lo usas
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.setAttribute('content', token);
+        }, 30 * 60 * 1000);
+    </script>
+
 
 
 
@@ -72,13 +89,13 @@
                                         <i class="fa-solid fa-circle-check text-xl text-emerald-400"></i>
                                     </div>
                                     <div class="ml-3 w-0 flex-1 pt-0.5">
-                                        <p class="text-sm font-medium text-gray-900">¡Hecho!</p>
+                                        <p class="text-sm font-medium text-gray-900">{{ __('labels.done') }}</p>
                                         <p class="mt-1 text-sm text-gray-500">{{ session('status') }}</p>
                                     </div>
                                     <div class="ml-4 flex flex-shrink-0">
                                         <button class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                                 @click="show = false">
-                                            <span class="sr-only">Cerrar</span>
+                                            <span class="sr-only">{{ __('labels.close_s') }}</span>
                                             <i class="fa-solid fa-xmark"></i>
                                         </button>
                                     </div>
@@ -102,7 +119,7 @@
                                         <i class="fa-solid fa-circle-exclamation text-xl text-red-400"></i>
                                     </div>
                                     <div class="ml-3 w-0 flex-1 pt-0.5">
-                                        <p class="text-sm font-medium text-gray-900">Atención</p>
+                                        <p class="text-sm font-medium text-gray-900">{{ __('labels.attention') }}</p>
                                         <p class="mt-1 text-sm text-gray-500">{{ session('error') }}</p>
                                     </div>
                                     <div class="ml-4 flex flex-shrink-0">
@@ -145,6 +162,21 @@
 
     <script>
         window.translations = @json($translations);
+        document.addEventListener('livewire:init', () => {
+            Livewire.hook('request', ({
+                fail
+            }) => {
+                fail(({
+                    status,
+                    preventDefault
+                }) => {
+                    if (status === 419) {
+                        preventDefault(); // Evita el alert nativo de Livewire
+                        window.location.reload(); // Recarga con token fresco
+                    }
+                });
+            });
+        });
     </script>
 
 </html>

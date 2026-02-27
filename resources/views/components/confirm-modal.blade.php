@@ -61,7 +61,7 @@
         <div class="grid grid-cols-2 gap-4 bg-gray-50 p-6">
             <button class="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
                     @click="show = false">
-                Cancelar
+                {{ __('labels.cancel') }}
             </button>
 
             <button class="flex w-full items-center justify-center rounded-xl py-3 font-bold text-white shadow-lg transition hover:shadow-xl focus:ring-4"
@@ -71,7 +71,7 @@
                         'bg-red-600 hover:bg-red-700 focus:ring-red-200': type === 'red',
                         'bg-amber-500 hover:bg-amber-600 focus:ring-amber-200': type === 'warning'
                     }">
-                Confirmar
+                {{ __('labels.confirm') }}
             </button>
         </div>
     </div>

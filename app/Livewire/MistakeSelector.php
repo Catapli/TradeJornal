@@ -55,8 +55,8 @@ class MistakeSelector extends Component
                 $formattedDiff = number_format($minutesDiff);
 
                 $this->suggestions[] = [
-                    'name' => 'Revenge Trading',
-                    'reason' => "Abierta solo {$formattedDiff} min después de una pérdida."
+                    'name' => __('labels.revenge_trading'),
+                    'reason' => __('labels.open_only', ['formattedDiff' => $formattedDiff])
                 ];
             }
         }
@@ -85,10 +85,10 @@ class MistakeSelector extends Component
             ->count();
 
         // Umbral: A partir de la operación número 9, empezamos a avisar.
-        if ($dailyOrder > 5) {
+        if ($dailyOrder > 4) {
             $this->suggestions[] = [
-                'name' => 'Overtrading',
-                'reason' => "Es la operación nº {$dailyOrder} del día (Umbral seguro: 5)."
+                'name' => __('labels.overtrading'),
+                'reason' => __('labels.overtrading_explain', ['dailyOrder' => $dailyOrder])
             ];
         }
 
@@ -110,8 +110,8 @@ class MistakeSelector extends Component
                 if ($efficiency < 0.30) {
                     $pct = round($efficiency * 100);
                     $this->suggestions[] = [
-                        'name' => 'Salida Prematura',
-                        'reason' => "Solo capturaste el {$pct}% del movimiento a favor."
+                        'name' => __('labels.early_exit'),
+                        'reason' => __('labels.early_exit_explain', ['pct' => $pct])
                     ];
                 }
             }
@@ -128,8 +128,8 @@ class MistakeSelector extends Component
 
             if ($lossDistance > 0 && ($maeDistance / $lossDistance) > 2.5) {
                 $this->suggestions[] = [
-                    'name' => 'Mover Stop Loss', // O "Aguantar Pérdidas"
-                    'reason' => "Aguantaste un drawdown 2.5x mayor que tu salida."
+                    'name' => __('labels.move_sl'),
+                    'reason' => __('labels.move_sl_explain')
                 ];
             }
         }
@@ -151,8 +151,8 @@ class MistakeSelector extends Component
             // Ejemplo: Ibas +200€ y cerraste -150€. Claramente debiste proteger.
             if ($maxProfitDist > $finalLossDist) {
                 $this->suggestions[] = [
-                    'name' => 'Round Trip', // O "Dejar Dinero"
-                    'reason' => "La operación estuvo muy verde antes de acabar en pérdida."
+                    'name' => __('labels.round_trip'),
+                    'reason' => __('labels.round_trip_explain')
                 ];
             }
         }

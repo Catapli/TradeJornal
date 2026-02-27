@@ -4,7 +4,13 @@
         {{-- Cabecera --}}
         <div class="mb-2 flex items-center justify-between">
             <h4 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-600">
-                <i class="fa-solid fa-lightbulb text-yellow-400"></i> Tip del Día
+                <i class="fa-solid fa-lightbulb text-yellow-400"></i> {{ __('labels.daily_tip') }}
+                <p class="mt-1 text-[10px] font-medium text-gray-500">
+                    {{ __('labels.daily_uses') }}
+                    <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                        {{ $this->getAiCreditsLeft() }} / 10
+                    </span>
+                </p>
             </h4>
 
             {{-- ACCIONES (Solo visibles si hay tip) --}}
@@ -14,7 +20,7 @@
                     <button class="text-gray-300 transition-colors hover:text-indigo-500 disabled:opacity-50"
                             wire:click="generateTip"
                             wire:loading.attr="disabled"
-                            title="Regenerar consejo">
+                            title="{{ __('labels.regenerate_advice') }}">
                         <i class="fa-solid fa-rotate text-xs"
                            wire:loading.remove
                            wire:target="generateTip"></i>
@@ -26,7 +32,7 @@
                     {{-- 2. Botón Cerrar (Borra caché y oculta) --}}
                     <button class="text-gray-300 transition-colors hover:text-red-500"
                             wire:click="closeTip"
-                            title="Cerrar y borrar">
+                            title="{{ __('labels.close_and_delete') }}">
                         <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
                 </div>
@@ -57,10 +63,10 @@
                 @else
                     {{-- Estado inicial / Botón Generar --}}
                     <div class="animate-in fade-in flex items-center justify-between py-1">
-                        <p class="text-xs text-gray-400">Descubre patrones ocultos en tu operativa reciente.</p>
+                        <p class="text-xs text-gray-400">{{ __('labels.discover_patterns') }}</p>
                         <button class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
                                 wire:click="generateTip">
-                            Generar <i class="fa-solid fa-wand-magic-sparkles ml-1"></i>
+                            {{ __('labels.generate') }} <i class="fa-solid fa-wand-magic-sparkles ml-1"></i>
                         </button>
                     </div>
                 @endif

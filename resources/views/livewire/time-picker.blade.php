@@ -86,10 +86,10 @@
         <div class="flex justify-end space-x-2">
             <button class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                     type="button"
-                    @click="clearTime()">Limpiar</button>
+                    @click="clearTime()">{{ __('labels.clean') }}</button>
             <button class="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                     type="button"
-                    @click="applyTime()">Aplicar</button>
+                    @click="applyTime()">{{ __('labels.apply') }}</button>
         </div>
     </div>
 </div>

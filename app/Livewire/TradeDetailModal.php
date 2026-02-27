@@ -252,7 +252,7 @@ class TradeDetailModal extends Component
                     'TradeDetailModal',
                     "Gemini {$response->status()} - Trade ID: {$trade->id}"
                 );
-                $this->dispatch('notify', 'Error en Gemini: ' . $response->status());
+                $this->dispatch('notify', __('labels.error_gemini') . $response->status());
             }
         } catch (\Throwable $e) {
             $this->logError($e, 'analyzeIndividualTrade', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
@@ -375,13 +375,13 @@ class TradeDetailModal extends Component
     private function analyzePostTradeContext(Trade $trade): string
     {
         if (!$trade->chart_data_path || !Storage::disk('public')->exists($trade->chart_data_path)) {
-            return 'No hay datos de mercado disponibles posteriores al cierre para analizar.';
+            return __('labels.no_data_market');
         }
 
         $chartData = json_decode(Storage::disk('public')->get($trade->chart_data_path), true);
         $candles   = $chartData['timeframes']['5m'] ?? ($chartData['timeframes']['1m'] ?? []);
 
-        if (empty($candles)) return 'Datos de velas insuficientes.';
+        if (empty($candles)) return __('labels.data_candles_not_enough');
 
         $exitTimestamp         = Carbon::parse($trade->exit_time)->timestamp;
         $entryPrice            = (float) $trade->entry_price;
@@ -401,15 +401,15 @@ class TradeDetailModal extends Component
             if ($candlesChecked >= 30) break;
         }
 
-        if (!$foundExit) return 'No hay datos posteriores al cierre.';
+        if (!$foundExit) return __('labels.not_data_close');
 
         $originalMfe = abs(($trade->mfe_price ?? 0) - $entryPrice);
         $threshold   = $originalMfe > 0 ? ($originalMfe * 1.5) : ($entryPrice * 0.0005);
         $pointsMoved = number_format($maxFavorableAfterExit, 5);
 
         return $maxFavorableAfterExit > $threshold
-            ? "CRÍTICO: El mercado se movió fuertemente A FAVOR ({$pointsMoved} pts) después de sacarte. Esto indica 'DIRECCIÓN CORRECTA, STOP LOSS INCORRECTO'. Hubo un barrido de liquidez."
-            : 'El mercado NO hizo movimientos significativos a favor después del cierre. El análisis de dirección probablemente era incorrecto o el momentum se perdió.';
+            ? __('labels.liquidity_sweep', ['pointsMoved' => $pointsMoved])
+            : __('labels.no_good_movement');
     }
 
     public function render()

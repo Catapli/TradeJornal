@@ -24,10 +24,10 @@
 
     // Traducción de estado
     $statusLabel = match ($objective['status']) {
-        'passed' => 'SUPERADO',
-        'failed' => 'FALLIDO',
-        'passing' => 'EN REGLA',
-        'ongoing' => 'EN PROGRESO',
+        'passed' => __('labels.surpassed'),
+        'failed' => __('labels.failed'),
+        'passing' => __('labels.passing'),
+        'ongoing' => __('labels.ongoing'),
         default => '---',
     };
 
@@ -72,7 +72,7 @@
             <div>
                 <h4 class="text-sm font-bold text-gray-700">{{ $objective['label'] }}</h4>
                 @if ($objective['is_hard_rule'])
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-red-500">Regla Estricta</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-red-500">{{ __('labels.strict_rule') }}</span>
                 @endif
             </div>
         </div>
@@ -96,7 +96,7 @@
                 {{ $objective['current_value'] }}
             </span>
             <span class="text-xs font-semibold text-gray-400">
-                / {{ $objective['target_value'] }} días
+                / {{ $objective['target_value'] }} {{ __('labels.days') }}
             </span>
         @else
             <span class="text-lg font-bold text-gray-800">{{ $objective['target_value'] }}</span>
@@ -107,7 +107,7 @@
     @if (in_array($objective['unit'], ['money', 'days']))
         <div class="relative z-10 mt-3">
             <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-400">
-                <span>Progreso</span>
+                <span>{{ __('labels.progress') }}</span>
                 <span>{{ number_format($pct, 1) }}%</span>
             </div>
 
@@ -119,7 +119,7 @@
             {{-- Texto de ayuda para reglas de pérdida --}}
             @if ($isLossRule && $objective['status'] !== 'failed')
                 <p class="mt-1 text-right text-[10px] text-gray-400">
-                    Te quedan <span class="font-bold text-gray-600">{{ number_format($objective['target_value'] - $objective['current_value'], 2) }} {{ $currency }}</span>
+                    {{ __('labels.you_have_left') }} <span class="font-bold text-gray-600">{{ number_format($objective['target_value'] - $objective['current_value'], 2) }} {{ $currency }}</span>
                 </p>
             @endif
         </div>

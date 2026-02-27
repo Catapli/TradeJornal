@@ -82,6 +82,10 @@ class DashboardPage extends Component
     private $_cachedDate = null;
     private $_recentTradesCache = null;
 
+    // Rango de fechas (solo se aplican juntas)
+    public string $dateFrom = '';
+    public string $dateTo   = '';
+
     // 👇 NUEVO: Listener para cuando se actualiza un trade
     protected $listeners = [
         'trade-updated' => 'refreshRecentNotes'
@@ -127,6 +131,43 @@ class DashboardPage extends Component
         }
     }
 
+    public function applyDateRange(string $from, string $to): void
+    {
+        try {
+            // Validar que ambas fechas sean válidas y coherentes
+            $parsedFrom = Carbon::parse($from)->startOfDay();
+            $parsedTo   = Carbon::parse($to)->endOfDay();
+
+            if ($parsedFrom->gt($parsedTo)) {
+                $this->dispatch('notify', __('labels.invalid_date_range'));
+                return;
+            }
+
+            $this->dateFrom = $parsedFrom->format('Y-m-d');
+            $this->dateTo   = $parsedTo->format('Y-m-d');
+
+            $this->_recentTradesCache = null;
+            $this->calculateStats();
+            $this->dispatch('dashboard-updated');
+        } catch (Exception $e) {
+            $this->logError($e, 'ApplyDateRange', 'DashboardPage', 'Error al aplicar rango de fechas');
+        }
+    }
+
+    public function clearDateRange(): void
+    {
+        try {
+            $this->dateFrom = '';
+            $this->dateTo   = '';
+            $this->_recentTradesCache = null;
+            $this->calculateStats();
+            $this->dispatch('dashboard-updated');
+        } catch (Exception $e) {
+            $this->logError($e, 'ClearDateRange', 'DashboardPage', 'Error al limpiar rango de fechas');
+        }
+    }
+
+
 
 
     public function getTradesQuery()
@@ -147,6 +188,14 @@ class DashboardPage extends Component
             // De lo contrario, "ALL" incluye cuentas zombis que no están en el select.
             $q->where('status', '!=', 'burned');
         });
+
+        // 👇 Filtro de rango — solo si AMBAS fechas están definidas
+        if (!empty($this->dateFrom) && !empty($this->dateTo)) {
+            $query->whereBetween('exit_time', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay(),
+            ]);
+        }
 
         return $query;
     }
@@ -320,7 +369,7 @@ class DashboardPage extends Component
                 ->get();
 
             return $this->_recentTradesCache;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'GetRecentTrades', 'DashboardPage', 'Error al cargar operaciones recientes');
             return collect([]);
         }
@@ -368,7 +417,7 @@ class DashboardPage extends Component
             }
 
             $this->heatmapData = array_reverse($chartData);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'CalculateHeatmap', 'DashboardPage', 'Error al calcular heatmap temporal');
             $this->heatmapData = [];
         }
@@ -437,7 +486,7 @@ class DashboardPage extends Component
 
             // 4. Avisar a Alpine que hay nuevos datos para redibujar gráficos
             $this->dispatch('dashboard-updated');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'UpdatedSelectedAccounts', 'DashboardPage', 'Error al cambiar filtro de cuentas');
 
             // Restaurar a 'all' como fallback
@@ -448,7 +497,7 @@ class DashboardPage extends Component
                 $this->calculateStats();
                 $this->generateCalendar();
                 $this->dispatch('dashboard-updated');
-            } catch (\Exception $retryException) {
+            } catch (Exception $retryException) {
                 // Si falla incluso con 'all', loguear y mostrar valores vacíos
                 $this->logError($retryException, 'UpdatedSelectedAccountsRetry', 'DashboardPage', 'Error al reintentar con todas las cuentas');
                 $this->dispatch('notify', __('labels.error_loading_accounts'));
@@ -464,7 +513,7 @@ class DashboardPage extends Component
                 ->format('Y-m-d');
 
             $this->generateCalendar();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'NextMonth', 'DashboardPage', 'Error al navegar al mes siguiente');
 
             // Restaurar a mes actual como fallback
@@ -481,7 +530,7 @@ class DashboardPage extends Component
                 ->format('Y-m-d');
 
             $this->generateCalendar();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'PrevMonth', 'DashboardPage', 'Error al navegar al mes anterior');
 
             // Restaurar a mes actual como fallback
@@ -576,7 +625,7 @@ class DashboardPage extends Component
                 'categories' => $categories,
                 'data' => $data
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logError($e, 'CalculateDailyBars', 'DashboardPage', 'Error al calcular barras diarias de PnL');
             $this->dailyPnLChartData = ['categories' => [], 'data' => []];
         }
@@ -633,28 +682,10 @@ class DashboardPage extends Component
                 })->join("\n");
 
             // 5. El Prompt
-            $prompt = "
-Realiza una auditoría de riesgo y comportamiento de la sesión de trading completa de hoy.
-Sé estricto, objetivo y profesional.
+            // 5. El Prompt (traducido al idioma del usuario)
+            $prompt = __('ai.session_prompt', ['trades_text' => $tradesText]);
 
-DATOS DE LA SESIÓN (Cronológicos):
-$tradesText
 
-INSTRUCCIONES DE ANÁLISIS (Busca estos patrones):
-1. CONTROL EMOCIONAL (Tilt): ¿Hay operaciones consecutivas rápidas tras una pérdida (Revenge Trading)?
-2. GESTIÓN DE RIESGO: ¿Aumenta el lotaje tras perder (Martingala)? ¿Corta las ganancias rápido y deja correr las pérdidas?
-3. DISCIPLINA: ¿Hay sobreoperativa (muchas operaciones mediocres) o selección de calidad?
-
-REGLAS DE FORMATO:
-- NO escribas introducciones, saludos ni frases dramáticas.
-- Empieza DIRECTAMENTE con el primer punto del formato.
-
-FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
-- **📊 Resumen:** Una frase que defina el estado mental y técnico del trader hoy.
-- **🚩 Alertas Detectadas:** Lista de errores graves (Tilt, Sobreoperativa, etc.). Si fue un día limpio, indica 'Ninguna'.
-- **💡 Consejo para Mañana:** Una acción correctiva concreta.
-- **🏆 Nota del Día:** [0/10] (Basado en la disciplina, no solo en el dinero ganado).
-        ";
 
             // 6. Petición a Gemini con timeout de 15 segundos
             $response = Http::timeout(15)
@@ -1198,11 +1229,6 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
             $this->recentNotes = collect([]);
         }
     }
-
-
-
-
-
 
     public function render()
     {

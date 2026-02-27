@@ -46,8 +46,8 @@
 
         {{-- Título --}}
         <div>
-            <h1 class="text-3xl font-black tracking-tight text-gray-900">Diario de Sesiones</h1>
-            <p class="text-sm text-gray-500">Historial de rendimiento y disciplina.</p>
+            <h1 class="text-3xl font-black tracking-tight text-gray-900">{{ __('labels.sesion_journal') }}</h1>
+            <p class="text-sm text-gray-500">{{ __('labels.sesion_journal_text') }}</p>
         </div>
 
         {{-- KPI Cards --}}
@@ -56,7 +56,7 @@
             {{-- Total sesiones --}}
             <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
                 <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Sesiones
+                    {{ __('labels.sesions') }}
                 </span>
                 <span class="text-xl font-black text-gray-800">
                     {{ $stats['total'] }}
@@ -66,7 +66,7 @@
             {{-- Sesiones ganadoras --}}
             <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
                 <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Ganadoras
+                    {{ __('labels.winners_fe') }}
                 </span>
                 <span class="text-xl font-black text-emerald-600">
                     {{ $stats['winning_sessions'] }}
@@ -76,7 +76,7 @@
             {{-- Win Rate --}}
             <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
                 <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Win Rate
+                    {{ __('labels.winrate') }}
                 </span>
                 <span class="text-xl font-black"
                       @class([
@@ -90,7 +90,7 @@
             {{-- PnL Total acumulado --}}
             <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
                 <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    PnL Total
+                    {{ __('labels.total_pnl') }}
                 </span>
                 <span class="text-xl font-black"
                       @class([
@@ -118,7 +118,7 @@
             <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
                     x-model="filterAccount"
                     @change="$wire.set('filterAccount', $event.target.value || null)">
-                <option value="">Todas las Cuentas</option>
+                <option value="">{{ __('labels.all_accounts') }}</option>
                 @foreach ($accounts as $acc)
                     <option value="{{ $acc->id }}">{{ $acc->name }}</option>
                 @endforeach
@@ -127,7 +127,7 @@
             <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
                     x-model="filterStrategy"
                     @change="$wire.set('filterStrategy', $event.target.value || null)">
-                <option value="">Cualquier Estrategia</option>
+                <option value="">{{ __('labels.any_strategy') }}</option>
                 @foreach ($strategies as $strategy)
                     <option value="{{ $strategy->id }}">{{ $strategy->name }}</option>
                 @endforeach
@@ -136,10 +136,10 @@
             <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
                     x-model="filterMood"
                     @change="$wire.set('filterMood', $event.target.value || null)">
-                <option value="">Cualquier Mood</option>
-                <option value="satisfied">Satisfecho</option>
-                <option value="tired">Cansado</option>
-                <option value="frustrated">Frustrado</option>
+                <option value="">{{ __('labels.any_mood') }}</option>
+                <option value="satisfied">{{ __('labels.mood_satisfied') }}</option>
+                <option value="tired">{{ __('labels.mood_tired') }}</option>
+                <option value="frustrated">{{ __('labels.mood_frustrated') }}</option>
             </select>
 
         </div>
@@ -169,7 +169,7 @@
                 @click="resetFilters()"
                 style="display: none;">
             <i class="fa-solid fa-xmark"></i>
-            Limpiar filtros
+            {{ __('labels.clean_filters') }}
         </button>
 
     </div>
@@ -189,9 +189,9 @@
             <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
                 <i class="fa-regular fa-calendar-xmark text-2xl text-indigo-400"></i>
             </div>
-            <p class="font-bold text-gray-900">Aún no tienes sesiones registradas</p>
+            <p class="font-bold text-gray-900">{{ __('labels.not_sesiones_registered') }}</p>
             <p class="mt-1 max-w-xs text-sm text-gray-400">
-                Tus sesiones aparecerán aquí una vez que el agente sincronice datos desde MT5.
+                {{ __('labels.sesions_appear_here') }}
             </p>
         </div>
 
@@ -201,15 +201,15 @@
             <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
                 <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-400"></i>
             </div>
-            <p class="font-bold text-gray-900">Sin resultados para estos filtros</p>
+            <p class="font-bold text-gray-900">{{ __('labels.not_results_filters') }}</p>
             <p class="mt-1 max-w-xs text-sm text-gray-400">
-                Prueba a ajustar o eliminar algún filtro activo.
+                {{ __('labels.adjust_delete_filter') }}
             </p>
             {{-- Atajo directo al reset — mismo comportamiento que el botón de la barra --}}
             <button class="mt-5 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
                     @click="resetFilters()">
                 <i class="fa-solid fa-xmark"></i>
-                Limpiar filtros
+                {{ __('labels.clean_filters') }}
             </button>
         </div>
 
@@ -248,7 +248,7 @@
                             @if ($session->status === 'active')
                                 <span class="flex animate-pulse items-center gap-1 text-[9px] font-bold text-emerald-600">
                                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                    LIVE
+                                    {{ __('labels.live') }}
                                 </span>
                             @endif
                         </div>
@@ -269,7 +269,7 @@
                     {{-- BOTÓN ACCIÓN --}}
                     <button class="flex w-full items-center justify-center gap-2 border-t border-gray-50 bg-white py-3 text-xs font-bold text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
                             @click="openSession({{ $session->id }})">
-                        ANALIZAR
+                        {{ __('labels.analyze') }}
                         <i class="fa-solid fa-arrow-right"></i>
                     </button>
 
@@ -327,7 +327,7 @@
                              style="display: none;">
                             <div class="flex flex-col items-center gap-3">
                                 <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-500"></i>
-                                <span class="text-xs font-bold text-gray-400">CARGANDO DATOS...</span>
+                                <span class="text-xs font-bold text-gray-400">{{ __('labels.loading_data') }}</span>
                             </div>
                         </div>
 
@@ -344,22 +344,22 @@
                             </div>
 
                             <div class="text-center">
-                                <p class="font-bold text-gray-900">Error al cargar la sesión</p>
+                                <p class="font-bold text-gray-900">{{ __('labels.error_loading_sesion') }}</p>
                                 <p class="mt-1 text-sm text-gray-500">
-                                    No se pudieron obtener los datos.<br>
-                                    Comprueba tu conexión e inténtalo de nuevo.
+                                    {{ __('labels.cant_obtain_data') }}<br>
+                                    {{ __('labels.check_connection') }}
                                 </p>
                             </div>
 
                             <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700"
                                     @click="openSession(lastSessionId)">
                                 <i class="fa-solid fa-rotate-right"></i>
-                                Reintentar
+                                {{ __('labels.retry') }}
                             </button>
 
                             <button class="text-xs text-gray-400 underline hover:text-gray-600"
                                     @click="close()">
-                                Cerrar panel
+                                {{ __('labels.close_panel') }}
                             </button>
                         </div>
 
@@ -371,7 +371,7 @@
                             {{-- HEADER MODAL --}}
                             <div class="bg-gray-900 px-6 py-6 text-white">
                                 <div class="flex justify-between">
-                                    <h2 class="text-lg font-medium">Análisis de Sesión</h2>
+                                    <h2 class="text-lg font-medium">{{ __('labels.analyze_sesion') }}</h2>
                                     <button class="text-gray-400 hover:text-white"
                                             @click="close()">
                                         <i class="fa-solid fa-xmark text-xl"></i>
@@ -406,11 +406,11 @@
                                                :class="detail?.is_overtraded ? 'fa-ban text-rose-500' : 'fa-check text-emerald-500'"></i>
                                         </div>
                                         <div>
-                                            <p class="text-xs font-bold uppercase text-gray-500">Regla Max Trades</p>
+                                            <p class="text-xs font-bold uppercase text-gray-500">{{ __('labels.rule_max_trades') }}</p>
                                             <p class="font-bold text-gray-900"
                                                x-text="detail?.is_overtraded
-                                               ? 'VIOLADA (' + detail.total_trades + '/' + detail.limit_trades + ')'
-                                               : 'RESPETADA'">
+                                               ? '{{ __('labels.violated') }} (' + detail.total_trades + '/' + detail.limit_trades + ')'
+                                               : '{{ __('labels.respected') }}'">
                                             </p>
                                         </div>
                                     </div>
@@ -418,13 +418,13 @@
 
                                 {{-- Narrativa --}}
                                 <div class="mb-8">
-                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">Narrativa de Sesión</h3>
+                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">{{ __('labels.session_narrative') }}</h3>
 
                                     {{-- Pre-sesión --}}
                                     <div x-show="detail?.pre_notes"
                                          style="display: none;">
                                         <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-indigo-500">
-                                            Antes de operar
+                                            {{ __('labels.before_to_operate') }}
                                         </p>
                                         <div class="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
                                             <p class="text-sm text-gray-700"
@@ -436,7 +436,7 @@
                                     <div x-show="detail?.notes && detail.notes.length > 0"
                                          style="display: none;">
                                         <p class="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                                            Durante la sesión
+                                            {{ __('labels.while_session') }}
                                         </p>
                                         <div class="mb-4 space-y-4 border-l-2 border-gray-100 pl-4">
                                             <template x-for="note in detail?.notes"
@@ -460,7 +460,7 @@
                                     <div x-show="detail?.post_notes"
                                          style="display: none;">
                                         <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
-                                            Reflexión post-sesión
+                                            {{ __('labels.reflection_post') }}
                                         </p>
                                         <div class="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
                                             <p class="text-sm text-gray-700"
@@ -472,22 +472,22 @@
                                     <div class="py-4 text-center text-xs text-gray-400"
                                          x-show="!detail?.pre_notes && (!detail?.notes || detail.notes.length === 0) && !detail?.post_notes"
                                          style="display: none;">
-                                        Sin notas registradas en esta sesión
+                                        {{ __('labels.without_notes') }}
                                     </div>
                                 </div>
 
 
                                 {{-- Trades --}}
                                 <div>
-                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">Ejecución Técnica</h3>
+                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">{{ __('labels.tecnique_execution') }}</h3>
                                     <div class="overflow-hidden rounded-xl border border-gray-200">
                                         <table class="min-w-full divide-y divide-gray-200">
                                             <thead class="bg-gray-50">
                                                 <tr>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">Hora</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">Símbolo</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">Dir</th>
-                                                    <th class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500">PnL</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.hour') }}</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.symbol') }}</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.direction') }}</th>
+                                                    <th class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500">{{ __('labels.p&l') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200 bg-white">
@@ -516,7 +516,7 @@
                                         <div class="p-8 text-center text-xs text-gray-400"
                                              x-show="!detail?.trades || detail.trades.length === 0"
                                              style="display: none;">
-                                            Sin trades registrados
+                                            {{ __('labels.without_trades_registered') }}
                                         </div>
                                     </div>
                                 </div>

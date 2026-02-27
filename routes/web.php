@@ -33,6 +33,8 @@ Route::controller(SocialiteController::class)->group(function () {
     Route::get('auth/google-callback', 'googleAuthentication')->name('auth.google-callback');
 });
 
+// routes/web.php
+Route::get('/csrf-refresh', fn() => response()->json(['token' => csrf_token()]))->name('csrf.refresh');
 
 
 

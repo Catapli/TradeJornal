@@ -65,7 +65,7 @@ class SessionHistory extends Component
 
             if (!$session) {
                 $this->dispatch('show-alert', [
-                    'message' => 'No se encontró la sesión solicitada.',
+                    'message' => __('labels.session_not_found'),
                     'type'    => 'error',
                 ]);
                 return null;
@@ -106,7 +106,7 @@ class SessionHistory extends Component
         } catch (\Exception $e) {
             $this->logError($e, 'GetSessionDetails', 'SessionHistory', "Error al cargar sesión ID: {$sessionId}");
             $this->dispatch('show-alert', [
-                'message' => 'Error al cargar los datos de la sesión. Inténtalo de nuevo.',
+                'message' => __('labels.error_loading_data_sesion'),
                 'type'    => 'error',
             ]);
             return null;

@@ -44,7 +44,7 @@ return new class extends Migration
             // ---------------------------------------------------------------
             $table->boolean('sync')->default(false);
             $table->string('platform')->default('mt5'); // 'mt4', 'mt5', 'ctrader', 'dxtrade'
-            $table->string('mt5_login')->nullable(); // El numero de cuenta real
+            $table->string('mt5_login')->nullable()->unique(); // El numero de cuenta real
             $table->string('mt5_password')->encrypted()->nullable();
             $table->string('mt5_server')->nullable();
             $table->string('broker_name')->nullable(); // Texto libre para mostrar (Ej: "FTMO-Server")

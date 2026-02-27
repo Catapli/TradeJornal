@@ -7,17 +7,22 @@
         "enter_platform_broker": "Por favor, introduzca la Plataforma de Trading",
         "enter_login_platform": "Por favor, introduzca el Login de la Plataforma",
         "enter_password_platform": "Por favor, introduzca la Contraseña de la Plataforma",
-        "enter_account_name": "Por favor, introduzca el Nombre de la Cuenta"
+        "enter_account_name": "Por favor, introduzca el Nombre de la Cuenta",
+        "error_apply_simulation": "❌ Error al aplicar la simulación",
+        "error_loading_sesion": "Error de conexión al cargar la sesión."
     },
     "success": {
         "account_created_success": "Cuenta creada exitosamente.",
-        "account_updated_success": "Cuenta actualizada exitosamente."
+        "account_updated_success": "Cuenta actualizada exitosamente.",
+        "symulation_apply_ok": "✅ Simulación aplicada correctamente"
     },
 
     "titles": {
         "create_account": "Crear Cuenta",
         "edit_account": "Editar Cuenta",
-        "delete_account": "¿Eliminar Cuenta?"
+        "delete_account": "¿Eliminar Cuenta?",
+        "delete_strategy": "¿Eliminar Estrategia?",
+        "clone_strategy": "¿Clonar Estrategia?"
     },
 
     "labels": {
@@ -37,6 +42,35 @@
         "lossers": "Perdedores",
         "acumulative_pnl": "PnL Acumulado",
         "order_active": "Orden / Activo",
-        "lost_history_account": "Estás seguro de que deseas eliminar esta cuenta? Se perderá todo el historial de operaciones."
+        "lost_history_account": "Estás seguro de que deseas eliminar esta cuenta? Se perderá todo el historial de operaciones.",
+        "delete_strategy": "Esta acción no se puede deshacer. Se borrarán todas las estadísticas.",
+        "clone_strategy": "Se creará una copia idéntica sin historial de operaciones.",
+        "january": "Enero",
+        "february": "Febrero",
+        "march": "Marzo",
+        "april": "Abril",
+        "may": "Mayo",
+        "june": "Junio",
+        "july": "Julio",
+        "august": "Agosto",
+        "september": "Septiembre",
+        "october": "Octubre",
+        "november": "Noviembre",
+        "december": "December",
+        "reality": "Realidad",
+        "simulation": "Simulación",
+        "pnl": "P&L",
+        "value_currency": "Valor Monetario ($)",
+        "trades": "Operaciones",
+        "puntuation": "Puntuación",
+        "repetitions": "Repeticiones",
+        "times": "veces",
+
+        "bloqued_overtrading": "BLOQUEADO: SOBREOPERAR",
+        "bloqued_max_loss": "BLOQUEADO: MÁXIMA PÉRDIDA",
+        "stop_not_ammo": "PARA: MUNICIÓN AGOTADA",
+        "out_schedule": "FUERA DE HORARIO",
+        "checklist_pendint": "CHECKLIST PENDIENTE",
+        "aproved_setup": "SETUP APROBADO"
     }
 }

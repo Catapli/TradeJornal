@@ -63,7 +63,7 @@
                                                     <i class="fa-solid fa-robot text-indigo-600"></i> {{ __('labels.intelligent_analysis') }}
                                                 </h4>
                                                 <p class="mt-1 text-[10px] font-medium text-gray-500">
-                                                    Usos diarios:
+                                                    {{ __('labels.daily_uses') }}
                                                     <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                                                         {{ $this->getAiCreditsLeft() }} / 10
                                                     </span>
@@ -619,7 +619,7 @@
                                                                     @click="activeTab = 'chart'"
                                                                     :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
                                                                 <i class="fa-solid fa-chart-line"></i>
-                                                                <span class="hidden sm:inline">Chart</span>
+                                                                <span class="hidden sm:inline">{{ __('labels.chart') }}</span>
                                                             </button>
                                                         @endif
 
@@ -628,7 +628,7 @@
                                                                 @click="activeTab = 'image'"
                                                                 :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
                                                             <i class="fa-solid fa-image"></i>
-                                                            <span class="hidden sm:inline">Screenshot</span>
+                                                            <span class="hidden sm:inline">{{ __('labels.screenshot') }}</span>
                                                         </button>
 
                                                         <div class="mx-1 h-3 w-px bg-gray-600"></div>
@@ -751,7 +751,7 @@
                                                         </h4>
                                                         {{-- CONTADOR VISUAL --}}
                                                         <p class="mt-1 text-[10px] font-medium text-gray-500">
-                                                            Usos diarios:
+                                                            {{ __('labels.daily_uses') }}
                                                             <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                                                                 {{ $this->getAiCreditsLeft() }} / 10
                                                             </span>
@@ -886,6 +886,82 @@
             <livewire:ai-daily-tip :selected-accounts="$selectedAccounts" />
         @endif
 
+        {{-- 👇 Date Range Picker — wire:ignore previene que Livewire destruya el DOM --}}
+        <div class="flex items-center gap-2"
+             wire:ignore
+             x-data="{
+                 fp: null,
+                 label: '{{ !empty($dateFrom) && !empty($dateTo) ? $dateFrom . ' → ' . $dateTo : '' }}',
+                 hasFilter: {{ !empty($dateFrom) && !empty($dateTo) ? 'true' : 'false' }},
+             
+                 init() {
+                     const self = this;
+             
+                     self.fp = flatpickr(self.$refs.fpInput, {
+                         mode: 'range',
+                         dateFormat: 'Y-m-d',
+                         locale: '{{ app()->getLocale() === 'es' ? 'es' : 'default' }}',
+                         disableMobile: true,
+                         positionElement: self.$refs.triggerBtn, // ← ancla al botón visible
+             
+                         @if (!empty($dateFrom) && !empty($dateTo)) defaultDate: ['{{ $dateFrom }}', '{{ $dateTo }}'], @endif
+             
+                         onChange(selectedDates) {
+                             if (selectedDates.length === 2) {
+                                 const from = selectedDates[0].toISOString().split('T')[0];
+                                 const to = selectedDates[1].toISOString().split('T')[0];
+                                 self.label = from + ' → ' + to;
+                                 self.hasFilter = true;
+                                 $wire.applyDateRange(from, to);
+                             }
+                         },
+                     });
+             
+                 },
+             
+                 open() {
+                     if (this.fp) this.fp.open();
+                 },
+             
+                 clear() {
+                     if (this.fp) {
+                         this.fp.clear();
+                         this.fp.close();
+                     }
+                     this.label = '';
+                     this.hasFilter = false;
+                     $wire.clearDateRange();
+                 }
+             }">
+            {{-- Input oculto que controla Flatpickr --}}
+            <input class="absolute h-0 w-0 overflow-hidden border-0 p-0 opacity-0"
+                   x-ref="fpInput"
+                   type="text"
+                   readonly
+                   tabindex="-1" />
+
+            {{-- Botón trigger --}}
+            <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+                    @click="open()"
+                    x-ref="triggerBtn"
+                    type="button">
+                <i class="fa-regular fa-calendar-range text-indigo-500"></i>
+                <span x-text="hasFilter ? label : '{{ __('labels.date_range') }}'"></span>
+                <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+            </button>
+
+            {{-- Botón limpiar --}}
+            <button class="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition hover:bg-red-100"
+                    x-show="hasFilter"
+                    x-cloak
+                    @click="clear()"
+                    type="button"
+                    title="{{ __('labels.clear_filter') }}">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+
+
         <x-input-multiselect wire:model="selectedAccounts"
                              :options="$availableAccounts"
                              placeholder="{{ __('labels.select_accounts') }}"
@@ -952,7 +1028,7 @@
 
             <div class="mb-4 flex items-center gap-2">
                 <div class="rounded-lg bg-indigo-100 p-1.5 text-indigo-600"><i class="fa-solid fa-crosshairs"></i></div>
-                <h3 class="text-sm font-bold text-gray-800">Objetivo Diario</h3>
+                <h3 class="text-sm font-bold text-gray-800">{{ __('labels.daily_objective') }}</h3>
             </div>
 
             @if ($planStatus)
@@ -961,7 +1037,7 @@
                     @if ($planStatus['pnl']['target'])
                         <div class="space-y-2">
                             <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
-                                <span class="italic text-gray-500">Profit Target</span>
+                                <span class="italic text-gray-500">{{ __('labels.profit_target') }}</span>
                                 <span class="font-mono text-xs text-emerald-600">{{ number_format($planStatus['pnl']['target'], 0) }} $</span>
                             </div>
 
@@ -989,7 +1065,7 @@
                         @endphp
                         <div class="space-y-2">
                             <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
-                                <span class="italic text-gray-500">Max Loss Limit</span>
+                                <span class="italic text-gray-500">{{ __('labels.max_loss_limit') }}</span>
                                 <span class="font-mono text-xs text-rose-500">{{ number_format($planStatus['pnl']['limit'], 0) }} $</span>
                             </div>
 
@@ -1001,7 +1077,7 @@
                             @if ($isOverLoss)
                                 <div class="mt-1 flex animate-bounce items-center justify-center gap-1">
                                     <span class="text-[10px]">⛔</span>
-                                    <p class="text-[10px] font-black uppercase tracking-tighter text-rose-600">STOP: Risk Reached</p>
+                                    <p class="text-[10px] font-black uppercase tracking-tighter text-rose-600">{{ __('labels.advice_max_loss') }}</p>
                                 </div>
                             @endif
                         </div>
@@ -1019,7 +1095,7 @@
 
                         <div class="space-y-2">
                             <div class="flex items-end justify-between">
-                                <div class="text-[10px] font-bold uppercase italic tracking-wider text-gray-500">Daily Plan</div>
+                                <div class="text-[10px] font-bold uppercase italic tracking-wider text-gray-500">{{ __('labels.daily_plan') }}</div>
                                 <div class="{{ $isFull ? 'text-rose-600' : ($isWarning ? 'text-orange-500' : 'text-emerald-500') }} font-mono text-[10px] font-bold">
                                     {{ number_format($pctTrades, 0) }}%
                                 </div>
@@ -1033,7 +1109,7 @@
 
                             <div class="flex items-center justify-between">
                                 <p class="font-mono text-[11px] font-black text-gray-700">
-                                    {{ $currentTrades }} <span class="font-normal italic text-gray-400">/ {{ $limitTrades }} ops</span>
+                                    {{ $currentTrades }} <span class="font-normal italic text-gray-400">/ {{ $limitTrades }} {{ __('labels.ops') }}</span>
                                 </p>
 
                                 @if ($isFull)
@@ -1042,7 +1118,7 @@
                                         {{ __('labels.limit_reached') }}
                                     </p>
                                 @elseif($isWarning)
-                                    <p class="text-[9px] font-bold uppercase italic text-orange-500">⚠️ Last Bullet</p>
+                                    <p class="text-[9px] font-bold uppercase italic text-orange-500">{{ __('labels.last_bullet') }}</p>
                                 @endif
                             </div>
                         </div>
@@ -1050,9 +1126,9 @@
                 </div>
             @else
                 <div class="py-4 text-center">
-                    <p class="mb-2 text-xs text-gray-400">Sin reglas configuradas.</p>
+                    <p class="mb-2 text-xs text-gray-400">{{ __('labels.not_rules_configured') }}</p>
                     <a class="text-xs font-bold text-indigo-600 hover:underline"
-                       href="{{ route('cuentas') }}">Configurar en Cuentas</a>
+                       href="{{ route('cuentas') }}">{{ __('labels.configure_in_accounts') }}</a>
                 </div>
             @endif
         </div>
@@ -1075,7 +1151,6 @@
                         <div class="text-3xl font-black text-gray-900">
                             <span class="{{ $pnlTotal >= 0 ? 'text-emerald-600' : 'text-rose-600' }}"
                                   x-text="$store.viewMode.format({{ $pnlTotal }}, {{ $pnlTotal_perc ?? 0 }})"></span>
-                            {{-- <span class="@if ($pnlTotal > 0) text-green-700   @else  text-red-700 @endif">{{ number_format($pnlTotal, 2) }} $</span> --}}
 
                         </div>
                     </div>
@@ -1153,7 +1228,7 @@
                     {{-- IZQUIERDA: Título y Ratio Grande --}}
                     <div class="flex min-w-[100px] flex-col justify-center">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">Avg R:R</h3>
+                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.avg_rr') }}</h3>
                             <i class="fa-regular fa-circle-question text-xs text-gray-400"
                                title="{{ __('labels.title_r_r') }}"></i>
                         </div>
@@ -1287,7 +1362,7 @@
                     <h3 class="text-lg font-bold text-gray-800">{{ __('labels.heatmap') }}</h3>
                     <p class="text-xs text-gray-500">{{ __('labels.cumulative_yield_hour') }}</p>
                 </div>
-                Leyenda visual simple
+                {{ __('labels.legend_simple') }}
                 <div class="flex items-center gap-2 text-xs">
                     <span class="rounded bg-rose-500 px-2 py-1 text-white">{{ __('labels.loss') }}</span>
                     <span class="rounded bg-gray-100 px-2 py-1 text-gray-500">{{ __('labels.neutral') }}</span>

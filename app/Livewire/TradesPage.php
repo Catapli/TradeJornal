@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\On;
 use App\LogActions; // <-- IMPORTANTE: Tu Trait
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 
 class TradesPage extends Component
@@ -191,11 +192,11 @@ class TradesPage extends Component
                 $trade->update($data);
 
                 $actionName = 'Update Trade';
-                $msg = 'Operación actualizada correctamente.';
+                $msg = __('labels.trade_updated_ok');
             } else {
                 Trade::create($data);
                 $actionName = 'Create Trade';
-                $msg = 'Operación creada correctamente.';
+                $msg = __('labels.trade_created_ok');
             }
 
             // Auditoría de éxito
@@ -249,42 +250,77 @@ class TradesPage extends Component
         }
     }
 
-    // --- QUERY MAESTRA BLINDADA ---
+    /**
+     * Query base reutilizable con todos los filtros activos.
+     * Sin relaciones, sin paginación, lista para componer.
+     *
+     */
+
+    private function getTradesQuery()
+    {
+        return Trade::query()
+            ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            ->when(
+                $this->search,
+                fn($q) =>
+                $q->where(
+                    fn($sub) =>
+                    $sub->where('ticket', 'like', '%' . $this->search . '%')
+                        ->orWhereHas(
+                            'tradeAsset',
+                            fn($a) =>
+                            $a->where('name', 'like', '%' . $this->search . '%')
+                        )
+                )
+            )
+            ->when(
+                $this->filters['account_id'] ?? null,
+                fn($q) => $q->where('account_id', $this->filters['account_id'])
+            )
+            ->when(
+                $this->filters['strategy_id'] ?? null,
+                fn($q) => $q->where('strategy_id', $this->filters['strategy_id'])
+            )
+            ->when(
+                $this->filters['mistake_id'] ?? null,
+                fn($q) => $q->whereHas(
+                    'mistakes',
+                    fn($m) => $m->where('mistakes.id', $this->filters['mistake_id'])
+                )
+            )
+            ->when(
+                $this->filters['direction'] ?? null,
+                fn($q) => $q->where('direction', $this->filters['direction'])
+            )
+            ->when(
+                $this->filters['date_from'] ?? null,
+                fn($q) => $q->whereDate('entry_time', '>=', $this->filters['date_from'])
+            )
+            ->when(
+                $this->filters['date_to'] ?? null,
+                fn($q) => $q->whereDate('entry_time', '<=', $this->filters['date_to'])
+            )
+            ->when($this->filters['result'] ?? null, function ($q) {
+                $res = $this->filters['result'];
+                if ($res === 'win')  $q->where('pnl', '>', 0);
+                if ($res === 'loss') $q->where('pnl', '<', 0);
+            })
+            ->orderBy('exit_time', 'desc');
+    }
+
+    // getTradesProperty queda así de limpio:
     public function getTradesProperty()
     {
         try {
-            return Trade::query()
-                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            return $this->getTradesQuery()
                 ->with(['account', 'strategy', 'tradeAsset', 'mistakes'])
-                ->when($this->search, function ($q) {
-                    $q->where(function ($sub) {
-                        $sub->where('ticket', 'like', '%' . $this->search . '%')
-                            ->orWhereHas('tradeAsset', fn($a) => $a->where('name', 'like', '%' . $this->search . '%'));
-                    });
-                })
-                ->when($this->filters['account_id'] ?? null, fn($q) => $q->where('account_id', $this->filters['account_id']))
-                ->when($this->filters['strategy_id'] ?? null, fn($q) => $q->where('strategy_id', $this->filters['strategy_id']))
-                ->when($this->filters['mistake_id'] ?? null, function ($q) {
-                    $q->whereHas('mistakes', fn($m) => $m->where('mistakes.id', $this->filters['mistake_id']));
-                })
-                ->when($this->filters['direction'] ?? null, fn($q) => $q->where('direction', $this->filters['direction']))
-                ->when($this->filters['date_from'] ?? null, fn($q) => $q->whereDate('entry_time', '>=', $this->filters['date_from']))
-                ->when($this->filters['date_to'] ?? null, fn($q) => $q->whereDate('entry_time', '<=', $this->filters['date_to']))
-                ->when($this->filters['result'] ?? null, function ($q) {
-                    $res = $this->filters['result'];
-                    if ($res === 'win') $q->where('pnl', '>', 0);
-                    if ($res === 'loss') $q->where('pnl', '<', 0);
-                })
-                ->orderBy('exit_time', 'desc')
                 ->paginate(20);
         } catch (\Throwable $e) {
-            // CRÍTICO: Si falla la query principal, la página se pone en blanco (WSOD).
-            // Retornamos un paginador vacío y logueamos el error.
             $this->logError($e, 'Get Trades Query', self::COMPONENT_FORM);
-
             return new LengthAwarePaginator([], 0, 20);
         }
     }
+
 
     // --- EJECUCIÓN MASIVA ---
     public function executeBulkUpdate()
@@ -377,6 +413,45 @@ class TradesPage extends Component
             $this->dispatch('error', __('labels.delete_operations_error'));
         }
     }
+
+    /**
+     * Abre el modal de detalle pasando el ID del trade
+     * y el contexto de IDs de la página actual para poder paginar.
+     */
+    public function openTradeDetail(int $tradeId): void
+    {
+        try {
+            if ($tradeId <= 0) {
+                $this->dispatch('notify', __('labels.invalid_trade_id'));
+                return;
+            }
+
+            // ✅ Query LIGERA: solo IDs de la página actual (mismos filtros activos)
+            // Reutilizamos la query maestra pero SIN relaciones ni datos pesados
+            $contextIds = $this->getTradesQuery()
+                ->orderBy('exit_time', 'desc')
+                ->paginate(20)           // Misma paginación que la tabla
+                ->pluck('id')
+                ->map(fn($id) => (int) $id)
+                ->toArray();
+
+            // Seguridad: el trade solicitado debe estar en el contexto visible
+            if (!in_array($tradeId, $contextIds, strict: true)) {
+                $this->dispatch('notify', __('labels.trade_not_in_list'));
+                return;
+            }
+
+            $this->dispatch(
+                'open-trade-detail',
+                tradeId: $tradeId,
+                tradeIds: $contextIds   // Array de IDs de la página actual
+            );
+        } catch (\Throwable $e) {
+            $this->logError($e, 'OpenTradeDetail', self::COMPONENT_FORM, "Trade ID: {$tradeId}");
+            $this->dispatch('error', __('labels.error_opening_trade'));
+        }
+    }
+
 
     public function render()
     {

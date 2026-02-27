@@ -90,12 +90,9 @@ document.addEventListener("alpine:init", () => {
                 this.$wire.scenarios = this.scenarios;
                 await this.$wire.$refresh();
                 this.hasUnsavedChanges = false;
-                this.triggerAlert(
-                    "✅ Simulación aplicada correctamente",
-                    "success",
-                );
+                this.triggerAlert(this.$s("symulation_apply_ok"), "success");
             } catch (error) {
-                this.triggerAlert("❌ Error al aplicar la simulación", "error");
+                this.triggerAlert(this.$e("error_apply_simulation"), "error");
             } finally {
                 this.isApplying = false;
             }
@@ -176,11 +173,11 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "Realidad",
+                        name: this.$l("reality"),
                         data: initialReal,
                     },
                     {
-                        name: "Simulación",
+                        name: this.$l("simulation"),
                         data: initialSim,
                     },
                 ],
@@ -272,11 +269,11 @@ document.addEventListener("alpine:init", () => {
             if (this.chart)
                 this.chart.updateSeries([
                     {
-                        name: "Realidad",
+                        name: this.$l("reality"),
                         data: newReal,
                     },
                     {
-                        name: "Simulación",
+                        name: this.$l("simulation"),
                         data: newSim,
                     },
                 ]);
@@ -298,7 +295,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "P&L",
+                        name: this.$l("pnl"),
                         data: seriesData,
                     },
                 ],
@@ -425,7 +422,7 @@ document.addEventListener("alpine:init", () => {
                 },
                 yaxis: {
                     title: {
-                        text: "Valor Monetario ($)",
+                        text: this.$l("value_currency"),
                         style: {
                             fontSize: "10px",
                             color: "#94a3b8",
@@ -495,7 +492,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "Trades",
+                        name: this.$l("trades"),
                         data: payload.data,
                     },
                 ],
@@ -574,7 +571,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "Puntuación",
+                        name: this.$l("puntuation"),
                         data: values,
                     },
                 ],
@@ -688,7 +685,7 @@ document.addEventListener("alpine:init", () => {
             const options = {
                 series: [
                     {
-                        name: "Repeticiones",
+                        name: this.$l("repetitions"),
                         data: counts,
                     },
                 ],
@@ -793,7 +790,7 @@ document.addEventListener("alpine:init", () => {
                         <div class="px-3 py-2 text-xs bg-white border border-gray-100 shadow-lg rounded-lg" style="border-left: 4px solid ${color}; min-width: 140px;">
                             <div class="font-bold text-gray-800 mb-1 truncate">${label}</div>
                             <div class="flex justify-between items-center text-gray-500 gap-3">
-                                <span>${count} veces</span>
+                                <span>${count} ${this.$l("times")}</span>
                                 <span class="font-black ${costClass}">${cost.toFixed(0)} $</span>
                             </div>
                         </div>

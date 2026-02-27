@@ -34,14 +34,14 @@
                     {{-- USUARIO PRO (Badge elegante) --}}
                     <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm">
                         <i class="fa-solid fa-crown text-emerald-500"></i>
-                        <span>PRO PLAN</span>
+                        <span>{{ __('labels.pro_plan') }}</span>
                     </div>
                 @else
                     {{-- USUARIO FREE (Botón Call to Action) --}}
                     <a class="group flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 transition-all hover:border-indigo-300 hover:bg-indigo-100 hover:text-indigo-700 hover:shadow-md"
                        href="{{ route('pricing') }}">
                         <i class="fa-regular fa-star transition-transform group-hover:scale-110"></i>
-                        <span>MEJORAR PLAN</span>
+                        <span>{{ __('labels.upgrade_plan') }}</span>
                     </a>
                 @endif
             </div>
@@ -157,8 +157,7 @@
                               action="{{ route('logout') }}"
                               x-data>
                             @csrf
-                            <x-dropdown-link class="flex items-center gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                                             href="{{ route('logout') }}"
+                            <x-dropdown-link class="flex items-center gap-2 text-rose-600 hover:cursor-pointer hover:bg-rose-50 hover:text-rose-700"
                                              @click.prevent="$root.submit();">
                                 <i class="fa-solid fa-arrow-right-from-bracket"></i> {{ __('labels.session_close') }}
                             </x-dropdown-link>

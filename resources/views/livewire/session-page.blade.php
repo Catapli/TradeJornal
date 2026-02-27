@@ -1,5 +1,5 @@
 <div class="h-screen w-full overflow-hidden bg-gray-50 font-sans text-gray-900"
-     x-data="sessionPage(@js($accounts), @js($strategies), @js($restoredSessionData))"
+     x-data="sessionPage(@js($accounts), @js($strategies), @js($restoredSessionData), @js($moodConfig))"
      x-on:resize.window="width = window.innerWidth">
 
 
@@ -51,16 +51,16 @@
         <div class="w-full max-w-lg space-y-8">
             <div class="text-center">
                 <h1 class="flex items-center justify-center gap-3 text-4xl font-black tracking-tight text-gray-900">
-                    <i class="fa-solid fa-bolt text-indigo-600"></i> MOJO MODE
+                    <i class="fa-solid fa-bolt text-indigo-600"></i> {{ __('labels.focus_mode') }}
                 </h1>
-                <p class="mt-2 text-gray-500">Configura tu sesión y elimina el ruido.</p>
+                <p class="mt-2 text-gray-500">{{ __('labels.configure_session_delete_noise') }}</p>
             </div>
 
             <div class="space-y-6 rounded-2xl border border-gray-200 bg-white p-8 shadow-xl shadow-gray-200/50">
                 <!-- Selector de Cuenta -->
                 <div class="mb-6">
                     <label class="mb-2 block text-sm font-medium text-gray-700">
-                        Cuenta de Trading
+                        {{ __('labels.trading_account') }}
                     </label>
                     <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                             x-model="selectedAccountId">
@@ -75,12 +75,12 @@
                     <div class="mt-3 grid grid-cols-2 gap-3 text-sm"
                          x-show="currentAccount.limits">
                         <div class="rounded bg-rose-50 p-2">
-                            <span class="text-gray-600">Max Loss:</span>
+                            <span class="text-gray-600">{{ __('labels.max_loss') }}</span>
                             <span class="font-semibold text-rose-600"
                                   x-text="currentAccount.limits?.max_loss_pct + '%'"></span>
                         </div>
                         <div class="rounded bg-emerald-50 p-2">
-                            <span class="text-gray-600">Target:</span>
+                            <span class="text-gray-600">{{ __('labels.target') }}</span>
                             <span class="font-semibold text-emerald-600"
                                   x-text="currentAccount.limits?.target_pct + '%'"></span>
                         </div>
@@ -90,7 +90,7 @@
                 <!-- Selector de Estrategia -->
                 <div class="mb-6">
                     <label class="mb-2 block text-sm font-medium text-gray-700">
-                        Estrategia
+                        {{ __('labels.strategy') }}
                     </label>
                     <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                             x-model="selectedStrategyId">
@@ -104,7 +104,7 @@
                     {{-- ✅ Preview de reglas (100% Alpine) --}}
                     <div class="mt-3 rounded-lg bg-gray-50 p-3"
                          x-show="currentStrategy.rules?.length > 0">
-                        <p class="mb-2 text-xs font-medium text-gray-600">Reglas de la estrategia:</p>
+                        <p class="mb-2 text-xs font-medium text-gray-600">{{ __('labels.strategy_rules') }}</p>
                         <ul class="space-y-1">
                             <template x-for="(rule, index) in currentStrategy.rules"
                                       :key="index">
@@ -126,19 +126,19 @@
                 <!-- Estado Emocional Inicial -->
                 <div class="mb-6">
                     <label class="mb-2 block text-sm font-medium text-gray-700">
-                        ¿Cómo te sientes?
+                        {{ __('labels.how_do_you_feel') }}
                     </label>
                     <div class="grid grid-cols-2 gap-3">
-                        <template x-for="mood in ['calm', 'neutral', 'anxious', 'confident']"
-                                  :key="mood">
+                        <template x-for="mood in sessionMoodOptions"
+                                  :key="mood.key">
                             <button class="rounded-lg border-2 px-4 py-3 font-medium capitalize transition"
                                     type="button"
-                                    @click="startMood = mood"
+                                    @click="startMood = mood.key"
                                     :class="{
-                                        'bg-indigo-100 border-indigo-500 text-indigo-700': startMood === mood,
-                                        'bg-white border-gray-300 text-gray-700 hover:border-indigo-300': startMood !== mood
+                                        'bg-indigo-100 border-indigo-500 text-indigo-700': startMood === mood.key,
+                                        'bg-white border-gray-300 text-gray-700 hover:border-indigo-300': startMood !== mood.key
                                     }"
-                                    x-text="mood"></button>
+                                    x-text="mood.label"></button>
                         </template>
                     </div>
                 </div>
@@ -151,8 +151,8 @@
                             'bg-indigo-600 hover:bg-indigo-700 cursor-pointer': selectedAccountId && selectedStrategyId,
                             'bg-gray-300 cursor-not-allowed': !selectedAccountId || !selectedStrategyId
                         }">
-                    <span x-show="!selectedAccountId || !selectedStrategyId">Selecciona Cuenta y Estrategia</span>
-                    <span x-show="selectedAccountId && selectedStrategyId">🚀 INICIAR SESIÓN</span>
+                    <span x-show="!selectedAccountId || !selectedStrategyId">{{ __('labels.select_account_strategy') }}</span>
+                    <span x-show="selectedAccountId && selectedStrategyId">{{ __('labels.login') }}</span>
                 </button>
             </div>
         </div>
@@ -173,7 +173,7 @@
                         <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                     </span>
-                    <span class="hidden text-xs font-bold uppercase tracking-wide text-gray-500 sm:block">Live Session</span>
+                    <span class="hidden text-xs font-bold uppercase tracking-wide text-gray-500 sm:block">{{ __('labels.live_session') }}</span>
                 </div>
                 <div class="hidden h-4 w-px bg-gray-300 sm:block"></div>
                 <span class="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-0.5 text-xs font-bold text-indigo-700"
@@ -202,7 +202,7 @@
 
                             {{-- Badge de Tiempo --}}
                             <span class="rounded bg-rose-200 px-1.5 py-0.5 text-[10px] font-black text-rose-800">
-                                <span x-text="events[0].minutes_diff > 0 ? 'En ' + events[0].minutes_diff + 'm' : 'AHORA'"></span>
+                                <span x-text="events[0].minutes_diff > 0 ? '{{ __('labels.in_e') }} ' + events[0].minutes_diff + 'm' : '{{ __('labels.now') }}'"></span>
                             </span>
                         </div>
                     </template>
@@ -217,7 +217,7 @@
             <button class="group mr-2 flex h-8 w-8 items-center justify-center rounded-lg border transition-all"
                     @click="ghostMode = !ghostMode"
                     :class="ghostMode ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500'"
-                    title="Modo Ciego (Ocultar Dinero)">
+                    title="{{ __('labels.blind_mode') }}">
                 <i class="fa-solid"
                    :class="ghostMode ? 'fa-eye-slash' : 'fa-eye'"></i>
             </button>
@@ -241,14 +241,14 @@
                               fill="currentColor"
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Sincronizando...</span>
+                    <span>{{ __('labels.syncronizing') }}</span>
                 </div>
 
                 {{-- Última sincronización --}}
                 <div class="flex items-center gap-1"
                      x-show="lastSyncTime && !isSyncing">
                     <i class="fa-solid fa-check text-emerald-500"></i>
-                    <span x-text="'Sync: ' + (lastSyncTime ? lastSyncTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '-')"></span>
+                    <span x-text="'{{ __('labels.sync_s') }} ' + (lastSyncTime ? lastSyncTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '-')"></span>
                 </div>
             </div>
 
@@ -256,7 +256,7 @@
             <button class="group flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 shadow-sm transition-all hover:border-rose-300 hover:bg-rose-50"
                     @click="step = 3">
                 <i class="fa-solid fa-power-off transition-transform duration-300"></i>
-                <span class="hidden sm:inline">FINALIZAR</span>
+                <span class="hidden sm:inline">{{ __('labels.finalize') }}</span>
             </button>
         </div>
 
@@ -264,7 +264,7 @@
         <div class="z-30 flex h-24 shrink-0 border-b border-gray-200 bg-white">
             <!-- PnL -->
             <div class="relative flex w-1/3 flex-col items-center justify-center overflow-hidden border-r border-gray-100">
-                <div class="z-10 mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Neto Sesión</div>
+                <div class="z-10 mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">{{ __('labels.pnl_session') }}</div>
 
                 <div class="z-10 flex items-baseline gap-1">
                     {{-- APLICAMOS EL FILTRO AQUÍ --}}
@@ -291,14 +291,14 @@
 
             <!-- Trades -->
             <div class="flex w-1/3 flex-col items-center justify-center border-r border-gray-100 bg-gray-50/30">
-                <div class="mb-1 text-[9px] font-bold uppercase text-gray-400">Trades</div>
+                <div class="mb-1 text-[9px] font-bold uppercase text-gray-400">{{ __('labels.trades') }}</div>
                 <div class="text-3xl font-black text-gray-800"
                      x-text="metrics.count"></div>
             </div>
 
             <!-- Winrate -->
             <div class="flex w-1/3 flex-col items-center justify-center bg-gray-50/30">
-                <div class="mb-1 text-[9px] font-bold uppercase text-gray-400">Winrate</div>
+                <div class="mb-1 text-[9px] font-bold uppercase text-gray-400">{{ __('labels.winrate') }}</div>
                 <div class="text-3xl font-black"
                      :class="metrics.winrate >= 50 ? 'text-indigo-600' : 'text-gray-500'"
                      x-text="metrics.winrate + '%'"></div>
@@ -327,7 +327,7 @@
                     <div class="border-b border-gray-100 bg-gray-50 p-4">
                         <div class="mb-3 flex items-center justify-between">
                             <span class="flex items-center gap-2 text-xs font-bold uppercase text-gray-700">
-                                <i class="fa-solid fa-scale-balanced text-indigo-600"></i> Plan Operativo
+                                <i class="fa-solid fa-scale-balanced text-indigo-600"></i> {{ __('labels.operative_plan') }}
                             </span>
                         </div>
 
@@ -337,7 +337,7 @@
                             <div class="col-span-1 rounded-lg border bg-white p-2 text-center shadow-sm transition-colors"
                                  x-show="currentAccount.limits?.max_loss_pct"
                                  :class="isLimitBreached ? 'border-rose-200 bg-rose-50' : (metrics.pnl_percent <= -(currentAccount.limits.max_loss_pct * 0.8) ? 'border-orange-200 bg-orange-50' : 'border-gray-200')">
-                                <span class="block text-[10px] font-bold uppercase text-gray-400">Max Loss</span>
+                                <span class="block text-[10px] font-bold uppercase text-gray-400">{{ __('labels.max_loss') }}</span>
                                 <div class="font-mono text-sm font-bold"
                                      :class="isLimitBreached ? 'text-rose-600' : 'text-gray-800'">
                                     <span x-text="'-' + currentAccount.limits.max_loss_pct + '%'"></span>
@@ -354,7 +354,7 @@
                             <div class="col-span-1 rounded-lg border bg-white p-2 text-center shadow-sm transition-colors"
                                  x-show="currentAccount.limits?.target_pct"
                                  :class="metrics.pnl_percent >= currentAccount.limits.target_pct ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200'">
-                                <span class="block text-[10px] font-bold uppercase text-gray-400">Target</span>
+                                <span class="block text-[10px] font-bold uppercase text-gray-400">{{ __('labels.target') }}</span>
                                 <div class="font-mono text-sm font-bold"
                                      :class="metrics.pnl_percent >= currentAccount.limits.target_pct ? 'text-emerald-600' : 'text-gray-800'">
                                     <span x-text="'+' + currentAccount.limits.target_pct + '%'"></span>
@@ -376,7 +376,7 @@
                                           :class="isOvertrading ? 'text-rose-600 animate-pulse' : 'text-gray-400'">
                                         <i class="fa-solid fa-ban mr-1"
                                            x-show="isOvertrading"></i>
-                                        <span x-text="isOvertrading ? 'OVERTRADING DETECTADO' : 'Munición Diaria'"></span>
+                                        <span x-text="isOvertrading ? {{ __('labels.overtrading_detected') }} : {{ __('labels.ammo_daily') }}"></span>
                                     </span>
                                     <div class="font-mono text-xs font-bold"
                                          :class="isOvertrading ? 'text-rose-600' : 'text-gray-800'">
@@ -427,8 +427,8 @@
                                      x-transition:enter-start="opacity-0 scale-90"
                                      x-transition:enter-end="opacity-100 scale-100">
                                     <div class="rounded-lg bg-rose-100 px-3 py-2 text-center shadow-sm">
-                                        <div class="text-xs font-black text-rose-700">PLAN ROTO</div>
-                                        <div class="text-[9px] font-medium text-rose-600">Has excedido tu límite diario.</div>
+                                        <div class="text-xs font-black text-rose-700">{{ __('labels.breaked_plan') }}</div>
+                                        <div class="text-[9px] font-medium text-rose-600">{{ __('labels.limit_reached_ammo') }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -439,14 +439,14 @@
                             <div class="col-span-1 rounded-lg border bg-white p-2 text-center shadow-sm transition-colors"
                                  x-show="currentAccount.limits?.start_time"
                                  :class="!isTimeValid ? 'border-rose-200 bg-rose-50' : 'border-gray-200'">
-                                <span class="block text-[10px] font-bold uppercase text-gray-400">Horario</span>
+                                <span class="block text-[10px] font-bold uppercase text-gray-400">{{ __('labels.schedule') }}</span>
                                 <div class="font-mono text-xs font-bold text-gray-800">
                                     <span x-text="currentAccount.limits?.start_time"></span> -
                                     <span x-text="currentAccount.limits?.end_time"></span>
                                 </div>
                                 <div class="mt-0.5 text-[9px] font-bold uppercase"
                                      :class="isTimeValid ? 'text-emerald-500' : 'text-rose-500'">
-                                    <span x-text="isTimeValid ? 'MERCADO ABIERTO' : 'CERRADO'"></span>
+                                    <span x-text="isTimeValid ? {{ __('labels.market_open') }} : {{ __('labels.closed') }}"></span>
                                 </div>
                             </div>
                         </div>
@@ -464,9 +464,9 @@
                             </div>
 
                             {{-- Texto --}}
-                            <p class="text-xs font-bold text-gray-700">Sin Plan de Trading</p>
+                            <p class="text-xs font-bold text-gray-700">{{ __('labels.without_trading_plan') }}</p>
                             <p class="mt-1 text-[10px] leading-relaxed text-gray-400">
-                                Configura límites de pérdida, objetivo diario y horario operativo para proteger tu cuenta.
+                                {{ __('labels.configure_trading_plan') }}
                             </p>
 
                             {{-- CTA --}}
@@ -474,7 +474,7 @@
                                href="{{ route('cuentas') }}"
                                target="_blank">
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-                                Configurar Plan
+                                {{ __('labels.configure_plan') }}
                             </a>
                         </div>
                     </div>
@@ -483,7 +483,7 @@
                 {{-- B) CHECKLIST ESTRATEGIA (Reglas de Entrada) --}}
                 <div class="flex h-10 shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4">
                     <span class="flex items-center gap-2 text-xs font-bold uppercase text-gray-700">
-                        <i class="fa-solid fa-list-check text-indigo-600"></i> Setup
+                        <i class="fa-solid fa-list-check text-indigo-600"></i> {{ __('labels.setup') }}
                     </span>
                     <span class="rounded border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-bold text-gray-500">
                         <span x-text="activeRules.filter(r => r.checked).length"></span>/<span x-text="activeRules.length"></span>
@@ -524,7 +524,7 @@
                     <div class="py-6 text-center text-xs text-gray-400"
                          x-show="activeRules.length === 0"
                          x-transition>
-                        Sin reglas de setup.
+                        {{ __('labels.without_setup_rules') }}
                     </div>
                 </div>
 
@@ -546,12 +546,12 @@
 
                 <div class="flex h-10 shrink-0 items-center border-b border-gray-200 bg-white px-4">
                     <span class="flex items-center gap-2 text-xs font-bold uppercase text-gray-700">
-                        <i class="fa-solid fa-feather text-indigo-500"></i> Bitácora
+                        <i class="fa-solid fa-feather text-indigo-500"></i> {{ __('labels.logbook') }}
                     </span>
                     {{-- ✅ NUEVO: Contador de notas --}}
                     <span class="ml-auto text-[10px] font-bold text-gray-400"
                           x-show="sessionNotes.length > 0">
-                        <span x-text="sessionNotes.length"></span> nota<span x-show="sessionNotes.length > 1">s</span>
+                        <span x-text="sessionNotes.length"></span> {{ __('labels.note') }}<span x-show="sessionNotes.length > 1">s</span>
                     </span>
                 </div>
 
@@ -604,7 +604,7 @@
                     <div class="py-10 text-center text-xs text-gray-400"
                          x-show="sessionNotes.length === 0"
                          x-transition>
-                        La sesión está tranquila...
+                        {{ __('labels.session_calm') }}
                     </div>
                 </div>
 
@@ -612,14 +612,15 @@
                     {{-- Selector de Mood --}}
                     <div class="mb-2 flex gap-2 overflow-x-auto pb-1"
                          style="scrollbar-width: none;">
-                        <template x-for="m in ['calm', 'fomo', 'fear', 'confident']"
-                                  :key="m">
+                        <template x-for="mood in noteMoodOptions"
+                                  :key="mood.key">
                             <button class="shrink-0 rounded-full border px-3 py-1 text-[10px] font-bold uppercase transition-all duration-200"
-                                    @click="newNoteMood = m"
-                                    :class="newNoteMood === m ?
-                                        'bg-indigo-100 text-indigo-700 border-indigo-300 scale-105 shadow-sm' :
-                                        'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 hover:border-gray-300'">
-                                <span x-text="m"></span>
+                                    @click="newNoteMood = mood.key"
+                                    :class="{
+                                        'bg-indigo-100 text-indigo-700 border-indigo-300 scale-105 shadow-sm': newNoteMood === mood.key,
+                                        'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 hover:border-gray-300': newNoteMood !== mood.key
+                                    }">
+                                <span x-text="mood.label"></span>
                             </button>
                         </template>
                     </div>
@@ -630,7 +631,7 @@
                                type="text"
                                x-model="newNoteText"
                                @keydown.enter="submitNote"
-                               placeholder="Nuevo pensamiento...">
+                               placeholder="{{ __('labels.new_thinking') }}">
 
                         <button class="absolute right-1.5 top-1.5 rounded-lg p-1.5 transition-all duration-200"
                                 :class="newNoteText.trim() ? 'text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50' : 'text-gray-300 cursor-not-allowed'"
@@ -649,7 +650,7 @@
 
                 <div class="flex h-10 shrink-0 items-center justify-between border-b border-gray-100 bg-gray-50/30 px-4">
                     <span class="text-[10px] font-bold uppercase text-gray-500">
-                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> Recientes
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> {{ __('labels.recents') }}
                     </span>
                     <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[9px] text-gray-400"
                           x-text="metrics.count"></span>
@@ -710,13 +711,13 @@
                     <div class="flex h-full flex-col items-center justify-center text-gray-300 opacity-50"
                          x-show="trades.length === 0">
                         <i class="fa-solid fa-hourglass-half mb-2"></i>
-                        <p class="text-[10px] font-bold">ESPERANDO CIERRES</p>
+                        <p class="text-[10px] font-bold">{{ __('labels.waiting_closes') }}</p>
                     </div>
 
                     {{-- Aviso +X trades --}}
                     <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent py-2 text-center"
                          x-show="trades.length > 8">
-                        <span class="text-[9px] font-bold text-gray-400">+<span x-text="trades.length - 8"></span> trades ocultos</span>
+                        <span class="text-[9px] font-bold text-gray-400">+<span x-text="trades.length - 8"></span> {{ __('labels.hide_trades') }}</span>
                     </div>
                 </div>
             </div>
@@ -737,9 +738,9 @@
                 <div class="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide"
                      :class="metrics.pnl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
                     <i class="fa-solid fa-flag-checkered"></i>
-                    <span>SESIÓN FINALIZADA</span>
+                    <span>{{ __('labels.end_session') }}</span>
                 </div>
-                <h2 class="text-3xl font-black text-gray-900">Resumen de Sesión</h2>
+                <h2 class="text-3xl font-black text-gray-900">{{ __('labels.resume_sesion') }}</h2>
             </div>
 
             {{-- Métricas Principales --}}
@@ -752,7 +753,7 @@
                              ghostMode ? 'blur-xl select-none opacity-50' : ''
                          ]"
                          x-text="(metrics.pnl > 0 ? '+' : '') + metrics.pnl.toFixed(2) + '$'"></div>
-                    <p class="text-xs font-medium text-gray-500">P&L Total</p>
+                    <p class="text-xs font-medium text-gray-500">{{ __('labels.total_pnl') }}</p>
                 </div>
 
                 {{-- PnL Porcentaje --}}
@@ -760,14 +761,14 @@
                     <div class="mb-1 text-3xl font-black"
                          :class="metrics.pnl_percent >= 0 ? 'text-emerald-600' : 'text-rose-600'"
                          x-text="(metrics.pnl_percent > 0 ? '+' : '') + metrics.pnl_percent.toFixed(2) + '%'"></div>
-                    <p class="text-xs font-medium text-gray-500">ROI</p>
+                    <p class="text-xs font-medium text-gray-500">{{ __('labels.roi') }}</p>
                 </div>
 
                 {{-- Trades --}}
                 <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
                     <div class="mb-1 text-3xl font-black text-gray-800"
                          x-text="metrics.count"></div>
-                    <p class="text-xs font-medium text-gray-500">Trades</p>
+                    <p class="text-xs font-medium text-gray-500">{{ __('labels.trades') }}</p>
                 </div>
 
                 {{-- Winrate --}}
@@ -779,7 +780,7 @@
                              'text-rose-600': metrics.winrate < 40
                          }"
                          x-text="metrics.winrate + '%'"></div>
-                    <p class="text-xs font-medium text-gray-500">Winrate</p>
+                    <p class="text-xs font-medium text-gray-500">{{ __('labels.winrate') }}</p>
                 </div>
             </div>
 
@@ -789,7 +790,7 @@
                     <i class="fa-solid fa-clock text-gray-400"></i>
                     <span class="font-mono text-2xl font-bold text-gray-700"
                           x-text="timer"></span>
-                    <span class="text-sm text-gray-500">de trading</span>
+                    <span class="text-sm text-gray-500">{{ __('labels.of_trading') }}</span>
                 </div>
             </div>
 
@@ -800,15 +801,15 @@
                 <div class="mb-6">
                     <label class="mb-2 block text-sm font-semibold text-gray-700">
                         <i class="fa-solid fa-pen-to-square mr-1 text-indigo-500"></i>
-                        Reflexión post-sesión
+                        {{ __('labels.reflection_post_sesion') }}
                     </label>
                     <textarea class="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700 transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500"
                               x-model="postSessionNotes"
-                              placeholder="¿Qué ha ido bien? ¿Qué mejorarías? ¿Alguna lección aprendida..."
+                              placeholder="{{ __('labels.placeholder_end_session') }}"
                               rows="3"></textarea>
                 </div>
                 <p class="mb-6 text-center text-sm font-semibold text-gray-700">
-                    ¿Cómo te sientes después de esta sesión?
+                    {{ __('labels.how_do_you_feel_end') }}
                 </p>
 
                 <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -817,7 +818,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-lg'"
                             @click="finishSession('satisfied')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😊</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-emerald-700">Satisfecho</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-emerald-700">{{ __('labels.mood_satisfied') }}</span>
                     </button>
 
                     {{-- Confident --}}
@@ -825,7 +826,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-lg'"
                             @click="finishSession('confident')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">💪</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-indigo-700">Confiado</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-indigo-700">{{ __('labels.mood_confident') }}</span>
                     </button>
 
                     {{-- Neutral --}}
@@ -833,7 +834,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 hover:shadow-lg'"
                             @click="finishSession('neutral')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😐</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-gray-800">Neutral</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-gray-800">{{ __('labels.mood_neutral') }}</span>
                     </button>
 
                     {{-- Tired --}}
@@ -841,7 +842,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-amber-300 hover:bg-amber-50 hover:shadow-lg'"
                             @click="finishSession('tired')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😴</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-amber-700">Cansado</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-amber-700">{{ __('labels.mood_tired') }}</span>
                     </button>
 
                     {{-- Frustrated --}}
@@ -849,7 +850,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-rose-300 hover:bg-rose-50 hover:shadow-lg'"
                             @click="finishSession('frustrated')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😤</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-rose-700">Frustrado</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-rose-700">{{ __('labels.mood_frustrated') }}</span>
                     </button>
 
                     {{-- Anxious --}}
@@ -857,7 +858,7 @@
                             :class="'border-gray-200 bg-gray-50 hover:border-purple-300 hover:bg-purple-50 hover:shadow-lg'"
                             @click="finishSession('anxious')">
                         <div class="mb-2 text-4xl transition-transform group-hover:scale-110">😰</div>
-                        <span class="block text-xs font-bold text-gray-700 group-hover:text-purple-700">Ansioso</span>
+                        <span class="block text-xs font-bold text-gray-700 group-hover:text-purple-700">{{ __('labels.mood_anxious') }}</span>
                     </button>
                 </div>
             </div>
@@ -866,7 +867,7 @@
             <div class="mt-6 text-center">
                 <button class="text-xs text-gray-500 underline transition hover:text-gray-700"
                         @click="step = 2">
-                    ← Volver a la sesión
+                    {{ __('labels.back_to_sesion') }}
                 </button>
             </div>
         </div>

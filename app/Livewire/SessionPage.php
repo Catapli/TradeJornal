@@ -2,6 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Enums\NoteMood;
+use App\Enums\SessionMood;
+use App\Enums\TradeMood;
 use App\LogActions; // ✅ TRAIT AÑADIDO
 use App\Models\Account;
 use App\Models\EconomicEvent;
@@ -25,11 +28,7 @@ class SessionPage extends Component
     public $accounts = [];
     public $strategies = [];
     public $restoredSessionData = null;
-
-    // ✅ NUEVO: Constantes de validación
-    private const VALID_SESSION_MOODS = ['calm', 'neutral', 'anxious', 'confident', 'satisfied', 'frustrated', 'tired'];
-    private const VALID_NOTE_MOODS = ['neutral', 'positive', 'negative', 'anxious', 'confident', 'calm', 'fomo', 'fear'];
-    private const VALID_TRADE_MOODS = ['neutral', 'happy', 'angry', 'fearful', 'confident'];
+    public $moodConfig = [];
 
     // ==========================================
     // 🎬 LIFECYCLE: MOUNT
@@ -38,11 +37,22 @@ class SessionPage extends Component
     {
         try {
             // ✅ QUERIES DIRECTAS (PostgreSQL es rápido con eager loading)
+            $this->moodConfig = [
+                'session' => SessionMood::toOptions(),
+                'note'    => NoteMood::toOptions(),
+                'trade'   => TradeMood::toOptions(),
+            ];
             $this->accounts = $this->loadAccounts();
             $this->strategies = $this->loadStrategies();
 
             // ✅ RESTAURAR SESIÓN ACTIVA
             $this->restoreActiveSession();
+
+            $this->moodConfig = [
+                'session' => SessionMood::toOptions(),
+                'note'    => NoteMood::toOptions(),
+                'trade'   => TradeMood::toOptions(),
+            ];
         } catch (\Exception $e) {
             $this->logError($e, 'mount', 'SessionPage', 'Error al cargar datos iniciales');
 
@@ -52,7 +62,7 @@ class SessionPage extends Component
             $this->restoredSessionData = null;
 
             $this->dispatch('show-alert', [
-                'message' => 'Error al cargar configuración. Por favor, recarga la página.',
+                'message' => __('labels.error_loading_conf'),
                 'type' => 'error'
             ]);
         }
@@ -122,10 +132,7 @@ class SessionPage extends Component
     {
         try {
             // ✅ VALIDACIÓN 1: Mood válido
-            if (!in_array($mood, self::VALID_SESSION_MOODS)) {
-                $mood = 'neutral';
-                $this->insertLog('validation_fix', 'SessionPage', "Mood inválido corregido a 'neutral'");
-            }
+            $mood = SessionMood::tryFrom($mood)?->value ?? SessionMood::Neutral->value;
 
             // ✅ VALIDACIÓN 2: Verificar que no haya sesión activa (con lock)
             $existingSession = TradingSession::where('user_id', Auth::id())
@@ -135,7 +142,7 @@ class SessionPage extends Component
 
             if ($existingSession) {
                 $this->dispatch('show-alert', [
-                    'message' => 'Ya tienes una sesión activa. Ciérrala primero.',
+                    'message' => __('labels.yet_active_session'),
                     'type' => 'warning'
                 ]);
                 return null;
@@ -150,7 +157,7 @@ class SessionPage extends Component
 
             if (!$account) {
                 $this->dispatch('show-alert', [
-                    'message' => 'Cuenta no válida o inactiva.',
+                    'message' => __('labels.not_valid_account'),
                     'type' => 'error'
                 ]);
                 return null;
@@ -159,7 +166,7 @@ class SessionPage extends Component
             // ✅ VALIDACIÓN 4: Balance inicial válido
             if ($account->current_balance <= 0) {
                 $this->dispatch('show-alert', [
-                    'message' => 'El balance de la cuenta debe ser mayor a 0.',
+                    'message' => __('labels.balance_not_zero'),
                     'type' => 'error'
                 ]);
                 return null;
@@ -173,7 +180,7 @@ class SessionPage extends Component
 
                 if (!$strategyExists) {
                     $this->dispatch('show-alert', [
-                        'message' => 'Estrategia no válida.',
+                        'message' => __('labels.strategy_not_valid'),
                         'type' => 'error'
                     ]);
                     return null;
@@ -214,7 +221,7 @@ class SessionPage extends Component
             DB::rollBack();
             $this->logError($e, 'startSession', 'SessionPage', 'Error al iniciar sesión de trading');
             $this->dispatch('show-alert', [
-                'message' => 'Error al iniciar sesión. Inténtalo de nuevo.',
+                'message' => __('labels.error_loging'),
                 'type' => 'error'
             ]);
             return null;
@@ -512,7 +519,7 @@ class SessionPage extends Component
         try {
             if (!$this->sessionId) {
                 $this->dispatch('show-alert', [
-                    'message' => 'No hay sesión activa.',
+                    'message' => __('labels.not_active_sesion'),
                     'type' => 'warning'
                 ]);
                 return;
@@ -527,17 +534,14 @@ class SessionPage extends Component
             // ✅ VALIDACIÓN 2: Nota no muy larga (evitar spam)
             if (strlen($note) > 1000) {
                 $this->dispatch('show-alert', [
-                    'message' => 'La nota es demasiado larga (máximo 1000 caracteres).',
+                    'message' => __('labels.note_large'),
                     'type' => 'warning'
                 ]);
                 return;
             }
 
             // ✅ VALIDACIÓN 3: Mood válido
-            if (!in_array($mood, self::VALID_NOTE_MOODS)) {
-                $mood = 'neutral';
-                $this->insertLog('validation_fix', 'SessionPage', "Mood de nota inválido corregido a 'neutral'");
-            }
+            $mood = NoteMood::tryFrom($mood)?->value ?? NoteMood::Neutral->value;
 
             // ✅ VALIDACIÓN 4: Sesión existe y pertenece al usuario
             $sessionExists = TradingSession::where('id', $this->sessionId)
@@ -547,7 +551,7 @@ class SessionPage extends Component
 
             if (!$sessionExists) {
                 $this->dispatch('show-alert', [
-                    'message' => 'Sesión no válida o ya cerrada.',
+                    'message' => __('labels.session_not_valid'),
                     'type' => 'error'
                 ]);
                 return;
@@ -561,7 +565,7 @@ class SessionPage extends Component
         } catch (\Exception $e) {
             $this->logError($e, 'addNote', 'SessionPage', 'Error al guardar nota');
             $this->dispatch('show-alert', [
-                'message' => 'Error al guardar la nota. Inténtalo de nuevo.',
+                'message' => __('labels.error_saving_note'),
                 'type' => 'error'
             ]);
         }
@@ -573,8 +577,8 @@ class SessionPage extends Component
     {
         try {
             // ✅ VALIDACIÓN: Mood válido
-            if (!in_array($mood, self::VALID_TRADE_MOODS)) {
-                $this->insertLog('validation_fail', 'SessionPage', "Mood de trade inválido rechazado: {$mood}");
+            if (!TradeMood::tryFrom($mood)) {
+                $this->insertLog('validation_fail', 'SessionPage', "Trade mood inválido rechazado: {$mood}");
                 return;
             }
 
@@ -616,7 +620,7 @@ class SessionPage extends Component
 
             if (!$session) {
                 $this->dispatch('show-alert', [
-                    'message' => 'Sesión no encontrada.',
+                    'message' => __('labels.session_not_found'),
                     'type' => 'error'
                 ]);
                 return route('journal');
@@ -629,10 +633,8 @@ class SessionPage extends Component
             }
 
             // ✅ VALIDACIÓN 3: Mood válido
-            if (!in_array($endMood, self::VALID_SESSION_MOODS)) {
-                $endMood = 'neutral';
-                $this->insertLog('validation_fix', 'SessionPage', "Mood final inválido corregido a 'neutral'");
-            }
+            $endMood = SessionMood::tryFrom($endMood)?->value ?? SessionMood::Neutral->value;
+
 
             // ✅ VALIDACIÓN 4: Métricas válidas
             if (!is_array($metrics) || !isset($metrics['count'], $metrics['pnl'], $metrics['pnl_percent'])) {
@@ -686,7 +688,7 @@ class SessionPage extends Component
             DB::rollBack();
             $this->logError($e, 'closeSession', 'SessionPage', 'Error al cerrar sesión');
             $this->dispatch('show-alert', [
-                'message' => 'Error al cerrar sesión. Contacta soporte.',
+                'message' => __('labels.error_closing_sesion'),
                 'type' => 'error'
             ]);
             return route('journal');

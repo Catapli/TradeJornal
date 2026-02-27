@@ -140,7 +140,7 @@
                             {{-- 1. CABECERA TRADE --}}
                             <div class="mb-4 flex items-end justify-between">
                                 <div>
-                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ticket #{{ $this->trade->ticket ?? 'N/A' }}</span>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ __('labels.ticket') }}{{ $this->trade->ticket ?? 'N/A' }}</span>
                                     <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
                                         {{ $this->trade->tradeAsset->name ?? 'N/A' }}
                                         <span class="{{ $this->trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
@@ -375,7 +375,7 @@
 
                                                     {{-- Icono de barras (FontAwesome o SVG manual) --}}
                                                     <i class="fa-solid fa-chart-column"></i>
-                                                    <span>VOL</span>
+                                                    <span>{{ __('labels.vol') }}</span>
                                                 </button>
                                                 {{-- BOTÓN EMA --}}
                                                 <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
@@ -385,7 +385,7 @@
 
                                                     {{-- Icono de línea --}}
                                                     <i class="fa-solid fa-wave-square"></i>
-                                                    <span>EMA 50</span>
+                                                    <span>{{ __('labels.ema_50') }}</span>
                                                 </button>
 
                                                 {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
@@ -400,7 +400,7 @@
                                                             @click="activeTab = 'chart'"
                                                             :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
                                                         <i class="fa-solid fa-chart-line"></i>
-                                                        <span class="hidden sm:inline">Chart</span>
+                                                        <span class="hidden sm:inline">{{ __('labels.chart') }}</span>
                                                     </button>
                                                 @endif
 
@@ -409,7 +409,7 @@
                                                         @click="activeTab = 'image'"
                                                         :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
                                                     <i class="fa-solid fa-image"></i>
-                                                    <span class="hidden sm:inline">Screenshot</span>
+                                                    <span class="hidden sm:inline">{{ __('labels.screenshot') }}</span>
                                                 </button>
 
                                                 <div class="mx-1 h-3 w-px bg-gray-600"></div>
@@ -532,7 +532,7 @@
                                                     </h4>
                                                     {{-- CONTADOR VISUAL --}}
                                                     <p class="mt-1 text-[10px] font-medium text-gray-500">
-                                                        Usos diarios:
+                                                        {{ __('labels.daily_uses') }}
                                                         <span class="{{ $this->aiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                                                             {{ $this->aiCreditsLeft() }} / 10
                                                         </span>

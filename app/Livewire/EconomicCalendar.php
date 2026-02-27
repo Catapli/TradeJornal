@@ -50,7 +50,7 @@ class EconomicCalendar extends Component
     {
         // 1. Obtener símbolos únicos que ha operado el usuario
         $symbols = \App\Models\Trade::query()
-            ->whereHas('account', fn($q) => $q->where('user_id', \Illuminate\Support\Facades\Auth::id()))
+            ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
             ->join('trade_assets', 'trades.trade_asset_id', '=', 'trade_assets.id')
             ->distinct()
             ->pluck('trade_assets.symbol') // Ej: ["EURUSD", "XAUUSD", "US30", "GBP.JPY"]

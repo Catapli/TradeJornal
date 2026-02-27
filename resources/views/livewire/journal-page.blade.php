@@ -32,7 +32,7 @@
 
     {{-- ? Loading --}}
     <div wire:loading
-         wire:target='updatedSelectedAccountId, insertAccount, updateAccount, deleteAccount'>
+         wire:target='updatedSelectedAccountId, insertAccount, updateAccount, deleteAccount, selectDate'>
         <x-loader></x-loader>
     </div>
 
@@ -42,7 +42,10 @@
 
     {{-- MODAL GESTIÓN DE REGLAS MAESTRAS --}}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
-         x-data="{ show: @entangle('showRulesModal') }"
+         x-data="{
+             show: $wire.entangle('showRulesModal'),
+             newRule: ''
+         }"
          x-show="show"
          style="display: none;">
 
@@ -55,7 +58,9 @@
             <div class="mb-4 max-h-60 space-y-2 overflow-y-auto">
                 @foreach ($userRules as $rule)
                     <div class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2">
-                        <span class="{{ $rule->is_active ? 'text-gray-700' : 'text-gray-400 line-through' }} text-sm">{{ $rule->text }}</span>
+                        <span class="{{ $rule->is_active ? 'text-gray-700' : 'text-gray-400 line-through' }} text-sm">
+                            {{ $rule->text }}
+                        </span>
                         <div class="flex gap-2">
                             <button class="{{ $rule->is_active ? 'text-emerald-500' : 'text-gray-400' }} text-xs"
                                     wire:click="toggleMasterRule({{ $rule->id }})">
@@ -70,27 +75,40 @@
                 @endforeach
             </div>
 
-            {{-- Añadir Nueva --}}
+            {{-- Añadir Nueva — 0 round-trips al escribir --}}
             <div class="flex gap-2">
                 <input class="flex-grow rounded-lg border-gray-300 text-sm focus:ring-indigo-500"
                        type="text"
-                       wire:model="newRuleText"
+                       x-model="newRule"
                        placeholder="{{ __('labels.placeholder_new_rule') }}"
-                       wire:keydown.enter="addMasterRule">
-                <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700"
-                        wire:click="addMasterRule">
+                       @keydown.enter="
+                       if (newRule.trim().length > 0) {
+                           $wire.addMasterRule(newRule.trim());
+                           newRule = '';
+                       }
+                   " />
+                <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                        :disabled="newRule.trim().length === 0"
+                        @click="
+                        if (newRule.trim().length > 0) {
+                            $wire.addMasterRule(newRule.trim());
+                            newRule = '';
+                        }
+                    ">
                     {{ __('labels.add') }}
                 </button>
             </div>
 
             <div class="mt-6 flex justify-end">
                 <button class="text-sm font-bold text-gray-500 hover:text-gray-700"
-                        @click="show = false">{{ __('labels.close_s') }}</button>
+                        @click="show = false">
+                    {{ __('labels.close_s') }}
+                </button>
             </div>
         </div>
     </div>
 
-    {{-- HEADER FIJO --}}
+
     {{-- HEADER FIJO --}}
     <div class="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
         <div class="mx-auto flex max-w-7xl items-center justify-between">
@@ -100,7 +118,7 @@
 
                 {{-- Botón Día Anterior --}}
                 <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
-                        wire:click="prevDay">
+                        wire:click="selectDate('{{ \Carbon\Carbon::parse($date)->subDay()->format('Y-m-d') }}')">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
 
@@ -110,9 +128,8 @@
                     {{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}
                 </h1>
 
-                {{-- Botón Día Siguiente --}}
                 <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
-                        wire:click="nextDay">
+                        wire:click="selectDate('{{ \Carbon\Carbon::parse($date)->addDay()->format('Y-m-d') }}')">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
             </div>
@@ -120,11 +137,15 @@
 
             {{-- BOTÓN GUARDAR (Tu código original) --}}
             <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow-md transition-all hover:bg-indigo-700 disabled:opacity-50"
-                    wire:click="save"
+                    @click="
+        $wire.set('content', document.getElementById('x').value);
+        $wire.save();
+    "
                     wire:loading.attr="disabled">
                 <span wire:loading.remove>{{ __('labels.save') }}</span>
                 <span wire:loading><i class="fa-solid fa-circle-notch fa-spin"></i></span>
             </button>
+
         </div>
     </div>
 
@@ -133,8 +154,6 @@
 
         {{-- === COLUMNA IZQUIERDA (PREPARACIÓN) === --}}
         <div class="space-y-6 lg:col-span-4">
-
-
 
             {{-- 2. PRE-MARKET --}}
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -209,8 +228,9 @@
 
                 {{-- Grid --}}
                 <div class="grid grid-cols-7 gap-1">
+                    {{-- ✅ CORRECTO — igual que los botones de navegación --}}
                     @foreach ($this->miniCalendar as $day)
-                        <button class="{{ $day['is_selected'] ? 'bg-indigo-600 text-white font-bold shadow-md' : ($day['is_today'] ? 'border border-indigo-500 text-indigo-600 bg-indigo-50' : ($day['is_current_month'] ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-300')) }} relative h-8 rounded-lg text-xs font-medium transition-all"
+                        <button class="{{ $day['is_selected'] ? 'bg-indigo-600 text-white font-bold shadow-md' : ($day['is_today'] ? 'border border-indigo-500 text-indigo-600 bg-indigo-50' : ($day['is_current_month'] ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-300')) }} relative h-8 w-full rounded-lg text-xs font-medium transition-all"
                                 wire:click="selectDate('{{ $day['date'] }}')">
                             {{ $day['day'] }}
                             @if ($day['has_entry'] && !$day['is_selected'])
@@ -218,6 +238,7 @@
                             @endif
                         </button>
                     @endforeach
+
                 </div>
             </div>
 
@@ -298,7 +319,12 @@
                             @foreach ($dayTrades as $trade)
                                 {{-- FILA DEL TRADE --}}
                                 <div class="group relative flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-gray-50"
-                                     wire:click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
+                                     @click="
+        $el.classList.add('opacity-50');
+        $wire.openTradeDetail({{ $trade->id }}).then(() => {
+            $el.classList.remove('opacity-50');
+        });
+    ">
 
                                     {{-- IZQUIERDA: Info Trade + Errores --}}
                                     <div class="flex items-center gap-4">
@@ -366,7 +392,7 @@
                     </div>
 
                     <p class="mt-1 text-[10px] font-medium text-gray-500">
-                        Usos diarios de la IA:
+                        {{ __('labels.daily_uses') }}
                         <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                             {{ $this->getAiCreditsLeft() }} / 10
                         </span>
@@ -391,21 +417,25 @@
                 {{-- Cuerpo del Editor --}}
                 <div class="relative flex-grow p-4"
                      x-data="{
-                         value: @entangle('content').defer,
+                         value: '{{ addslashes($content ?? '') }}',
                      
                          init() {
-                             // 1. Listeners básicos (Igual que antes)
-                             this.$refs.trix.addEventListener('trix-change', (e) => this.value = e.target.value);
+                             // Cargar contenido inicial en Trix
+                             this.$nextTick(() => {
+                                 if (this.value) {
+                                     this.$refs.trix.editor.loadHTML(this.value);
+                                 }
+                             });
                      
+                             // Listener IA: cuando Livewire genera un borrador, cargarlo en Trix
                              Livewire.on('editor-content-updated', (data) => {
                                  let newContent = Array.isArray(data) ? data[0] : data;
                                  if (newContent) {
                                      this.$refs.trix.editor.loadHTML(newContent);
-                                     this.value = newContent;
+                                     document.getElementById('x').value = newContent;
                                  }
                              });
                      
-                             // 📸 2. LISTENER DE SUBIDA DE IMÁGENES (NUEVO)
                              addEventListener('trix-attachment-add', (e) => {
                                  if (e.attachment.file) {
                                      this.uploadFile(e.attachment);
@@ -413,34 +443,27 @@
                              });
                          },
                      
-                         // FUNCIÓN DE SUBIDA AJAX
                          uploadFile(attachment) {
-                             // A. Preparar datos
                              let formData = new FormData();
                              formData.append('file', attachment.file);
                      
-                             // B. Petición al Controlador Laravel
                              axios.post('{{ route('journal.upload') }}', formData, {
                                  headers: {
                                      'Content-Type': 'multipart/form-data',
-                                     'X-CSRF-TOKEN': '{{ csrf_token() }}' // Seguridad Laravel
+                                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                  },
                                  onUploadProgress: (progressEvent) => {
-                                     // Barra de progreso nativa de Trix
                                      let progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                                      attachment.setUploadProgress(progress);
                                  }
                              }).then(response => {
-                                 // C. Éxito: Sustituir el archivo local por la URL del servidor
                                  attachment.setAttributes({
                                      url: response.data.url,
-                                     href: response.data.url // Para que sea clicable
+                                     href: response.data.url
                                  });
                              }).catch(error => {
                                  console.error('Upload error:', error);
-                                 attachment.setAttributes({
-                                     error: 'Falló la subida.'
-                                 });
+                                 attachment.setAttributes({ error: 'Falló la subida.' });
                              });
                          }
                      }">

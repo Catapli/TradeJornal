@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Reactive; // Importante
 use App\Models\Trade;
+use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 class AiDailyTip extends Component
 {
     // Recibimos las cuentas del padre en tiempo real
+    use WithAiLimits; // <--- 2. Usar el Trait
     #[Reactive]
     public $selectedAccounts = [];
 
@@ -58,6 +60,16 @@ class AiDailyTip extends Component
     {
         $this->isLoading = true;
 
+        // ----------------------------------------------------
+        // 2. VALIDACIÓN DE LÍMITE (NUEVO)
+        // ----------------------------------------------------
+        if (!$this->checkAiLimit()) {
+            $this->isLoading = false; // Apagar spinner
+            $this->dispatch('notify', __('labels.limit_ai_reached'));
+            return; // Detener ejecución
+        }
+
+
         // 1. QUERY (Igual que tenías)
         $query = Trade::whereHas('account', function ($q) {
             $q->where('user_id', Auth::id())
@@ -74,7 +86,7 @@ class AiDailyTip extends Component
             ->get();
 
         if ($trades->count() < 5) {
-            $this->tip = "Necesito al menos 5 operaciones recientes para analizarte.";
+            $this->tip = __('labels.need_min_5_trades');
             $this->isLoading = false;
             return;
         }
@@ -88,26 +100,7 @@ class AiDailyTip extends Component
         })->join("\n");
 
         // 3. PROMPT CON JERARQUÍA DE ERRORES
-        $prompt = "
-            Actúa como un Psico-Trading Coach experto. Analiza estos trades buscando patrones destructivos.
-            
-            DATOS:
-            $dataStr
-
-            INSTRUCCIONES DE PRIORIDAD (Sigue este orden estricto):
-            1. 🚨 PRIMERO busca SOBREOPERATIVA/TILT: Si ves múltiples operaciones (más de 3-4) en el mismo día o sesión con pérdidas, IGNORA la dirección (Long/Short) y ataca la cantidad. El problema es el volumen, no el setup.
-            2. 🕒 SEGUNDO busca HORARIO: Si pierde siempre a la misma hora.
-            3. 📉 TERCERO busca DIRECCIÓN: Solo si la conducta es disciplinada (pocos trades), mira si falla en Longs/Shorts.
-
-            REGLAS DE RESPUESTA:
-            - Dame UNA SOLA frase imperativa y dura.
-            - Máximo 20 palabras.
-            - Empieza con emoji.
-            
-            Ejemplos correctos:
-            '🔥 Estás en racha destructiva: apaga el ordenador tras 2 pérdidas o quemarás la cuenta.' (Prioriza conducta)
-            '🛑 Tu obsesión por operar la apertura de Nueva York te está costando cara; espera 30 minutos.' (Prioriza horario)
-        ";
+        $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
         try {
             $apiKey = env('GEMINI_API_KEY');
@@ -122,6 +115,7 @@ class AiDailyTip extends Component
             if ($response->successful()) {
                 $content = $response->json()['candidates'][0]['content']['parts'][0]['text'];
                 $this->tip = $content;
+                $this->consumeAiCredit();
                 Cache::put($this->getCacheKey(), $content, Carbon::now()->endOfDay());
             } else {
                 // 👇 CAMBIO 3: Mostrar el error real en pantalla para depurar

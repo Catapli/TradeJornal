@@ -33,12 +33,6 @@
         </div>
     </div>
 
-    {{-- ? Loading --}}
-    {{-- <div class="fixed inset-0 z-[9999]"
-         wire:loading>
-        <x-loader></x-loader>
-    </div> --}}
-
     <x-confirm-modal />
 
     {{-- Top-Right Snackbar --}}
@@ -162,19 +156,6 @@
                         </select>
                     </div>
                 </div>
-
-                {{-- Servidor (Read-only) --}}
-                {{-- <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-xs font-medium text-gray-600">
-                        <i class="fa-solid fa-server text-gray-400"></i>
-                        {{ __('labels.server') }}
-                    </label>
-                    <input class="w-full rounded-lg border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-500"
-                           type="text"
-                           x-model="selectedServer"
-                           disabled
-                           placeholder="{{ __('labels.auto_assigned') }}">
-                </div> --}}
             </div>
 
             @if (Auth::user()->subscribed('default'))
@@ -302,7 +283,7 @@
                            type="number"
                            step="0.01"
                            x-model="$wire.rules_max_loss_percent"
-                           placeholder="Ej: 5.00">
+                           placeholder="{{ __('labels.placeholder_daily_loss') }}">
                 </div>
 
                 {{-- Daily Profit Target --}}
@@ -314,7 +295,7 @@
                            type="number"
                            step="0.01"
                            x-model="$wire.rules_profit_target_percent"
-                           placeholder="Ej: 2.00">
+                           placeholder="{{ __('labels.placeholder_daily_profit') }}">
                 </div>
 
                 {{-- Max Daily Trades --}}
@@ -325,7 +306,7 @@
                     <input class="w-full rounded-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500"
                            type="number"
                            x-model="$wire.rules_max_trades"
-                           placeholder="Ej: 5">
+                           placeholder="{{ __('labels.placeholder_daily_trades') }}">
                 </div>
 
                 {{-- Trading Hours --}}
@@ -855,7 +836,12 @@
                         @forelse ($this->historyTrades as $trade)
                             <tr class="group cursor-pointer transition duration-150 hover:bg-indigo-50/40"
                                 wire:key="history-{{ $trade->id }}"
-                                @click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
+                                @click="
+        $el.classList.add('opacity-50');
+        $wire.openTradeDetail({{ $trade->id }}).then(() => {
+            $el.classList.remove('opacity-50');
+        });
+    ">
 
                                 {{-- COLUMNA 1: BADGE + TICKET + SIMBOLO --}}
                                 <td class="whitespace-nowrap px-6 py-4">
@@ -949,16 +935,6 @@
                                         {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
                                     </span>
                                 </td>
-
-                                {{-- COLUMNA 5: PNL --}}
-                                {{-- <td class="whitespace-nowrap px-6 py-4 text-right">
-                                    <div class="flex flex-col items-end">
-                                        <span class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono text-base font-black">
-                                            {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
-                                        </span>
-                                        {{~~ Opcional: Mostrar % o pips debajo si lo tuvieras ~~}}
-                                    </div>
-                                </td> --}}
                             </tr>
                         @empty
                             <tr>

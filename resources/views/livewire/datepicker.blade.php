@@ -98,12 +98,12 @@
              x-show="startDate || endDate">
             <div class="flex justify-between"
                  x-show="startDate">
-                <span>Inicio:</span>
+                <span>{{ __('labels.start:') }}</span>
                 <span x-text="startDate"></span>
             </div>
             <div class="flex justify-between"
                  x-show="endDate">
-                <span>Fin:</span>
+                <span>{{ __('labels.end:') }}</span>
                 <span x-text="endDate"></span>
             </div>
         </div>
@@ -112,11 +112,11 @@
         <div class="mt-4 flex justify-end space-x-2">
             <button class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
                     @click="clearDates()">
-                Limpiar
+                {{ __('labels.clean') }}
             </button>
             <button class="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                     @click="applyDates()">
-                Aplicar
+                {{ __('labels.apply') }}
             </button>
         </div>
     </div>
@@ -133,7 +133,8 @@
             year: '',
             daysInMonth: [],
             blankDays: [],
-            monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+            monthNames: [this.$l('january'), this.$l('february'), this.$l('march'), this.$l('april'), this.$l('may'), this.$l('june'), this.$l('july'), this.$l('august'), this.$l('september'), this.$l('october'), this.$l('november'), this.$l(
+                'december')],
 
             init() {
                 let today = new Date();

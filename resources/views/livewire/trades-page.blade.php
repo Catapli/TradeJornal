@@ -328,9 +328,16 @@
 
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2 opacity-0 transition group-hover:opacity-100">
-                                    <button class="text-gray-400 transition hover:text-indigo-600"
-                                            @click="$dispatch('open-trade-detail', { tradeId: {{ $trade->id }} })">
-                                        <i class="fa-solid fa-eye"></i>
+                                    <button class="text-gray-400 transition hover:text-indigo-600 disabled:opacity-40"
+                                            wire:click="openTradeDetail({{ $trade->id }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="openTradeDetail({{ $trade->id }})">
+                                        <i class="fa-solid fa-eye"
+                                           wire:loading.remove
+                                           wire:target="openTradeDetail({{ $trade->id }})"></i>
+                                        <i class="fa-solid fa-spinner fa-spin text-indigo-400"
+                                           wire:loading
+                                           wire:target="openTradeDetail({{ $trade->id }})"></i>
                                     </button>
                                     {{-- Botón Editar --}}
                                     <button class="relative rounded p-1 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"

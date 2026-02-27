@@ -73,9 +73,25 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            $user->sync_token = static::generateUniqueSyncToken();
+        });
+    }
+
+    protected static function generateUniqueSyncToken(): string
+    {
+        do {
+            $token = Str::random(40);
+        } while (static::where('sync_token', $token)->exists());
+
+        return $token;
+    }
+
     public function regenerateSyncToken()
     {
-        $this->sync_token = Str::random(32);
+        $this->sync_token = Str::random(40);
         $this->save();
 
         return $this->sync_token;

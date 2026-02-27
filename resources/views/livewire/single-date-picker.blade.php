@@ -96,7 +96,7 @@
         <div class="mt-4 text-sm text-gray-600"
              x-show="selectedDate">
             <div class="flex justify-between">
-                <span>Fecha:</span>
+                <span>{{ __('labels.date') }}:</span>
                 <span x-text="selectedDate"></span>
             </div>
         </div>
@@ -104,9 +104,9 @@
         <!-- Actions -->
         <div class="mt-4 flex justify-end space-x-2">
             <button class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                    @click="clearDate()">Limpiar</button>
+                    @click="clearDate()">{{ __('labels.clean') }}</button>
             <button class="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
-                    @click="applyDate()">Aplicar</button>
+                    @click="applyDate()"> {{ __('labels.apply') }}</button>
         </div>
     </div>
 </div>
@@ -120,8 +120,8 @@
             year: '',
             daysInMonth: [],
             blankDays: [],
-            monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-
+            monthNames: [this.$l('january'), this.$l('february'), this.$l('march'), this.$l('april'), this.$l('may'), this.$l('june'), this.$l('july'), this.$l('august'), this.$l('september'), this.$l('october'), this.$l('november'), this.$l(
+                'december')],
             init() {
                 const today = new Date();
                 this.month = today.getMonth();

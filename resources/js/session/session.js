@@ -1,7 +1,7 @@
 document.addEventListener("alpine:init", () => {
     Alpine.data(
         "sessionPage",
-        (serverAccounts, serverStrategies, restoredData) => ({
+        (serverAccounts, serverStrategies, restoredData, moodConfig) => ({
             // ==========================================
             // 🎯 STATE
             // ==========================================
@@ -15,7 +15,12 @@ document.addEventListener("alpine:init", () => {
             accounts: serverAccounts,
             strategies: serverStrategies,
 
-            // Setup Inputs
+            // ✅ Mood Options (labels traducidas, keys invariantes)
+            sessionMoodOptions: moodConfig?.session ?? [],
+            noteMoodOptions: moodConfig?.note ?? [],
+            tradeMoodOptions: moodConfig?.trade ?? [],
+
+            // ✅ Setup Inputs — siempre guardamos la KEY, nunca el label
             selectedAccountId: serverAccounts.length
                 ? serverAccounts[0].id
                 : null,
@@ -23,6 +28,8 @@ document.addEventListener("alpine:init", () => {
                 ? serverStrategies[0].id
                 : null,
             startMood: "calm",
+            // ✅ NUEVO: endMood como estado propio (ya no como parámetro)
+            endMood: "calm",
 
             // Active Session Data
             activeRules: [],
@@ -54,6 +61,7 @@ document.addEventListener("alpine:init", () => {
             // 🎬 LIFECYCLE
             // ==========================================
             init() {
+                console.log(moodConfig);
                 if (restoredData) {
                     this.selectedAccountId = restoredData.accountId;
                     this.selectedStrategyId = restoredData.strategyId;
@@ -175,12 +183,12 @@ document.addEventListener("alpine:init", () => {
             },
 
             get tradeButtonText() {
-                if (this.isOvertrading) return "BLOQUEADO: OVERTRADING";
-                if (this.isLimitBreached) return "BLOQUEADO: MAX LOSS";
-                if (this.isMaxTradesReached) return "STOP: MUNICIÓN AGOTADA";
-                if (!this.isTimeValid) return "FUERA DE HORARIO";
-                if (!this.allRulesChecked) return "CHECKLIST PENDIENTE";
-                return "SETUP APROBADO";
+                if (this.isOvertrading) return this.$l("bloqued_overtrading");
+                if (this.isLimitBreached) return this.$l("bloqued_max_loss");
+                if (this.isMaxTradesReached) return this.$l("stop_not_ammo");
+                if (!this.isTimeValid) return this.$l("out_schedule");
+                if (!this.allRulesChecked) return this.$l("checklist_pendint");
+                return this.$l("aproved_setup");
             },
 
             get isOvertrading() {
@@ -323,21 +331,14 @@ document.addEventListener("alpine:init", () => {
 
                         // Después de 3 errores consecutivos, detener polling
                         if (this.syncErrors >= 3) {
-                            console.warn(
-                                "Sesión no encontrada. Deteniendo polling.",
-                            );
                             this.stopPolling();
                         }
                     }
                 } catch (error) {
-                    console.error("Error en fetchUpdates:", error);
                     this.syncErrors++;
 
                     // Detener polling si hay muchos errores
                     if (this.syncErrors >= 5) {
-                        console.error(
-                            "Demasiados errores. Deteniendo polling.",
-                        );
                         this.stopPolling();
                     }
                 } finally {
@@ -360,7 +361,6 @@ document.addEventListener("alpine:init", () => {
 
                     if (this.isTabVisible && this.step === 2) {
                         // Tab vuelve a estar visible, forzar sync inmediata
-                        console.log("Tab visible, sincronizando...");
                         this.fetchUpdates();
                     }
                 });
@@ -408,7 +408,6 @@ document.addEventListener("alpine:init", () => {
                     );
                     this.newNoteText = noteText;
                     this.newNoteMood = noteMood;
-                    console.error("Error al guardar nota:", error);
                 }
             },
 

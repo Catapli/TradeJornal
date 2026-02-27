@@ -2,6 +2,35 @@
     <div class="mt-14 min-h-screen bg-gray-50 pb-20 pt-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
+            <div x-data="{
+                initialLoad: true,
+                init() {
+                    // Cuando Livewire termine de cargar sus scripts y efectos, quitamos el loader
+                    document.addEventListener('livewire:initialized', () => {
+                        this.initialLoad = false;
+                    });
+            
+                    // Fallback de seguridad: por si Livewire ya cargó antes de este script
+                    setTimeout(() => { this.initialLoad = false }, 200);
+                }
+            }">
+
+                {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
+                {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
+                <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+                     x-show="initialLoad"
+                     x-transition:leave="transition ease-in duration-500"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0">
+
+                    {{-- Aquí tu componente loader --}}
+                    <div class="flex flex-col items-center">
+                        <x-loader />
+                        <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+                    </div>
+                </div>
+            </div>
+
             {{-- Título de Sección --}}
             <div class="mb-8">
                 <h2 class="text-2xl font-black text-gray-900">Configuración de Cuenta</h2>

@@ -105,11 +105,11 @@
         <div class="mt-4 flex justify-end space-x-2">
             <button class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                     @click="clearDate()"> {{-- Nombre de función cambiado --}}
-                Limpiar
+                {{ __('labels.clean') }}
             </button>
             <button class="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                     @click="applyDate()"> {{-- Nombre de función cambiado --}}
-                Aplicar
+                {{ __('labels.apply') }}
             </button>
         </div>
     </div>
@@ -126,7 +126,8 @@
             year: '',
             daysInMonth: [],
             blankDays: [],
-            monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+            monthNames: [this.$l('january'), this.$l('february'), this.$l('march'), this.$l('april'), this.$l('may'), this.$l('june'), this.$l('july'), this.$l('august'), this.$l('september'), this.$l('october'), this.$l('november'), this.$l(
+                'december')],
 
             // Guarda la propiedad Livewire para fácil acceso (asume que se llama 'date')
             wireDate: null,

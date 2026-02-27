@@ -9,6 +9,10 @@ import $ from "jquery";
 import "./bootstrap";
 import translations from "./plugins/translations";
 
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
+import { Spanish } from "flatpickr/dist/l10n/es.js";
+
 // ============================================================
 // 2. ASIGNAR VARIABLES GLOBALES (ANTES DE CARGAR TUS SCRIPTS)
 // ============================================================
@@ -21,6 +25,9 @@ window.mdtimepicker = mdtimepicker;
 // Importar Trix y sus estilos
 import Trix from "trix";
 import "trix/dist/trix.css";
+
+flatpickr.localize(Spanish);
+window.flatpickr = flatpickr;
 
 // ============================================================
 // 3. IMPORTAR TUS SCRIPTS (AHORA YA PUEDEN VER LAS GLOBALES)

@@ -20,7 +20,6 @@
              x-transition:leave-end="opacity-0">
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">Cargando Dashboard...</span>
             </div>
         </div>
     </div>
@@ -110,16 +109,16 @@
         <div>
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-flask-vial text-2xl text-indigo-600"></i>
-                <h1 class="text-3xl font-black text-gray-900">Laboratorio</h1>
+                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.laboratory') }}</h1>
             </div>
-            <p class="text-sm text-gray-500">Analiza el impacto de tu disciplina en el resultado final.</p>
+            <p class="text-sm text-gray-500">{{ __('menu.resume_laboratory') }}</p>
         </div>
 
         <div class="flex items-center gap-3">
             {{-- Selector de cuenta (Livewire) --}}
             <select class="rounded-lg border-gray-300 text-sm font-bold shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     wire:model.live="accountId">
-                <option value="all">Todas las Cuentas</option>
+                <option value="all">{{ __('labels.all_accounts') }}</option>
                 @foreach ($this->accounts as $acc)
                     <option value="{{ $acc->id }}">{{ $acc->name }}</option>
                 @endforeach
@@ -136,7 +135,7 @@
                           d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
                           clip-rule="evenodd" />
                 </svg>
-                <span x-text="countActiveScenarios() + ' escenario' + (countActiveScenarios() > 1 ? 's' : '') + ' activo' + (countActiveScenarios() > 1 ? 's' : '')"></span>
+                <span x-text="countActiveScenarios() + '{{ __('labels.scenario') }}' + (countActiveScenarios() > 1 ? 's' : '') + '{{ __('labels._active') }}' + (countActiveScenarios() > 1 ? 's' : '')"></span>
             </div>
 
             {{-- Badge de cambios pendientes --}}
@@ -150,7 +149,7 @@
                           d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
                           clip-rule="evenodd" />
                 </svg>
-                Cambios pendientes
+                {{ __('labels.pending_changes') }}
             </div>
         </div>
     </div>
@@ -168,7 +167,7 @@
                 {{-- Header --}}
                 <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                     <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                        <i class="fa-solid fa-flask text-indigo-600"></i> Laboratorio
+                        <i class="fa-solid fa-flask text-indigo-600"></i> {{ __('menu.laboratory') }}
                     </h3>
 
                     <button class="flex items-center gap-1 text-xs text-gray-500 transition hover:text-red-600"
@@ -183,7 +182,7 @@
                                   d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
                                   clip-rule="evenodd" />
                         </svg>
-                        Reset
+                        {{ __('labels.reset') }}
                     </button>
                 </div>
 
@@ -192,12 +191,12 @@
                     <button class="flex-1 border-b-2 px-4 py-3 text-xs font-bold uppercase transition"
                             @click="activeTab = 'mechanical'"
                             :class="activeTab === 'mechanical' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
-                        <i class="fa-solid fa-gears mr-1"></i> Mecánico
+                        <i class="fa-solid fa-gears mr-1"></i> {{ __('labels.mechanic') }}
                     </button>
                     <button class="flex-1 border-b-2 px-4 py-3 text-xs font-bold uppercase transition"
                             @click="activeTab = 'discipline'"
                             :class="activeTab === 'discipline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
-                        <i class="fa-solid fa-brain mr-1"></i> Disciplina
+                        <i class="fa-solid fa-brain mr-1"></i> {{ __('labels.discipline') }}
                     </button>
                 </div>
 
@@ -208,13 +207,13 @@
                          x-show="activeTab === 'mechanical'"
                          x-transition>
                         <p class="text-[10px] leading-tight text-gray-400">
-                            Recalcula resultados usando SL/TP fijos en puntos. Basado en tus datos MAE/MFE reales.
+                            {{ __('labels.recalculating_results') }}
                         </p>
 
                         <div class="grid grid-cols-2 gap-3">
                             {{-- Fixed SL --}}
                             <div>
-                                <label class="mb-1 block text-[10px] font-bold text-gray-500">Fixed SL</label>
+                                <label class="mb-1 block text-[10px] font-bold text-gray-500">{{ __('labels.fixed_sl') }}</label>
                                 <div class="relative">
                                     <input class="w-full rounded-lg border-gray-200 bg-white py-2 pl-2 pr-12 text-xs font-bold text-rose-600 placeholder-gray-300 focus:border-rose-500 focus:ring-rose-500"
                                            type="number"
@@ -222,13 +221,13 @@
                                            x-model="scenarios.fixed_sl"
                                            @input="onScenarioChange()"
                                            placeholder="Ej: 15">
-                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">pts</span>
+                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">{{ __('labels.pts') }}</span>
                                 </div>
                             </div>
 
                             {{-- Fixed TP --}}
                             <div>
-                                <label class="mb-1 block text-[10px] font-bold text-gray-500">Fixed TP</label>
+                                <label class="mb-1 block text-[10px] font-bold text-gray-500">{{ __('labels.fixed_tp') }}</label>
                                 <div class="relative">
                                     <input class="w-full rounded-lg border-gray-200 bg-white py-2 pl-2 pr-12 text-xs font-bold text-emerald-600 placeholder-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                            type="number"
@@ -236,14 +235,14 @@
                                            x-model="scenarios.fixed_tp"
                                            @input="onScenarioChange()"
                                            placeholder="Ej: 30">
-                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">pts</span>
+                                    <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">{{ __('labels.pts') }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg bg-blue-50 p-3 text-[10px] leading-relaxed text-blue-800">
                             <i class="fa-solid fa-info-circle mr-1"></i>
-                            El simulador usa <strong>MAE (peor precio)</strong> y <strong>MFE (mejor precio)</strong> para determinar si habrías tocado el SL o TP fijo.
+                            {!! __('labels.simulator_explanation') !!}
                         </div>
                     </div>
 
@@ -254,23 +253,23 @@
                         {{-- Fatiga --}}
                         <div>
                             <label class="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                                Control de Fatiga
+                                {{ __('labels.fatigue_control') }}
                             </label>
                             <select class="w-full rounded-lg border-gray-200 text-xs font-bold text-gray-600 focus:border-indigo-500 focus:ring-indigo-500"
                                     x-model="scenarios.max_daily_trades"
                                     @change="onScenarioChange()">
-                                <option value="">Todas las operaciones</option>
-                                <option value="1">Solo la 1ª del día (Sniper)</option>
-                                <option value="2">Max 2 trades/día</option>
-                                <option value="3">Max 3 trades/día</option>
-                                <option value="4">Max 4 trades/día</option>
+                                <option value="">{{ __('labels.all_trades') }}</option>
+                                <option value="1">{{ __('labels.only_first_trade') }}</option>
+                                <option value="2">{{ __('labels.two_trades') }}</option>
+                                <option value="3">{{ __('labels.three_trades') }}</option>
+                                <option value="4">{{ __('labels.four_trades') }}</option>
                             </select>
                         </div>
 
                         {{-- Días de la semana --}}
                         <div>
                             <label class="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                                Días Excluidos
+                                {{ __('labels.exclude_days') }}
                             </label>
                             <div class="grid grid-cols-2 gap-2">
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
@@ -279,7 +278,7 @@
                                            type="checkbox"
                                            :checked="isDayExcluded(1)"
                                            @change="toggleDay(1)">
-                                    <span class="text-xs font-medium text-gray-700">Lunes</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ __('labels.monday') }}</span>
                                 </label>
 
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
@@ -288,7 +287,7 @@
                                            type="checkbox"
                                            :checked="isDayExcluded(2)"
                                            @change="toggleDay(2)">
-                                    <span class="text-xs font-medium text-gray-700">Martes</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ __('labels.tuesday') }}</span>
                                 </label>
 
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
@@ -297,7 +296,7 @@
                                            type="checkbox"
                                            :checked="isDayExcluded(3)"
                                            @change="toggleDay(3)">
-                                    <span class="text-xs font-medium text-gray-700">Miércoles</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ __('labels.wednesday') }}</span>
                                 </label>
 
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
@@ -306,7 +305,7 @@
                                            type="checkbox"
                                            :checked="isDayExcluded(4)"
                                            @change="toggleDay(4)">
-                                    <span class="text-xs font-medium text-gray-700">Jueves</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ __('labels.thursday') }}</span>
                                 </label>
 
                                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50"
@@ -315,7 +314,7 @@
                                            type="checkbox"
                                            :checked="isDayExcluded(5)"
                                            @change="toggleDay(5)">
-                                    <span class="text-xs font-medium text-gray-700">Viernes</span>
+                                    <span class="text-xs font-medium text-gray-700">{{ __('labels.friday') }}</span>
                                 </label>
                             </div>
                         </div>
@@ -323,7 +322,7 @@
                         {{-- Toggles compactos --}}
                         <div class="space-y-2 border-t border-gray-100 pt-4">
                             <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
-                                <span class="text-xs font-medium text-gray-700">Solo operaciones Long</span>
+                                <span class="text-xs font-medium text-gray-700">{{ __('labels.only_longs') }}</span>
                                 <div class="relative inline-block h-5 w-9 select-none align-middle">
                                     <input class="peer sr-only"
                                            type="checkbox"
@@ -336,7 +335,7 @@
                             </label>
 
                             <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
-                                <span class="text-xs font-medium text-gray-700">Solo operaciones Short</span>
+                                <span class="text-xs font-medium text-gray-700">{{ __('labels.only_shorts') }}</span>
                                 <div class="relative inline-block h-5 w-9 select-none align-middle">
                                     <input class="peer sr-only"
                                            type="checkbox"
@@ -349,7 +348,7 @@
                             </label>
 
                             <label class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:bg-gray-50">
-                                <span class="text-xs font-medium text-gray-700">Eliminar 5 peores trades</span>
+                                <span class="text-xs font-medium text-gray-700">{{ __('labels.delete_five_worst') }}</span>
                                 <div class="relative inline-block h-5 w-9 select-none align-middle">
                                     <input class="peer sr-only"
                                            type="checkbox"
@@ -400,7 +399,7 @@
                                   clip-rule="evenodd" />
                         </svg>
 
-                        <span x-text="isApplying ? 'Aplicando...' : 'Aplicar Simulación'"></span>
+                        <span x-text="isApplying ? '{{ __('labels.applying') }}' : '{{ __('labels.apply_sim') }}'"></span>
                     </button>
                 </div>
             </div>
@@ -409,13 +408,13 @@
 
             {{-- TARJETA 2: CALIDAD DEL SISTEMA (SQN) --}}
             <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <h3 class="mb-1 font-bold text-gray-900">System Quality (SQN)</h3>
+                <h3 class="mb-1 font-bold text-gray-900">{{ __('labels.system_quality') }}</h3>
 
                 <div class="mb-2 mt-4 flex items-end gap-3">
                     {{-- Valor Real --}}
                     <div>
                         <span class="text-4xl font-black text-gray-900">{{ $this->realStats['sqn'] ?? '0.0' }}</span>
-                        <span class="block text-[10px] font-bold uppercase text-gray-400">Actual</span>
+                        <span class="block text-[10px] font-bold uppercase text-gray-400">{{ __('labels.actual') }}</span>
                     </div>
 
                     {{-- Valor Simulado (si existe) --}}
@@ -423,7 +422,7 @@
                         <div class="mb-1 text-gray-300"><i class="fa-solid fa-arrow-right"></i></div>
                         <div>
                             <span class="text-2xl font-black text-indigo-500">{{ $this->simulatedData['stats']['sqn'] }}</span>
-                            <span class="block text-[10px] font-bold uppercase text-indigo-300">Simulado</span>
+                            <span class="block text-[10px] font-bold uppercase text-indigo-300">{{ __('labels.simulated') }}</span>
                         </div>
                     @endif
                 </div>
@@ -435,8 +434,8 @@
                 </div>
 
                 <div class="flex justify-between text-[10px] font-bold uppercase text-gray-400">
-                    <span>Pobre (< 1.6)</span>
-                            <span>Santo Grial (> 5.0)</span>
+                    <span>{{ __('labels.sqn_poor') }}</span>
+                    <span>{{ __('labels.sqn_good') }}</span>
                 </div>
 
                 {{-- Diagnóstico --}}
@@ -444,17 +443,17 @@
                     @if (($this->realStats['sqn'] ?? 0) < 1.6)
                         <div class="flex gap-2">
                             <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-                            <span>Difícil de operar. Mucha volatilidad para poco beneficio.</span>
+                            <span>{{ __('labels.hard_to_operate') }}</span>
                         </div>
                     @elseif(($this->realStats['sqn'] ?? 0) < 3.0)
                         <div class="flex gap-2">
                             <i class="fa-solid fa-check mt-0.5"></i>
-                            <span>Buen sistema. Tienes ventaja estadística clara.</span>
+                            <span>{{ __('labels.good_system') }}</span>
                         </div>
                     @else
                         <div class="flex gap-2">
                             <i class="fa-solid fa-trophy mt-0.5"></i>
-                            <span>Sistema excelente. Considera aumentar el tamaño de posición.</span>
+                            <span>{{ __('labels.excellent_system') }}</span>
                         </div>
                     @endif
                 </div>
@@ -474,14 +473,14 @@
                  x-effect="updateData(@js($this->realCurve), @js($this->simulatedData['curve']))">
 
                 <div class="mb-2 flex items-center justify-between">
-                    <h3 class="font-bold text-gray-800">Curva de Crecimiento (Equity Curve)</h3>
+                    <h3 class="font-bold text-gray-800">{{ __('labels.equitiy_curve') }}</h3>
                     <div class="flex gap-4">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
-                            <span class="h-3 w-3 rounded-full bg-slate-300"></span> Realidad
+                            <span class="h-3 w-3 rounded-full bg-slate-300"></span> {{ __('labels.reality') }}
                         </div>
                         @if (!empty($this->simulatedData['curve']))
                             <div class="flex items-center gap-2 text-xs font-bold text-indigo-600">
-                                <span class="h-3 w-3 rounded-full bg-indigo-500"></span> Simulación
+                                <span class="h-3 w-3 rounded-full bg-indigo-500"></span> {{ __('labels.simulation') }}
                             </div>
                         @endif
                     </div>
@@ -501,18 +500,18 @@
             {{-- 2. REPORTES TEMPORALES --}}
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="barChart(@js($this->hourlyReportData), 'hour', 'P&L por Hora')">
+                     x-data="barChart(@js($this->hourlyReportData), 'hour', '{{ __('labels.pl_by_hour') }}')">
                     <h3 class="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                        <i class="fa-regular fa-clock text-blue-600"></i> Rendimiento por Hora
+                        <i class="fa-regular fa-clock text-blue-600"></i> {{ __('labels.performance_by_hour') }}
                     </h3>
                     <div id="hourlyChart"
                          class="h-[250px] w-full"></div>
                 </div>
 
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
-                     x-data="barChart(@js($this->sessionReportData), 'session', 'P&L por Sesión')">
+                     x-data="barChart(@js($this->sessionReportData), 'session', '{{ __('labels.pl_by_sesion') }}')">
                     <h3 class="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                        <i class="fa-solid fa-globe-americas text-green-600"></i> Rendimiento por Sesión
+                        <i class="fa-solid fa-globe-americas text-green-600"></i> {{ __('labels.performance_by_session') }}
                     </h3>
                     <div id="sessionChart"
                          class="h-[250px] w-full"></div>
@@ -529,13 +528,13 @@
                     <div class="mb-6 flex flex-col justify-between sm:flex-row sm:items-end">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                                <i class="fa-solid fa-crosshairs text-indigo-600"></i> Eficiencia del Trader
+                                <i class="fa-solid fa-crosshairs text-indigo-600"></i> {{ __('labels.efficiency_of_trader') }}
                             </h3>
                             <p class="mt-1 text-xs text-gray-500">
-                                Comparativa de los últimos 15 trades:
-                                <span class="font-bold text-rose-500">Riesgo sufrido (MAE)</span> vs
-                                <span class="font-bold text-gray-900">Resultado (PnL)</span> vs
-                                <span class="font-bold text-emerald-500">Potencial máximo (MFE)</span>.
+                                {{ __('labels.comparative_last_15_trades') }}
+                                <span class="font-bold text-rose-500">{{ __('labels.risk_suffered') }}</span> {{ __('labels.vs') }}
+                                <span class="font-bold text-gray-900">{{ __('labels.result_pnl') }}</span> {{ __('labels.vs') }}
+                                <span class="font-bold text-emerald-500">{{ __('labels.max_potencial_mfe') }}</span>.
                             </p>
                         </div>
                     </div>
@@ -545,10 +544,10 @@
 
                     <div class="mt-4 flex flex-wrap justify-center gap-4 text-[10px] text-gray-400">
                         <div class="flex items-center gap-1">
-                            <span class="block h-2 w-2 rounded-full bg-rose-400"></span> MAE: Cuanto se fue en contra antes de cerrar.
+                            <span class="block h-2 w-2 rounded-full bg-rose-400"></span> {{ __('labels.mae_explain') }}
                         </div>
                         <div class="flex items-center gap-1">
-                            <span class="block h-2 w-2 rounded-full bg-emerald-400"></span> MFE: Cuanto dinero llegó a marcar flotante.
+                            <span class="block h-2 w-2 rounded-full bg-emerald-400"></span> {{ __('labels.mfe_explain') }}
                         </div>
                     </div>
                 </div>
@@ -559,9 +558,9 @@
                     <div class="mb-4 flex items-start justify-between">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                                <i class="fa-solid fa-chart-column text-purple-500"></i> Distribución de PnL
+                                <i class="fa-solid fa-chart-column text-purple-500"></i> {{ __('labels.pnl_distribution') }}
                             </h3>
-                            <p class="mt-1 text-xs text-gray-400">Frecuencia de resultados. ¿Hacia dónde se inclina?</p>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('labels.results_frequency') }}</p>
                         </div>
                     </div>
                     <div id="distChart"
@@ -575,9 +574,9 @@
                     <div class="mb-2 flex items-start justify-between">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                                <i class="fa-solid fa-fingerprint text-purple-600"></i> Perfil del Trader
+                                <i class="fa-solid fa-fingerprint text-purple-600"></i> {{ __('labels.trader_profile') }}
                             </h3>
-                            <p class="mt-1 text-xs text-gray-400">Análisis 360º de tu estilo actual.</p>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('labels.analyze_360') }}</p>
                         </div>
                     </div>
 
@@ -590,14 +589,14 @@
                      x-data>
                     <div class="mb-4">
                         <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                            <i class="fa-solid fa-skull-crossbones text-gray-800"></i> Análisis de Riesgo & Ruina
+                            <i class="fa-solid fa-skull-crossbones text-gray-800"></i> {{ __('labels.analysis_risk') }}
                         </h3>
-                        <p class="mt-1 text-xs text-gray-400">Probabilidades matemáticas basadas en tu Winrate ({{ $this->riskData['win_rate'] ?? 0 }}%) y Ratio (1:{{ $this->riskData['payoff'] ?? 0 }}).</p>
+                        <p class="mt-1 text-xs text-gray-400"> {{ __('labels.maths_probs') }} ({{ $this->riskData['win_rate'] ?? 0 }}%) {{ __('labels.and_rate') }} (1:{{ $this->riskData['payoff'] ?? 0 }}).</p>
                     </div>
 
                     @if (empty($this->riskData))
                         <div class="flex h-32 items-center justify-center text-xs text-gray-400">
-                            Necesitas al menos 10 trades para calcular el riesgo.
+                            {{ __('labels.need_ten_trades') }}
                         </div>
                     @else
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -618,24 +617,24 @@
                                     <div class="absolute bottom-0 z-10 flex h-20 w-32 items-end justify-center rounded-t-full bg-white pb-2">
                                         <div class="text-center">
                                             <span class="block text-3xl font-black text-gray-900">{{ $this->riskData['risk_of_ruin'] }}%</span>
-                                            <span class="text-[10px] font-bold uppercase text-gray-400">Prob. Ruina</span>
+                                            <span class="text-[10px] font-bold uppercase text-gray-400">{{ __('labels.prob_ruin') }}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="mt-2 text-center text-xs">
                                     @if ($this->riskData['risk_of_ruin'] < 1)
-                                        <span class="font-bold text-emerald-600">✅ Zona Segura</span>
+                                        <span class="font-bold text-emerald-600">{{ __('labels.safe_zone') }}</span>
                                     @elseif($this->riskData['risk_of_ruin'] < 10)
-                                        <span class="font-bold text-amber-500">⚠️ Precaución</span>
+                                        <span class="font-bold text-amber-500">{{ __('labels.precaution') }}</span>
                                     @else
-                                        <span class="font-bold text-rose-600">🚨 Peligro Crítico</span>
+                                        <span class="font-bold text-rose-600">{{ __('labels.critic_danger') }}</span>
                                     @endif
                                     <p class="mt-1 text-[10px] text-gray-400">
                                         @if ($this->riskData['edge'] > 0)
-                                            Tienes ventaja estadística (Edge: {{ $this->riskData['edge'] }}).
+                                            {{ __('labels.statistical_edge') }} ({{ __('labels.edge') }} {{ $this->riskData['edge'] }}).
                                         @else
-                                            Tu esperanza matemática es negativa.
+                                            {{ __('labels.negative_math_expect') }}
                                         @endif
                                     </p>
                                 </div>
@@ -643,12 +642,12 @@
 
                             {{-- Tabla de Rachas --}}
                             <div>
-                                <h4 class="mb-3 text-xs font-bold text-gray-500">Probabilidad de Racha (Losing Streak)</h4>
+                                <h4 class="mb-3 text-xs font-bold text-gray-500">{{ __('labels.probability_streak') }}</h4>
                                 <div class="space-y-3">
 
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
-                                            <span>3 Pérdidas seguidas</span>
+                                            <span>{{ __('labels.3_streak_losses') }}</span>
                                             <span>{{ $this->riskData['streak_prob']['3'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
@@ -659,7 +658,7 @@
 
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
-                                            <span>5 Pérdidas seguidas</span>
+                                            <span>{{ __('labels.5_streak_losses') }}</span>
                                             <span class="{{ $this->riskData['streak_prob']['5'] > 50 ? 'text-rose-500 font-bold' : '' }}">{{ $this->riskData['streak_prob']['5'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
@@ -670,7 +669,7 @@
 
                                     <div>
                                         <div class="mb-1 flex justify-between text-[10px] font-medium text-gray-600">
-                                            <span>8 Pérdidas seguidas</span>
+                                            <span>{{ __('labels.8_streak_losses') }}</span>
                                             <span>{{ $this->riskData['streak_prob']['8'] }}%</span>
                                         </div>
                                         <div class="h-1.5 w-full rounded-full bg-gray-100">
@@ -681,7 +680,7 @@
 
                                     <div class="mt-3 rounded-md bg-indigo-50 p-2 text-[10px] leading-tight text-indigo-800">
                                         <i class="fa-solid fa-circle-info mr-1"></i>
-                                        Si tienes un <strong>{{ $this->riskData['streak_prob']['5'] }}%</strong> de perder 5 veces seguidas, asegúrate de que 5 pérdidas no quemen más del 10% de tu cuenta.
+                                        {{ __('labels.if_you_have') }} <strong>{{ $this->riskData['streak_prob']['5'] }}%</strong> {{ __('labels.dont_burn_your_account') }}
                                     </div>
 
                                 </div>
@@ -697,9 +696,9 @@
                     <div class="mb-2 flex items-center justify-between">
                         <div>
                             <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900">
-                                <i class="fa-solid fa-bug text-rose-500"></i> Ranking de Errores
+                                <i class="fa-solid fa-bug text-rose-500"></i>{{ __('labels.ranking_errors') }}
                             </h3>
-                            <p class="mt-1 text-xs text-gray-400">Coste total y frecuencia.</p>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('labels.price_total_frecuency') }}</p>
                         </div>
                     </div>
 
@@ -709,7 +708,7 @@
                                 <div class="mb-3 rounded-full bg-emerald-50 p-4">
                                     <i class="fa-solid fa-shield-halved text-2xl text-emerald-400"></i>
                                 </div>
-                                <p class="text-xs font-medium">Operativa limpia.</p>
+                                <p class="text-xs font-medium">{{ __('labels.clean_trade') }}</p>
                             </div>
                         </template>
 

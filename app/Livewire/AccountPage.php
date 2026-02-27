@@ -122,8 +122,6 @@ class AccountPage extends Component
         try {
             $account = Account::with('tradingPlan')->findOrFail($accountId);
             $plan = $account->tradingPlan;
-
-            // Cargar datos en propiedades públicas (solo lectura/escritura)
             $this->editingAccountId = $accountId;
             $this->rules_max_loss_percent = $plan?->max_daily_loss_percent;
             $this->rules_profit_target_percent = $plan?->daily_profit_target_percent;
@@ -138,31 +136,10 @@ class AccountPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar las reglas de la cuenta.'
+                'message' => __('labels.error_loading_rules')
             ]);
         }
     }
-
-
-    // public function handleSyncCompleted($data)
-    // {
-    //     try {
-    //         Log::info("🔔 Evento sync.completed recibido", $data);
-
-
-    //         // Refrescar datos
-    //         $this->selectedAccount->refresh(); // Recargar desde BD
-    //         $this->updateData();
-
-    //         // Notificar al usuario
-    //         $this->dispatch('show-alert', [
-    //             'type' => 'success',
-    //             'message' => "Sincronización completada: {$data['trades_inserted']} operaciones actualizadas."
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         Log::error("Error manejando sync.completed: " . $e->getMessage());
-    //     }
-    // }
 
 
     /**
@@ -190,14 +167,14 @@ class AccountPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'success',
-                'message' => 'Plan de trading actualizado correctamente.'
+                'message' => __('labels.trading_plan_ok')
             ]);
         } catch (Exception $e) {
             $this->logError($e, 'saveRules', 'AccountPage', "Error guardando reglas para cuenta {$this->editingAccountId}");
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al guardar las reglas.'
+                'message' => __('labels.error_saving_rules')
             ]);
         }
     }
@@ -219,7 +196,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar los trades de la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_loading_trades')
             ]);
         }
     }
@@ -238,7 +215,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar la moneda de la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_loading_currency')
             ]);
         }
     }
@@ -259,7 +236,7 @@ class AccountPage extends Component
             $this->loadBalanceChart();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar el timeframe. Mostrando todos los datos.'
+                'message' => __('labels.error_loading_timeframe')
             ]);
         }
     }
@@ -309,7 +286,7 @@ class AccountPage extends Component
                     // ✅ NOTIFICAR AL USUARIO
                     $this->dispatch('show-alert', [
                         'type' => 'success',
-                        'message' => 'Nuevas operaciones detectadas. Datos actualizados automáticamente.'
+                        'message' => __('labels.new_operations_detected')
                     ]);
 
                     Log::info("✅ Datos actualizados para cuenta {$this->selectedAccount->id}");
@@ -344,7 +321,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_loading_account')
             ]);
         }
     }
@@ -414,7 +391,7 @@ class AccountPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al cargar los datos de la cuenta. Por favor, recarga la página.'
+                'message' => __('labels.error_loading_data_account')
             ]);
         }
     }
@@ -487,6 +464,33 @@ class AccountPage extends Component
     {
 
         try {
+
+            // ✅ Validar límite máximo de 3 cuentas por usuario
+            $accountCount = Account::where('user_id', Auth::id())
+                ->where('status', '!=', 'burned')
+                ->count();
+
+            if ($accountCount >= 3) {
+                $this->dispatch('show-alert', [
+                    'type' => 'error',
+                    'message' => __('labels.max_accounts_reached')
+                ]);
+                return;
+            }
+
+            // ✅ Validar mt5_login único (solo si viene informado)
+            if ($this->form->loginPlatform) {
+                $exists = Account::where('mt5_login', $this->form->loginPlatform)->exists();
+
+                if ($exists) {
+                    $this->dispatch('show-alert', [
+                        'type' => 'error',
+                        'message' => __('labels.mt5_login_already_exists')
+                    ]);
+                    return;
+                }
+            }
+
             $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
 
             // 3. Determinar el Objetivo Inicial (Fase 1 o Directo a Live)
@@ -551,7 +555,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al crear una nueva cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_create_account')
             ]);
         }
     }
@@ -603,10 +607,39 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al editar la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_edit_account')
             ]);
         }
     }
+
+    /**
+     * Abre el detalle de un trade con contexto de paginación
+     * Los IDs de contexto son los trades de la página actual visible
+     */
+    public function openTradeDetail(int $tradeId): void
+    {
+        try {
+            // IDs del contexto = página actual de la tabla (ya paginada)
+            // Reutilizamos la misma query sin volver a paginar
+            $contextIds = Trade::query()
+                ->where('account_id', $this->selectedAccountId)
+                ->with('tradeAsset')
+                ->orderBy('exit_time', 'desc')
+                ->paginate(10, ['*'], 'page', $this->getPage())
+                ->pluck('id')
+                ->toArray();
+
+            $this->dispatch(
+                'open-trade-detail',
+                tradeId: $tradeId,
+                tradeIds: $contextIds
+            );
+        } catch (\Exception $e) {
+            $this->logError($e, 'openTradeDetail', 'AccountPage', "Error abriendo trade: {$tradeId}");
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_opening_trade')]);
+        }
+    }
+
 
     public function updateAccount($id)
     {
@@ -614,6 +647,21 @@ class AccountPage extends Component
         try {
             // Lógica de validación y update...
             $account = Account::find($id);
+
+            // ✅ Validar mt5_login único excluyendo la propia cuenta
+            if ($this->form->loginPlatform) {
+                $exists = Account::where('mt5_login', $this->form->loginPlatform)
+                    ->where('id', '!=', $id)
+                    ->exists();
+
+                if ($exists) {
+                    $this->dispatch('show-alert', [
+                        'type' => 'error',
+                        'message' => __('labels.mt5_login_already_exists')
+                    ]);
+                    return;
+                }
+            }
 
             $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
 
@@ -675,7 +723,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al actualizar la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_update_account')
             ]);
         }
     }
@@ -722,7 +770,7 @@ class AccountPage extends Component
             $this->selectedAccount = $this->accounts->first();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => 'Error al borrar la cuenta. Mostrando la primera disponible.'
+                'message' => __('labels.error_delete_account')
             ]);
         }
     }
