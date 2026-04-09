@@ -288,7 +288,7 @@ class TradeChartController {
         };
 
         try {
-            const res = await fetch(`/storage/${path}?t=${Date.now()}`);
+            const res = await fetch(path);
             if (!res.ok) throw new Error("404");
 
             const data = await res.json();
@@ -916,6 +916,7 @@ document.addEventListener("alpine:init", () => {
                 });
 
                 window.addEventListener("trade-selected", (e) => {
+                    console.log(e.detail);
                     this.currentTimeframe = "5m"; // Resetear al cargar nuevo trade
 
                     // 2. LÓGICA AUTOMÁTICA AL CAMBIAR DE TRADE
@@ -936,6 +937,7 @@ document.addEventListener("alpine:init", () => {
             },
 
             load(path, entry, exit, direction) {
+                console.log(path);
                 // Si no hay controller, reintentamos un poco
                 if (!controller) {
                     if (this.$refs.chartContainer) {

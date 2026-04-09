@@ -8,6 +8,7 @@ use App\Models\Alert;
 use App\Models\JournalEntry;
 use App\Models\Trade;
 use App\Models\Traffic;
+use App\Services\StorageService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -19,9 +20,12 @@ use App\Services\TradingRulesService; // <--- Importamos el servicio
 use App\WithAiLimits;
 use Exception;
 use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Computed;
 
 class DashboardPage extends Component
 {
+
+    protected StorageService $storage;
     use WithFileUploads; // <--- IMPORTANTE: Usar el Trait
     use WithAiLimits; // <--- 2. Usar el Trait
     use LogActions;
@@ -90,6 +94,19 @@ class DashboardPage extends Component
     protected $listeners = [
         'trade-updated' => 'refreshRecentNotes'
     ];
+
+
+    public function boot(StorageService $storage): void
+    {
+        $this->storage = $storage;
+    }
+
+    #[Computed]
+    public function screenshotUrl(): ?string
+    {
+        if (!$this->currentScreenshot) return null;
+        return $this->storage->temporaryUrl($this->currentScreenshot, 30);
+    }
 
     public function mount()
     {
@@ -878,9 +895,14 @@ class DashboardPage extends Component
             $this->notes = $this->selectedTrade->notes;
             $this->currentScreenshot = $this->selectedTrade->screenshot;
 
+            // ✅ Presigned URL generada en PHP, nunca el path crudo
+            $chartUrl = $this->selectedTrade->chart_data_path
+                ? $this->storage->temporaryUrl($this->selectedTrade->chart_data_path, 60)
+                : null;
+
             $this->dispatch(
                 'trade-selected',
-                path: $this->selectedTrade->chart_data_path,
+                path: $chartUrl,
                 entry: $this->selectedTrade->entry_price,
                 exit: $this->selectedTrade->exit_price,
                 direction: $this->selectedTrade->direction
@@ -900,81 +922,47 @@ class DashboardPage extends Component
      * NUEVO: Se ejecuta automáticamente cuando 'uploadedScreenshot' cambia
      * (es decir, cuando el usuario suelta el archivo en el input).
      */
-    public function updatedUploadedScreenshot()
+    public function updatedUploadedScreenshot(): void
     {
         try {
-            // 1. Validación del archivo
             $this->validate([
-                'uploadedScreenshot' => 'required|image|mimes:png,jpg,jpeg,webp|max:10240', // 10MB
+                'uploadedScreenshot' => 'required|image|mimes:png,jpg,jpeg,webp|max:10240',
             ]);
 
-            // 2. Validar que hay un trade seleccionado
             if (!$this->selectedTrade) {
-                $this->dispatch('notify', __('labels.no_trade_selected'));
+                $this->dispatch('notify', __('labels.notradeselected'));
                 $this->reset('uploadedScreenshot');
                 return;
             }
 
-            // 3. Guardar el archivo nuevo
-            $path = $this->uploadedScreenshot->store('screenshots', 'public');
-
-            // 4. Eliminar el archivo antiguo (solo si existe)
-            if (
-                $this->selectedTrade->screenshot &&
-                \Illuminate\Support\Facades\Storage::disk('public')->exists($this->selectedTrade->screenshot)
-            ) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($this->selectedTrade->screenshot);
+            // Borrar screenshot anterior de R2
+            if ($this->selectedTrade->screenshot) {
+                $this->storage->delete($this->selectedTrade->screenshot);
             }
 
-            // 5. Actualizar Base de Datos
+            // Guardar en R2 con path estandarizado
+            $ext  = $this->uploadedScreenshot->getClientOriginalExtension() ?: 'png';
+            $path = $this->storage->tradeScreenshotPath(
+                $this->user->id,
+                $this->selectedTrade->ticket,
+                $ext
+            );
+            $this->storage->putFile($path, $this->uploadedScreenshot->readStream());
+
             $this->selectedTrade->update(['screenshot' => $path]);
-
-            // 6. Recargar solo lo necesario
-            $this->selectedTrade = Trade::query()
-                ->with([
-                    'tradeAsset:id,name,symbol',
-                    'account:id,name',
-                ])
-                ->select([
-                    'id',
-                    'account_id',
-                    'trade_asset_id',
-                    'direction',
-                    'entry_price',
-                    'exit_price',
-                    'size',
-                    'pnl',
-                    'pnl_percentage',
-                    'duration_minutes',
-                    'entry_time',
-                    'exit_time',
-                    'notes',
-                    'screenshot',
-                    'chart_data_path',
-                    'ai_analysis',
-                    'mae_price',
-                    'mfe_price',
-                ])
-                ->find($this->selectedTrade->id);
-
-
-            // 7. Actualizar variable primitiva para Alpine
             $this->currentScreenshot = $path;
 
-            // 8. Limpiar el input temporal
             $this->reset('uploadedScreenshot');
-
-            // 9. Notificar al frontend
             $this->dispatch('screenshot-updated');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Errores de validación (archivo muy grande, formato incorrecto)
             $this->dispatch('notify', $e->validator->errors()->first());
-        } catch (\Exception $e) {
-            $this->logError($e, 'UploadScreenshot', 'DashboardPage', 'Error al subir captura de pantalla');
-            $this->dispatch('notify', __('labels.screenshot_upload_failed'));
+        } catch (\Throwable $e) {
+            $this->logError($e, 'UploadScreenshot', 'DashboardPage', "Trade ID: {$this->selectedTrade?->id}");
+            $this->dispatch('notify', __('labels.screenshotuploadfailed'));
             $this->reset('uploadedScreenshot');
         }
     }
+
 
 
     public function saveNotes()
@@ -1053,27 +1041,17 @@ class DashboardPage extends Component
             ];
 
             // 5. Añadir imagen SI EXISTE y es válida
-            if ($trade->screenshot && \Illuminate\Support\Facades\Storage::disk('public')->exists($trade->screenshot)) {
-                try {
-                    // Validar tamaño de la imagen (máximo 4MB para Gemini)
-                    $fileSize = \Illuminate\Support\Facades\Storage::disk('public')->size($trade->screenshot);
-                    if ($fileSize > 4 * 1024 * 1024) {
-                        // Imagen muy grande, analizar solo con texto
-                        $this->dispatch('notify', __('labels.screenshot_too_large'));
-                    } else {
-                        $imageContent = \Illuminate\Support\Facades\Storage::disk('public')->get($trade->screenshot);
-                        $base64Image = base64_encode($imageContent);
-
-                        $parts[] = [
-                            'inline_data' => [
-                                'mime_type' => 'image/png',
-                                'data' => $base64Image
-                            ]
-                        ];
-                    }
-                } catch (\Exception $e) {
-                    // Si falla la carga de imagen, continuamos solo con texto
-                    $this->logError($e, 'LoadScreenshot', 'DashboardPage', 'Error al cargar screenshot para análisis IA');
+            if ($trade->screenshot) {
+                $imageContent = $this->storage->getContents($trade->screenshot);
+                if ($imageContent && strlen($imageContent) <= 4 * 1024 * 1024) {
+                    $parts[] = [
+                        'inline_data' => [
+                            'mime_type' => $this->storage->getMimeType($trade->screenshot),
+                            'data'      => base64_encode($imageContent),
+                        ],
+                    ];
+                } elseif ($imageContent) {
+                    $this->dispatch('notify', __('labels.screenshottoolarge'));
                 }
             }
 

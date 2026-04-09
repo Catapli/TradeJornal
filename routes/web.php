@@ -93,6 +93,10 @@ Route::middleware([
         return view('alerts.index');
     })->name('alerts');
 
+    Route::get('/backtesting', function () {
+        return view('backtesting.index');
+    })->name('backtesting');
+
     Route::get('/checkout/success', function () {
         return redirect()->route('dashboard')->with('status', '¡Pago realizado con éxito! Bienvenido a Pro 🚀');
     })->name('checkout.success'); // <--- IMPORTANTE: Este es el nombre que busca Laravel

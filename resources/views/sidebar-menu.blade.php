@@ -57,6 +57,9 @@
             <x-sidebar-element name="{{ __('menu.playbook') }}"
                                route="playbook"
                                icon="fa-solid fa-chess-board" />
+            <x-sidebar-element name="{{ __('menu.backtesting') }}"
+                               route="backtesting"
+                               icon="fa-solid fa-database" />
         @endif
 
     </nav>

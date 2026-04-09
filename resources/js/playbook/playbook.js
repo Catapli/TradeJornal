@@ -58,6 +58,7 @@ document.addEventListener("alpine:init", () => {
         // ─────────────────────────────────────────────────────────────────
         // ALERTAS
         // ─────────────────────────────────────────────────────────────────
+
         triggerAlert(message, type = "error") {
             this.bodyAlert = message;
             this.typeAlert = type;

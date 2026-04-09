@@ -437,35 +437,9 @@
                              });
                      
                              addEventListener('trix-attachment-add', (e) => {
-                                 if (e.attachment.file) {
-                                     this.uploadFile(e.attachment);
-                                 }
+                                 e.attachment.remove();
                              });
                          },
-                     
-                         uploadFile(attachment) {
-                             let formData = new FormData();
-                             formData.append('file', attachment.file);
-                     
-                             axios.post('{{ route('journal.upload') }}', formData, {
-                                 headers: {
-                                     'Content-Type': 'multipart/form-data',
-                                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                 },
-                                 onUploadProgress: (progressEvent) => {
-                                     let progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                                     attachment.setUploadProgress(progress);
-                                 }
-                             }).then(response => {
-                                 attachment.setAttributes({
-                                     url: response.data.url,
-                                     href: response.data.url
-                                 });
-                             }).catch(error => {
-                                 console.error('Upload error:', error);
-                                 attachment.setAttributes({ error: 'Falló la subida.' });
-                             });
-                         }
                      }">
 
                     <input id="x"
@@ -555,6 +529,10 @@
                         padding-left: 1em;
                         color: #64748b;
                         font-style: italic;
+                    }
+
+                    trix-toolbar .trix-button-group--file-tools {
+                        display: none !important;
                     }
                 </style>
             </div>

@@ -10,6 +10,7 @@ use App\Models\Account;
 use App\Models\Trade;
 use App\Observers\AccountObserver;
 use App\Observers\TradeObserver;
+use App\Services\StorageService;
 use Illuminate\Support\Facades\Event;  // ← AÑADE IMPORT
 
 class AppServiceProvider extends ServiceProvider
@@ -17,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         //
+        $this->app->singleton(StorageService::class);
     }
 
 

@@ -413,7 +413,7 @@
                 <div class="relative h-40 w-full overflow-hidden bg-gray-100">
                     @if ($strategy->image_path)
                         <img class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                             src="{{ Storage::url($strategy->image_path) }}">
+                             src="{{ $strategy->image_url }}">
                     @else
                         <div class="flex h-full w-full items-center justify-center bg-gray-50 text-gray-300">
                             <i class="fa-solid fa-image text-4xl"></i>

@@ -5,9 +5,11 @@ namespace App\Livewire;
 use App\LogActions;
 use App\WithAiLimits;
 use App\Models\Trade;
+use App\Services\StorageService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -36,6 +38,8 @@ class TradeDetailModal extends Component
     public mixed  $uploadedScreenshot = null;
     public bool   $isAnalyzingTrade   = false;
 
+    protected StorageService $storage;
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // COMPUTED PROPERTIES
@@ -56,6 +60,19 @@ class TradeDetailModal extends Component
         return Trade::with(['account', 'tradeAsset', 'mistakes'])
             ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
             ->find($this->selectedTradeId);
+    }
+
+    #[Computed]
+    public function screenshotUrl(): ?string
+    {
+        if (!$this->currentScreenshot) return null;
+        return $this->storage->temporaryUrl($this->currentScreenshot, 30);
+    }
+
+
+    public function boot(StorageService $storage): void
+    {
+        $this->storage = $storage;
     }
 
     /**
@@ -155,33 +172,33 @@ class TradeDetailModal extends Component
 
             if (!$this->selectedTradeId) return;
 
-            // Mime real del archivo subido (inspección binaria, no extensión)
             $mimeType = $this->uploadedScreenshot->getMimeType();
-            $path     = $this->uploadedScreenshot->store('screenshots', 'public');
 
-            // Limpieza del archivo anterior usando el primitivo local (sin re-query)
-            if ($this->currentScreenshot && Storage::disk('public')->exists($this->currentScreenshot)) {
-                Storage::disk('public')->delete($this->currentScreenshot);
+            // Borrar screenshot anterior de R2
+            if ($this->currentScreenshot) {
+                $this->storage->delete($this->currentScreenshot);
             }
 
-            // Update directo por ID
-            Trade::whereKey($this->selectedTradeId)->update(['screenshot' => $path]);
+            // Guardar nuevo en R2 con path estandarizado
+            $trade = $this->trade;
+            $ext   = $this->uploadedScreenshot->getClientOriginalExtension() ?: 'png';
+            $path  = $this->storage->tradeScreenshotPath(Auth::id(), $trade->ticket, $ext);
+            $this->storage->putFile($path, $this->uploadedScreenshot->readStream());
 
-            // Actualizar el primitivo local para que Alpine y el Blade reflejen el cambio
+            Trade::whereKey($this->selectedTradeId)->update(['screenshot' => $path]);
             $this->currentScreenshot = $path;
 
-            // Invalidar computed cache
             unset($this->trade);
-
             $this->reset('uploadedScreenshot');
             $this->dispatch('screenshot-updated', mimeType: $mimeType);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            throw $e; // Re-lanzar para que Livewire gestione @error en el Blade
+            throw $e;
         } catch (\Throwable $e) {
             $this->logError($e, 'updatedUploadedScreenshot', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
             $this->reset('uploadedScreenshot');
         }
     }
+
 
     /**
      * Mejora 6: config() en lugar de env().
@@ -216,13 +233,16 @@ class TradeDetailModal extends Component
             $parts = [['text' => __('ai.audit_prompt', ['context' => $contextoDatos])]];
 
             // Adjuntar imagen con mime real del disco
-            if ($trade->screenshot && Storage::disk('public')->exists($trade->screenshot)) {
-                $parts[] = [
-                    'inline_data' => [
-                        'mime_type' => mime_content_type(Storage::disk('public')->path($trade->screenshot)),
-                        'data'      => base64_encode(Storage::disk('public')->get($trade->screenshot)),
-                    ],
-                ];
+            if ($trade->screenshot) {
+                $imageContent = $this->storage->getContents($trade->screenshot);
+                if ($imageContent) {
+                    $parts[] = [
+                        'inline_data' => [
+                            'mime_type' => $this->storage->getMimeType($trade->screenshot),
+                            'data'      => base64_encode($imageContent),
+                        ],
+                    ];
+                }
             }
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
@@ -308,9 +328,16 @@ class TradeDetailModal extends Component
         // Trade como parámetro explícito: evita re-acceder al computed innecesariamente
         $this->calculateNavigation($trade);
 
+        // ✅ Generamos la presigned URL del JSON aquí, en el servidor
+        $chartUrl = $trade->chart_data_path
+            ? $this->storage->temporaryUrl($trade->chart_data_path, 60)
+            : null;
+
+        Log::info('🔗 Chart URL generada: ' . ($chartUrl ?? 'NULL'));
+        Log::info('📁 Chart path en BD: ' . ($trade->chart_data_path ?? 'NULL'));
         $this->dispatch(
             'trade-selected',
-            path: $trade->chart_data_path,
+            path: $chartUrl,
             entry: $trade->entry_price,
             exit: $trade->exit_price,
             direction: $trade->direction
@@ -374,11 +401,13 @@ class TradeDetailModal extends Component
 
     private function analyzePostTradeContext(Trade $trade): string
     {
-        if (!$trade->chart_data_path || !Storage::disk('public')->exists($trade->chart_data_path)) {
+        if (!$trade->chart_data_path) {
             return __('labels.no_data_market');
         }
 
-        $chartData = json_decode(Storage::disk('public')->get($trade->chart_data_path), true);
+        $chartData = $this->storage->getJson($trade->chart_data_path);
+
+        if (!$chartData) return __('labels.no_data_market');
         $candles   = $chartData['timeframes']['5m'] ?? ($chartData['timeframes']['1m'] ?? []);
 
         if (empty($candles)) return __('labels.data_candles_not_enough');

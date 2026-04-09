@@ -67,20 +67,20 @@ class DatabaseSeeder extends Seeder
         $tenAccountObjective = ProgramObjective::where('program_level_id', $tenkaccountPrime->id)->where('phase_number', "1")->first();
 
 
-        Account::create([
-            'user_id' => 1,
-            'name' => 'Prueba Neomma 3',
-            'broker_name' => 'Neommaa',
-            'initial_balance' => 10000,
-            'current_balance' => 10000,
-            'status' => 'active',
-            'mt5_login' => '7733662',
-            'mt5_password' => encrypt('j0CMHxCmj#@H'),
-            'mt5_server' => 'Neomaaa-Live',
-            'program_level_id' => $tenkaccountPrime->id,
-            'program_objective_id' => $tenAccountObjective->id,
-            "sync" => true,
-        ]);
+        // Account::create([
+        //     'user_id' => 1,
+        //     'name' => 'Prueba Neomma 3',
+        //     'broker_name' => 'Neommaa',
+        //     'initial_balance' => 10000,
+        //     'current_balance' => 10000,
+        //     'status' => 'active',
+        //     'mt5_login' => '7733662',
+        //     'mt5_password' => encrypt('j0CMHxCmj#@H'),
+        //     'mt5_server' => 'Neomaaa-Live',
+        //     'program_level_id' => $tenkaccountPrime->id,
+        //     'program_objective_id' => $tenAccountObjective->id,
+        //     "sync" => true,
+        // ]);
 
 
         TradeAsset::create([

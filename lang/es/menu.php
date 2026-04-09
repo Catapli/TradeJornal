@@ -14,6 +14,7 @@ return [
     'session' => "Sesión",
     "history_session" => "Histórico de Sesiones",
     "logs" => "Auditoría",
+    'backtesting' => 'Backtesting',
 
     // Resumen seccion
     'resume_accounts' => "Gestión de Cuentas y estado de objetivos",

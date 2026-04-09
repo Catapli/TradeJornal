@@ -7,6 +7,7 @@ use Livewire\WithFileUploads;
 use Livewire\Attributes\Computed;
 use App\Models\Strategy;
 use App\LogActions;
+use App\Services\StorageService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ class PlaybookPage extends Component
 {
     use WithFileUploads;
     use LogActions;
+
+    protected StorageService $storage;
 
     // ── Solo Livewire puede manejar el file upload ──────────────────────────
     public $photo;
@@ -33,6 +36,11 @@ class PlaybookPage extends Component
     public string  $formColor       = '#4F46E5';
     public bool    $formIsmain      = false;
     public array   $formRules       = [];
+
+    public function boot(StorageService $storage): void
+    {
+        $this->storage = $storage;
+    }
 
     // ───────────────────────────────────────────────────────────────────────
     // REGLAS DE VALIDACIÓN CENTRALIZADAS
@@ -154,7 +162,7 @@ class PlaybookPage extends Component
                         : 0;
 
                     $strategy->image_url = $strategy->image_path
-                        ? Storage::url($strategy->image_path)
+                        ? $this->storage->temporaryUrl($strategy->image_path)
                         : null;
 
                     $strategy->chart_data = [
@@ -185,13 +193,7 @@ class PlaybookPage extends Component
 
     public function createStrategy(): void
     {
-        // validate() lanza ValidationException si falla.
-        // Livewire la captura automáticamente y puebla $errors en Blade.
-        // El modal NO se cierra porque 'strategy-saved' no se emite.
-        $this->validate(
-            $this->strategyValidationRules(),
-            $this->strategyValidationMessages()
-        );
+        $this->validate($this->strategyValidationRules(), $this->strategyValidationMessages());
 
         try {
             DB::transaction(function () {
@@ -209,30 +211,34 @@ class PlaybookPage extends Component
                     'is_main'     => $this->formIsmain,
                 ];
 
-                if ($this->photo) {
-                    $strategyData['image_path'] = $this->photo->store('playbooks', 'public');
-                }
-
+                // Crear primero sin imagen para tener el ID
                 $strategy = Strategy::create($strategyData);
+
+                // Ahora que tenemos el ID, guardamos con el path correcto
+                if ($this->photo) {
+                    $ext  = $this->photo->getClientOriginalExtension() ?: 'png';
+                    $path = $this->storage->strategyScreenshotPath(Auth::id(), $strategy->id, $ext);
+                    $this->storage->putFile($path, $this->photo->readStream());
+                    $strategy->update(['image_path' => $path]);
+                }
 
                 $this->insertLog(
                     action: 'Create Strategy',
                     form: 'PlaybookPage',
-                    description: "Created strategy ID: {$strategy->id} - {$strategy->name}",
+                    description: "Created strategy ID {$strategy->id} - {$strategy->name}",
                     type: 'success'
                 );
             });
 
             $this->resetStrategyForm();
-            // 'strategy-saved' es el único trigger para cerrar el modal en Alpine.
-            // Si validate() falló, nunca llegamos aquí → modal sigue abierto.
             $this->dispatch('strategy-saved');
-            $this->dispatch('show-alert', message: __('labels.strategy_created_ok'), type: 'success');
+            $this->dispatch('show-alert', message: __('labels.strategycreatedok'), type: 'success');
         } catch (\Throwable $e) {
             $this->logError($e, 'Create Strategy', 'PlaybookPage', 'Failed to create strategy');
-            $this->dispatch('show-alert', message: __('labels.error_creating_strategy'), type: 'error');
+            $this->dispatch('show-alert', message: __('labels.errorcreatingstrategy'), type: 'error');
         }
     }
+
 
     // ───────────────────────────────────────────────────────────────────────
     // ACTUALIZAR ESTRATEGIA
@@ -266,10 +272,14 @@ class PlaybookPage extends Component
 
                 if ($this->photo) {
                     if ($strategy->image_path) {
-                        Storage::disk('public')->delete($strategy->image_path);
+                        $this->storage->delete($strategy->image_path);
                     }
-                    $strategyData['image_path'] = $this->photo->store('playbooks', 'public');
+                    $ext  = $this->photo->getClientOriginalExtension() ?: 'png';
+                    $path = $this->storage->strategyScreenshotPath(Auth::id(), $strategy->id, $ext);
+                    $this->storage->putFile($path, $this->photo->readStream());
+                    $strategyData['image_path'] = $path;
                 }
+
 
                 $strategy->update($strategyData);
 
@@ -301,7 +311,7 @@ class PlaybookPage extends Component
             $name = $strategy->name;
 
             if ($strategy->image_path) {
-                Storage::disk('public')->delete($strategy->image_path);
+                $this->storage->delete($strategy->image_path);
             }
 
             $strategy->delete();
@@ -409,7 +419,7 @@ class PlaybookPage extends Component
                     'direction'      => ucfirst($t->direction),
                     'pnl'            => (float) $t->pnl,
                     'duration'       => $t->duration_minutes . ' min',
-                    'screenshot_url' => $t->screenshot ? Storage::url($t->screenshot) : null,
+                    'screenshot_url' => $t->screenshot ? $this->storage->temporaryUrl($t->screenshot) : null,
                     'day_iso'        => $t->exit_time?->format('N'),
                     'hour'           => $t->exit_time?->format('H'),
                 ])

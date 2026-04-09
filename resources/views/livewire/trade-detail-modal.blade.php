@@ -343,7 +343,7 @@
         2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
     --}}
                                     <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                         data-path="{{ $this->trade?->chart_data_path }}"
+                                         data-path="{{ $this->trade?->chart_data_path ? $this->storage->temporaryUrl($this->trade->chart_data_path, 60) : '' }}"
                                          data-entry="{{ $this->trade?->entry_price }}"
                                          data-exit="{{ $this->trade?->exit_price }}"
                                          data-dir="{{ $this->trade?->direction }}"
@@ -457,7 +457,7 @@
                                                     <div class="group relative h-full w-full">
                                                         {{-- Añadimos un timestamp a la URL para evitar caché del navegador si cambias la imagen --}}
                                                         <img class="h-full w-full object-contain"
-                                                             src="{{ Storage::url($currentScreenshot) }}?t={{ time() }}"
+                                                             src="{{ $this->screenshotUrl }}"
                                                              alt="Trade Screenshot">
 
                                                         {{-- Overlay para cambiar imagen --}}
