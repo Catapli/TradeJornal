@@ -10,6 +10,7 @@ use App\Http\Controllers\RolsController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SocialiteController;
 use App\Http\Controllers\TownController;
+use App\Http\Controllers\TradeChartController;
 use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TrafficController;
 use App\Http\Controllers\UserController;
@@ -138,6 +139,11 @@ Route::middleware([
         ->middleware('auth')
         ->name('journal.upload');
 });
+
+
+Route::get('/trades/{trade}/chart-data', [TradeChartController::class, 'show'])
+    ->middleware(['auth'])
+    ->name('trades.chart-data');
 
 // Grupo protegido por Autenticación Y SuperAdmin
 Route::middleware(['auth', 'superadmin'])->group(function () {

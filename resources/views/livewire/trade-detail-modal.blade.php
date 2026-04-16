@@ -343,7 +343,7 @@
         2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
     --}}
                                     <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                         data-path="{{ $this->trade?->chart_data_path ? $this->storage->temporaryUrl($this->trade->chart_data_path, 60) : '' }}"
+                                         data-path="{{ $this->trade?->chart_data_path ? route('trades.chart-data', $this->trade->id) : '' }}"
                                          data-entry="{{ $this->trade?->entry_price }}"
                                          data-exit="{{ $this->trade?->exit_price }}"
                                          data-dir="{{ $this->trade?->direction }}"

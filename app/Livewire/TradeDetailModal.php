@@ -330,7 +330,7 @@ class TradeDetailModal extends Component
 
         // ✅ Generamos la presigned URL del JSON aquí, en el servidor
         $chartUrl = $trade->chart_data_path
-            ? $this->storage->temporaryUrl($trade->chart_data_path, 60)
+            ? route('trades.chart-data', $trade->id)
             : null;
 
         Log::info('🔗 Chart URL generada: ' . ($chartUrl ?? 'NULL'));
