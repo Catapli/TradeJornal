@@ -18,7 +18,7 @@ document.addEventListener("alpine:init", () => {
 
             // ✅ CRÍTICO: limpiar cuando wire:navigate destruye el componente
             // Esto elimina el "Could not find Livewire component in DOM tree"
-            this.$cleanup(() => {
+            this.$el.addEventListener("alpine:destroy", () => {
                 window.removeEventListener("open-trade-detail", handler);
             });
         },

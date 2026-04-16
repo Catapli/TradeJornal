@@ -9,183 +9,199 @@ use Illuminate\Support\Collection;
 
 class RapidAPICalendarService
 {
-    private string $apiKey;
-    private string $apiHost;
-    private string $baseUrl;
+    private const DATE_FORMAT = 'Y.m.d H:i:s';
+    private const DATE_FORMAT_SHORT = 'Y.m.d H:i'; // Algunos eventos vienen sin segundos
 
-    // Mapeo de currencies a country codes de RapidAPI
-    private array $countryMap = [
-        'USD' => 'US',
-        'EUR' => 'DE',
-        'GBP' => 'GB',
-        'JPY' => 'JP',
-        'AUD' => 'AU',
-        'CAD' => 'CA',
-        'CHF' => 'CH',
-        'NZD' => 'NZ',
+    private const IMPACT_MAP = [
+        'High'   => 'high',
+        'Medium' => 'medium',
+        'Low'    => 'low',
+        'None'   => 'low',
     ];
+
+    private const SOURCES = ['mql5', 'fxstreet'];
+
+    private string $apiKey;
+    private string $baseUrl;
 
     public function __construct()
     {
-        $this->apiKey = config('services.rapidapi.key');
-        $this->apiHost = config('services.rapidapi.host');
-        $this->baseUrl = config('services.rapidapi.base_url');
+        $this->apiKey  = config('services.jblanked.api_key');
+        $this->baseUrl = config('services.jblanked.base_url');
+    }
+
+    // ─── API Pública ──────────────────────────────────────────────────────────
+
+    /**
+     * Fetch desde UNA fuente y rango concreto.
+     * Devuelve Collection de arrays ya normalizados al schema de TradeForge.
+     */
+    public function fetchFromSource(string $source, string $range, ?string $from = null, ?string $to = null): Collection
+    {
+        $url      = $this->buildUrl($source, $range, $from, $to);
+        $raw      = $this->get($url);
+
+        return collect($raw)
+            ->filter(fn(array $event) => $this->isValid($event))
+            ->map(fn(array $event)    => $this->normalize($event))
+            ->values();
     }
 
     /**
-     * Fetch eventos desde RapidAPI Ultimate Economic Calendar
-     * 
-     * @param Carbon $from
-     * @param Carbon $to
-     * @param array $currencies Ejemplo: ['USD', 'EUR', 'GBP']
-     * @return Collection
-     * @throws \Exception
+     * Fetch desde MQL5 y FxStreet, merge inteligente:
+     * MQL5 es fuente primaria. FxStreet solo rellena campos null.
+     * Devuelve Collection ordenada por date+time.
      */
-    public function fetchEvents(Carbon $from, Carbon $to, array $currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD']): Collection
+    public function fetchMerged(string $range, ?string $from = null, ?string $to = null): Collection
     {
-        if (!$this->apiKey) {
-            throw new \Exception('RAPIDAPI_KEY no configurada en .env');
+        // 1. MQL5 primero — fuente primaria
+        $mql5Events = $this->fetchFromSource('mql5', $range, $from, $to);
+
+        // 2. Pequeña pausa para respetar rate limit (1 req/s) [web:30]
+        usleep(1_100_000); // 1.1 segundos
+
+        // 3. FxStreet — fuente secundaria
+        $fxstreetEvents = $this->fetchFromSource('fxstreet', $range, $from, $to);
+
+        // 4. Merge: indexamos MQL5 por clave única y enriquecemos con FxStreet
+        $merged = $mql5Events->keyBy(fn(array $e) => $this->uniqueKey($e));
+
+        foreach ($fxstreetEvents as $fxEvent) {
+            $key = $this->uniqueKey($fxEvent);
+
+            if (! $merged->has($key)) {
+                // Evento exclusivo de FxStreet — añadir directamente
+                $merged->put($key, $fxEvent);
+                continue;
+            }
+
+            // Evento en ambas fuentes — FxStreet solo rellena nulls
+            $existing = $merged->get($key);
+            $merged->put($key, $this->mergeEvent($existing, $fxEvent));
         }
 
-        // Convertir currencies a country codes (USD -> US, EUR -> DE, etc)
-        $countries = collect($currencies)
-            ->map(fn($currency) => $this->countryMap[$currency] ?? null)
-            ->filter()
-            ->unique()
-            ->join(',');
+        return $merged
+            ->values()
+            ->sortBy(fn(array $e) => $e['date'] . ' ' . $e['time'])
+            ->values();
+    }
 
-        if (empty($countries)) {
-            throw new \Exception('No se pudieron mapear currencies a country codes');
+    // ─── Helpers Internos ─────────────────────────────────────────────────────
+
+    private function buildUrl(string $source, string $range, ?string $from, ?string $to): string
+    {
+        $base = "{$this->baseUrl}/{$source}/calendar";
+
+        return match ($range) {
+            'today' => "{$base}/today/",
+            'week'  => "{$base}/week/",
+            'month' => "{$base}/month/",
+            'range' => "{$base}/range/?from={$from}&to={$to}",
+            default => "{$base}/week/",
+        };
+    }
+
+    private function get(string $url): array
+    {
+        if (! $this->apiKey) {
+            throw new \RuntimeException('JBLANKED_API_KEY no configurada en .env');
         }
 
-        $response = Http::timeout(30)
-            ->withHeaders([
-                'x-rapidapi-host' => $this->apiHost,
-                'x-rapidapi-key' => $this->apiKey,
-            ])
-            ->get("{$this->baseUrl}/economic-events/tradingview", [
-                'from' => $from->format('Y-m-d'),
-                'to' => $to->format('Y-m-d'),
-                'countries' => $countries, // "US,DE,GB,JP,AU,CA,CH,NZ"
-            ]);
+        $response = Http::withHeaders([
+            'Authorization' => "Api-Key {$this->apiKey}",
+            'Content-Type'  => 'application/json',
+        ])
+            ->timeout(20)
+            ->retry(3, 1500)
+            ->get($url);
 
         if ($response->failed()) {
-            throw new \Exception(
-                "RapidAPI HTTP {$response->status()}: {$response->body()}"
-            );
+            Log::error('JBlanked API error', [
+                'status' => $response->status(),
+                'url'    => $url,
+                'body'   => $response->body(),
+            ]);
+            return [];
         }
 
         $data = $response->json();
 
-        // Detectar estructura de respuesta (puede variar)
-        $events = $this->extractEventsFromResponse($data);
-
-        if (!is_array($events)) {
-            throw new \Exception('Respuesta inválida: no se encontró array de eventos');
-        }
-
-        return collect($events)->map(function ($event) {
-            return $this->transformEvent($event);
-        });
+        // JBlanked devuelve array plano directamente [web:30]
+        return is_array($data) ? $data : [];
     }
 
-    /**
-     * Extrae array de eventos según estructura de respuesta
-     */
-    private function extractEventsFromResponse(array $data): array
+    private function isValid(array $event): bool
     {
-        // Caso 1: Array directo de eventos
-        if (isset($data[0]) && is_array($data[0])) {
-            return $data;
-        }
+        return isset($event['Name'], $event['Currency'], $event['Date'], $event['Impact'])
+            && in_array($event['Impact'], ['High', 'Medium', 'Low', 'None'], true)
+            && in_array(strtoupper($event['Currency']), ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD'], true);
+    }
 
-        // Caso 2: Wrapper con "data"
-        if (isset($data['data']) && is_array($data['data'])) {
-            return $data['data'];
-        }
+    private function normalize(array $event): array
+    {
+        $parsed = $this->parseDate($event['Date']);
 
-        // Caso 3: Wrapper con "events"
-        if (isset($data['events']) && is_array($data['events'])) {
-            return $data['events'];
-        }
-
-        // Caso 4: Wrapper con "result"
-        if (isset($data['result']) && is_array($data['result'])) {
-            return $data['result'];
-        }
-
-        // Si no matchea ninguno, retornar data tal cual
-        return $data;
+        return [
+            'date'     => $parsed->toDateString(),
+            'time'     => $parsed->toTimeString(),
+            'currency' => strtoupper($event['Currency']),
+            'event'    => $this->sanitizeName($event['Name']),
+            'impact'   => self::IMPACT_MAP[$event['Impact']] ?? 'low',
+            'actual'   => $this->castValue($event['Actual']   ?? null),
+            'forecast' => $this->castValue($event['Forecast'] ?? null),
+            'previous' => $this->castValue($event['Previous'] ?? null),
+        ];
     }
 
     /**
-     * Transforma evento de RapidAPI a formato TradeForge
+     * MQL5 gana en datos ya existentes.
+     * FxStreet rellena solo campos null del evento base.
      */
-    private function transformEvent(array $event): array
+    private function mergeEvent(array $primary, array $secondary): array
     {
         return [
-            'raw' => $event, // Guardamos raw para debugging
-
-            // Country/Currency
-            'country_code' => $event['country'] ?? $event['countryCode'] ?? $event['country_code'] ?? null,
-
-            // DateTime
-            'datetime' => $event['date'] ?? $event['dateTime'] ?? $event['timestamp'] ?? $event['time'] ?? null,
-
-            // Event name
-            'event_name' => $event['title'] ?? $event['event'] ?? $event['name'] ?? $event['indicator'] ?? null,
-
-            // Impact/Importance
-            'impact' => $event['impact'] ?? $event['importance'] ?? $event['volatility'] ?? $event['priority'] ?? null,
-
-            // Data values
-            'actual' => $event['actual'] ?? null,
-            'previous' => $event['previous'] ?? $event['prev'] ?? $event['prior'] ?? null,
-            'forecast' => $event['forecast'] ?? $event['consensus'] ?? $event['expected'] ?? $event['estimate'] ?? null,
-
-            // Metadata
-            'unit' => $event['unit'] ?? null,
-            'source' => $event['source'] ?? 'tradingview',
+            ...$primary,
+            'actual'   => $primary['actual']   ?? $secondary['actual'],
+            'forecast' => $primary['forecast'] ?? $secondary['forecast'],
+            'previous' => $primary['previous'] ?? $secondary['previous'],
         ];
     }
 
-    /**
-     * Mapea código de país a divisa
-     */
-    public function mapCountryToCurrency(string $countryCode): ?string
+    private function uniqueKey(array $event): string
     {
-        $map = [
-            'US' => 'USD',
-            'DE' => 'EUR',
-            'EU' => 'EUR',
-            'GB' => 'GBP',
-            'UK' => 'GBP',
-            'JP' => 'JPY',
-            'AU' => 'AUD',
-            'CA' => 'CAD',
-            'CH' => 'CHF',
-            'NZ' => 'NZD',
-        ];
+        // Normalizamos el nombre para evitar diferencias de espacios entre fuentes
+        $name = strtolower(preg_replace('/\s+/', ' ', trim($event['event'])));
+        return "{$event['date']}|{$event['time']}|{$event['currency']}|{$name}";
+    }
 
-        return $map[strtoupper($countryCode)] ?? null;
+    private function parseDate(string $date): Carbon
+    {
+        // Formato principal: "2024.02.08 15:30:00" [web:30]
+        // Formato corto: "2024.02.08 15:30" (sin segundos)
+        try {
+            return Carbon::createFromFormat(self::DATE_FORMAT, $date)
+                ?? Carbon::createFromFormat(self::DATE_FORMAT_SHORT, $date);
+        } catch (\Exception) {
+            return Carbon::parse($date); // Fallback a parse genérico
+        }
+    }
+
+    private function sanitizeName(?string $name): string
+    {
+        if (! $name) return 'Unknown Event';
+        return trim(preg_replace('/\s+/', ' ', $name));
     }
 
     /**
-     * Mapea impact/importance de RapidAPI a enum de TradeForge
+     * JBlanked devuelve 0.0 cuando no hay dato, no null.
+     * Guardamos null si el valor es 0.0 para no contaminar la BBDD [web:30].
      */
-    public function mapImpactToEnum(?string $impact): string
+    private function castValue(mixed $value): ?string
     {
-        if (!$impact) {
-            return 'low';
+        if (is_null($value) || $value === '' || $value === 0.0 || $value === 0) {
+            return null;
         }
 
-        $normalized = strtolower(trim($impact));
-
-        // RapidAPI puede usar: "High", "Medium", "Low" o "3", "2", "1"
-        return match ($normalized) {
-            'high', '3', 'important', 'critical' => 'high',
-            'medium', '2', 'moderate' => 'medium',
-            default => 'low',
-        };
+        return (string) $value;
     }
 }

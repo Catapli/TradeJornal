@@ -24,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Los uploads temporales de Livewire van al disco local (servidor),
+        // evitando el PUT directo navegador→R2 que falla por CORS.
+        // El método updatedUploadedScreenshot ya mueve el fichero a R2 server-side.
+        config(['livewire.temporary_file_upload.disk' => 'local']);
+
         // Fuerza https en producción para generar URLs correctas
         if (app()->environment('production')) {
             URL::forceScheme('https');
