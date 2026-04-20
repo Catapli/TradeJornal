@@ -62,9 +62,9 @@ Route::middleware([
         return view('journal.index');
     })->name('journal');
 
-    Route::get('/calendar', function () {
-        return view('calendar.index');
-    })->name('calendar');
+    // Route::get('/calendar', function () {
+    //     return view('calendar.index');
+    // })->name('calendar');
 
     Route::get('/trades', function () {
         return view('trades.index');
@@ -90,9 +90,9 @@ Route::middleware([
         return view('pricing.index');
     })->name('pricing');
 
-    Route::get('/alerts', function () {
-        return view('alerts.index');
-    })->name('alerts');
+    // Route::get('/alerts', function () {
+    //     return view('alerts.index');
+    // })->name('alerts');
 
     Route::get('/backtesting', function () {
         return view('backtesting.index');

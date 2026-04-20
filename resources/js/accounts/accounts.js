@@ -21,6 +21,11 @@ document.addEventListener("alpine:init", () => {
             // Inicializamos gráfico
             this.initChart();
 
+            // Redibujar chart automáticamente cuando Livewire actualice balanceChartData
+            this.$wire.$watch('balanceChartData', () => {
+                this.initChart();
+            });
+
             // Listeners de eventos globales
             window.addEventListener("timeframe-updated", (e) => {
                 this.timeframe = e.detail.timeframe;
@@ -160,8 +165,10 @@ document.addEventListener("alpine:init", () => {
                 const seriesData = chartData.series;
                 const currency = this.$wire.currency || "$";
 
-                // Si no hay datos, salimos
+                // Si no hay datos, limpiar el contenedor y salir
                 if (!categories.length) {
+                    window.balanceChart = null;
+                    chartEl.innerHTML = '';
                     this.showLoadingGrafic = false;
                     return;
                 }

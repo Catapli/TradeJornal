@@ -48,9 +48,9 @@
                            icon="fa-solid fa-list-check" />
 
         @if (Auth::user()->subscribed('default'))
-            <x-sidebar-element name="{{ __('menu.calendar') }}"
+            {{-- <x-sidebar-element name="{{ __('menu.calendar') }}"
                                route="calendar"
-                               icon="fa-regular fa-calendar" />
+                               icon="fa-regular fa-calendar" /> --}}
             <x-sidebar-element name="{{ __('menu.laboratory') }}"
                                route="reports"
                                icon="fa-solid fa-flask" />

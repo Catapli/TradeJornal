@@ -209,8 +209,8 @@
                 </div>
             </div>
             {{-- 3. CALENDARIO ECONÓMICO (NUEVO) --}}
-            <livewire:economic-calendar :date="$date"
-                                        :wire:key="'eco-'.$date" />
+            {{-- <livewire:economic-calendar :date="$date"
+                                        :wire:key="'eco-'.$date" /> --}}
             {{-- 1. MINI CALENDARIO (Navegación SPA) --}}
             <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div class="mb-3 flex items-center justify-between">
@@ -427,10 +427,11 @@
                                  }
                              });
                      
-                             // Listener IA: cuando Livewire genera un borrador, cargarlo en Trix
+                             // Listener IA y cambio de fecha: cargar contenido en Trix
                              Livewire.on('editor-content-updated', (data) => {
                                  let newContent = Array.isArray(data) ? data[0] : data;
-                                 if (newContent) {
+                                 newContent = newContent ?? '';
+                                 if (this.$refs.trix && this.$refs.trix.editor) {
                                      this.$refs.trix.editor.loadHTML(newContent);
                                      document.getElementById('x').value = newContent;
                                  }

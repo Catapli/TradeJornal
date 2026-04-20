@@ -528,7 +528,7 @@ class AccountPage extends Component
 
                 // Datos Técnicos (MT5)
                 'platform' => $this->form->platformBroker ?? 'mt5',
-                'mt5_login' => $this->form->loginPlatform,
+                'mt5_login' => $this->form->loginPlatform ?: null,
                 'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
                 'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
 
@@ -548,8 +548,9 @@ class AccountPage extends Component
             $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
             $this->selectedAccount = $account; // ← Array[0]
             $this->changeCurrency();
-            $this->dispatch('account-created');
             $this->updateData();
+            $this->dispatch('account-created');
+            $this->dispatch('timeframe-updated', timeframe: 'all');
         } catch (Exception $e) {
             $this->logError($e, 'insertAccount', 'AccountPage', "Error al insertar cuenta");
 
@@ -699,7 +700,7 @@ class AccountPage extends Component
                 'program_level_id' => $level->id,
                 'program_objective_id' => $objective->id,
                 'platform' => $this->form->platformBroker ?? 'mt5',
-                'mt5_login' => $this->form->loginPlatform,
+                'mt5_login' => $this->form->loginPlatform ?: null,
                 'mt5_server' => $level->program->propFirm->server, // Viene del JS automático
                 'broker_name' => $level->program->propFirm->name, // Opcional, o sacarlo por relación
 
@@ -716,8 +717,9 @@ class AccountPage extends Component
             $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
             $this->selectedAccount = $account; // ← Array[0]
 
-            $this->dispatch('account-updated', timeframe: 'all'); // Cerrar modal y refrescar
             $this->updateData();
+            $this->dispatch('account-updated', timeframe: 'all');
+            $this->dispatch('timeframe-updated', timeframe: 'all');
         } catch (Exception $e) {
             $this->logError($e, 'updateAccount', 'AccountPage', "Error al actualizar cuenta {$id}");
 

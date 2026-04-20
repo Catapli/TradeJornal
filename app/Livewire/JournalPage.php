@@ -447,6 +447,7 @@ class JournalPage extends Component
             $this->date        = $date;
             $this->calendarRef = Carbon::parse($date);
             $this->loadData();
+            $this->dispatch('editor-content-updated', $this->content ?? '');
         } catch (\Exception $e) {
             $this->logError($e, 'selectDate', 'JournalPage', "Error seleccionando fecha {$date}");
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));

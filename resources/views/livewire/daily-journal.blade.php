@@ -15,11 +15,34 @@
         </div>
     </div>
 
-    {{-- Textarea con DEFER (Clave para rendimiento) --}}
-    <div class="relative flex-grow bg-white p-4">
-        <textarea class="h-full w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-700 placeholder-gray-400 focus:ring-0"
-                  wire:model.defer="content"
-                  placeholder="{{ __('labels.write_here_notes') }}"></textarea>
+    <style>
+        #daily-journal-wrapper trix-toolbar { display: none !important; }
+        #daily-journal-wrapper trix-editor { border: none !important; box-shadow: none !important; padding: 1rem !important; font-size: 0.875rem; color: #374151; line-height: 1.7; }
+    </style>
+
+    {{-- Editor Trix --}}
+    <div id="daily-journal-wrapper"
+         class="relative flex-grow bg-white"
+         wire:ignore
+         x-data="{
+             init() {
+                 this.$nextTick(() => {
+                     let trix = this.$refs.trix;
+                     if (trix && trix.editor) {
+                         trix.editor.loadHTML(@js($content ?? ''));
+                     }
+                 });
+
+                 addEventListener('trix-attachment-add', (e) => {
+                     e.attachment.remove();
+                 });
+             }
+         }">
+        <input id="daily-journal-input"
+               type="hidden">
+        <trix-editor class="trix-content h-full min-h-[200px] border-none focus:outline-none"
+                     input="daily-journal-input"
+                     x-ref="trix"></trix-editor>
 
         {{-- Mensaje de guardado --}}
         <div class="absolute bottom-4 right-4 rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm"
@@ -34,7 +57,11 @@
     {{-- Footer --}}
     <div class="flex justify-end border-t border-gray-100 bg-gray-50 p-4">
         <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-indigo-700"
-                wire:click="save"
+                @click="
+                    let trix = document.querySelector('#daily-journal-input + trix-editor') || document.querySelector('trix-editor[input=daily-journal-input]');
+                    $wire.set('content', document.getElementById('daily-journal-input').value);
+                    $wire.save();
+                "
                 wire:loading.attr="disabled">
             <span wire:loading.remove>{{ __('labels.save') }}</span>
             <span wire:loading><i class="fa-solid fa-circle-notch fa-spin"></i></span>
