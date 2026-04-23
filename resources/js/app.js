@@ -47,6 +47,7 @@ import "./reports/reports.js";
 import "./trade_detail/trade_detail.js";
 import "./backtesting/backtesting.js";
 import "./backtesting/backtesting-charts.js";
+import "./admin/adminpanel.js";
 
 document.addEventListener("alpine:init", () => {
     // Store Global de Preferencias

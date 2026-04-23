@@ -47,6 +47,12 @@ class Mt5SyncController extends Controller
             Log::error("❌ Token inválido");
             return response()->json(['error' => 'Token de usuario inválido.'], 404);
         }
+
+        if (!$user->subscribed('default')) {
+            Log::warning("⚠️ Usuario sin suscripción activa: ID={$user->id}");
+            return response()->json(['error' => 'Usuario sin suscripción activa.'], 403);
+        }
+
         Log::info("✅ Usuario encontrado: ID={$user->id}");
 
         // 2. BUSCAR CUENTA
@@ -149,8 +155,12 @@ class Mt5SyncController extends Controller
 
         // 4. ACTUALIZAR CUENTA
         $account->update([
-            'last_sync'       => now(),
-            'current_balance' => $data['balance'],
+            'last_sync'           => now(),
+            'current_balance'     => $data['balance'],
+            'sync_error'          => count($errors) > 0,
+            'sync_error_message'  => count($errors) > 0
+                ? implode("\n", array_map(fn($e) => "Trade {$e['position_id']}: {$e['error']}", $errors))
+                : null,
         ]);
 
         Log::info("========================================");
@@ -181,12 +191,19 @@ class Mt5SyncController extends Controller
                 return response()->json(['error' => 'Token inválido'], 404);
             }
 
+            if (!$user->subscribed('default')) {
+                Log::warning("⚠️ Usuario sin suscripción PRO activa: ID={$user->id}");
+                return response()->json(['error' => 'No tienes el plan PRO activo.'], 403);
+            }
+
+            // La búsqueda mediante la relación $user->accounts() garantiza que
+            // la cuenta con ese mt5_login pertenece al usuario del sync_token.
             $account = $user->accounts()
                 ->where('mt5_login', $request->account_login)
                 ->first();
 
             if (!$account) {
-                return response()->json(['error' => 'Cuenta no encontrada'], 404);
+                return response()->json(['error' => 'Cuenta no encontrada o no pertenece a este usuario'], 404);
             }
 
             // Borrar archivos de R2 trade por trade

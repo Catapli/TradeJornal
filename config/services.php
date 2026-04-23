@@ -55,6 +55,12 @@ return [
         'key' => env('GEMINI_API_KEY'),
     ],
 
+    'cloudflare' => [
+        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'api_token'  => env('CLOUDFLARE_API_TOKEN'),
+        'r2_bucket'  => env('R2_BUCKET'),
+    ],
+
 
 
 ];

@@ -56,32 +56,26 @@ class AiDailyTip extends Component
         $this->loadTipFromCache();
     }
 
-    public function generateTip()
+    public function generateTip(): void
     {
         $this->isLoading = true;
 
-        // ----------------------------------------------------
-        // 2. VALIDACIÓN DE LÍMITE (NUEVO)
-        // ----------------------------------------------------
         if (!$this->checkAiLimit()) {
-            $this->isLoading = false; // Apagar spinner
+            $this->isLoading = false;
             $this->dispatch('notify', __('labels.limit_ai_reached'));
-            return; // Detener ejecución
+            return;
         }
 
-
-        // 1. QUERY (Igual que tenías)
-        $query = Trade::whereHas('account', function ($q) {
-            $q->where('user_id', Auth::id())
-                ->where('status', '!=', 'burned');
-
-            if (!empty($this->selectedAccounts) && !in_array('all', $this->selectedAccounts)) {
-                $q->whereIn('id', $this->selectedAccounts);
-            }
-        });
-
-        $trades = $query->orderBy('exit_time', 'desc')
-            ->take(50)
+        $trades = Trade::select('trades.*')
+            ->join('accounts', 'accounts.id', '=', 'trades.account_id')
+            ->where('accounts.user_id', Auth::id())
+            ->where('accounts.status', '!=', 'burned')
+            ->when(
+                !empty($this->selectedAccounts) && !in_array('all', $this->selectedAccounts),
+                fn($q) => $q->whereIn('trades.account_id', $this->selectedAccounts)
+            )
+            ->orderBy('trades.exit_time', 'desc')
+            ->take(20)
             ->with('tradeAsset')
             ->get();
 
@@ -91,41 +85,66 @@ class AiDailyTip extends Component
             return;
         }
 
-        // 2. PREPARAR DATOS (Igual)
         $dataStr = $trades->map(function ($t) {
-            $hour = Carbon::parse($t->exit_time)->hour;
-            $session = ($hour >= 8 && $hour < 16) ? 'LONDRES' : (($hour >= 13 && $hour < 22) ? 'NY' : 'ASIA');
-            $efficiency = ($t->mae_price && $t->mfe_price && $t->pnl > 0) ? "| Eff: OK" : "";
-            return "{$t->exit_time->format('Y-m-d H:i')} | {$t->tradeAsset->name} | {$session} | " . strtoupper($t->direction) . " | PnL: {$t->pnl} $efficiency";
+            $hour = $t->exit_time->hour;
+            $session = ($hour >= 8 && $hour < 16) ? 'LON' : (($hour >= 13 && $hour < 22) ? 'NY' : 'ASIA');
+            return "{$t->exit_time->format('d/m H:i')}|{$t->tradeAsset->name}|{$session}|" . strtoupper($t->direction) . "|PnL:{$t->pnl}";
         })->join("\n");
 
-        // 3. PROMPT CON JERARQUÍA DE ERRORES
         $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
         try {
             $apiKey = env('GEMINI_API_KEY');
 
-            // 👇 CAMBIO 2: withoutVerifying() para evitar errores de SSL local
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+            $response = Http::withoutVerifying()
+                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
+                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                        return in_array($exception->response->status(), [429, 503]);
+                    }
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+                }, throw: false)
+                ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => ['temperature' => 0.7]
+                    'contents' => [
+                        ['parts' => [['text' => $prompt]]]
+                    ],
+                    'generationConfig' => [
+                        'temperature'     => 0.5,
+                    ],
                 ]);
 
             if ($response->successful()) {
-                $content = $response->json()['candidates'][0]['content']['parts'][0]['text'];
-                $this->tip = $content;
-                $this->consumeAiCredit();
-                Cache::put($this->getCacheKey(), $content, Carbon::now()->endOfDay());
+                $json         = $response->json();
+                $finishReason = $json['candidates'][0]['finishReason'] ?? 'UNKNOWN';
+                $content      = $json['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+                if ($finishReason === 'MAX_TOKENS') {
+                    Log::warning('AI Tip cortado por MAX_TOKENS en Gemini.');
+                    $this->tip = __('labels.ai_tip_error');
+                    $this->isLoading = false;
+                    return;
+                }
+
+                if ($finishReason === 'STOP' && $content) {
+                    $this->tip = trim($content);
+                    $this->consumeAiCredit();
+                    Cache::put($this->getCacheKey(), $this->tip, Carbon::now()->endOfDay());
+                }
             } else {
-                // 👇 CAMBIO 3: Mostrar el error real en pantalla para depurar
-                $errorMsg = $response->json()['error']['message'] ?? 'Error desconocido de Google';
-                $this->tip = "⚠️ Error API: " . $errorMsg;
-                Log::error('Gemini Error Body: ' . $response->body());
+                $statusCode = $response->status();
+                $errorMsg   = $response->json()['error']['message'] ?? 'Error desconocido';
+
+                Log::warning("AI Tip Gemini error {$statusCode}: {$errorMsg}");
+
+                $this->tip = match ($statusCode) {
+                    429     => '⏳ Límite de peticiones alcanzado. Reintenta en unos segundos.',
+                    503     => '🌐 El servicio de IA está saturado. Reintenta más tarde.',
+                    default => "⚠️ No se pudo generar el tip ({$statusCode}). Reintenta.",
+                };
             }
-        } catch (\Exception $e) {
-            Log::error("Error AI Tip: " . $e->getMessage());
-            $this->tip = "Error de conexión: " . $e->getMessage();
+        } catch (\Throwable $e) {
+            Log::error("Error AI Tip Gemini: " . $e->getMessage());
+            $this->tip = '⚠️ Error inesperado al conectar con el servicio de IA.';
         }
 
         $this->isLoading = false;

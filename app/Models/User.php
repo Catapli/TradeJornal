@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -106,6 +107,20 @@ class User extends Authenticatable
     public function activeAccounts()
     {
         return $this->accounts()->where('status', 'active');
+    }
+
+
+    // Relación a través de cuentas hasta trades
+    public function trades(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            \App\Models\Trade::class,   // Modelo final
+            \App\Models\Account::class, // Modelo intermedio
+            'user_id',                  // FK en accounts → users
+            'account_id',               // FK en trades → accounts
+            'id',                       // PK en users
+            'id'                        // PK en accounts
+        );
     }
 
 

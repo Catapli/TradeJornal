@@ -68,26 +68,26 @@
             </div>
 
             <h3 class="mb-1 text-center text-base font-semibold text-gray-900">
-                Eliminar trade
+                {{ __('labels.bt_delete_trade_title') }}
             </h3>
             <p class="mb-6 text-center text-sm text-gray-500">
-                Esta acción no se puede deshacer. Se eliminará el trade y su screenshot asociado.
+                {{ __('labels.bt_delete_trade_text') }}
             </p>
 
             <div class="flex gap-3">
                 <button class="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                         type="button"
                         @click="cancelDelete()">
-                    Cancelar
+                    {{ __('labels.cancel') }}
                 </button>
                 <button class="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
                         type="button"
                         @click="executeDelete()"
                         wire:loading.attr="disabled">
                     <span wire:loading.remove
-                          wire:target="deleteTrade">Eliminar</span>
+                          wire:target="deleteTrade">{{ __('labels.delete') }}</span>
                     <span wire:loading
-                          wire:target="deleteTrade">Eliminando...</span>
+                          wire:target="deleteTrade">{{ __('labels.deleting') }}</span>
                 </button>
             </div>
         </div>
@@ -108,7 +108,7 @@
                       stroke-linejoin="round"
                       d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
             </svg>
-            {{ $showArchived ? 'Ocultar archivadas' : 'Ver estrategias archivadas' }}
+            {{ $showArchived ? __('labels.hide_archived') : __('labels.view_archived_strategies') }}
             @if (!$showArchived)
                 <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
                     {{ \App\Models\BacktestStrategy::where('user_id', auth()->id())->where('status', 'archived')->count() }}
@@ -118,7 +118,7 @@
 
         @if ($showArchived)
             @if ($archivedStrategies->isEmpty())
-                <p class="mt-4 text-sm text-gray-400">No hay estrategias archivadas.</p>
+                <p class="mt-4 text-sm text-gray-400">{{ __('labels.no_archived_strategies') }}</p>
             @else
                 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($archivedStrategies as $strategy)
@@ -140,7 +140,7 @@
                                           stroke-linejoin="round"
                                           d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                                 </svg>
-                                Reactivar
+                                {{ __('labels.reactivate') }}
                             </button>
                         </div>
                     @endforeach
@@ -176,18 +176,18 @@
                           d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                 </svg>
             </div>
-            <h3 class="mb-1 text-sm font-bold text-gray-900">Archivar estrategia</h3>
-            <p class="mb-5 text-sm text-gray-500">La estrategia se ocultará del listado principal. Podrás reactivarla en cualquier momento desde "Ver estrategias archivadas".</p>
+            <h3 class="mb-1 text-sm font-bold text-gray-900">{{ __('labels.archive_strategy_title') }}</h3>
+            <p class="mb-5 text-sm text-gray-500">{{ __('labels.archive_strategy_text') }}</p>
             <div class="flex justify-end gap-3">
                 <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
                         type="button"
                         @click="cancelArchive()">
-                    Cancelar
+                    {{ __('labels.cancel') }}
                 </button>
                 <button class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-600"
                         type="button"
                         @click="executeArchive()">
-                    Archivar
+                    {{ __('labels.archive') }}
                 </button>
             </div>
         </div>

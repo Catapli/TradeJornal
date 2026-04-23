@@ -1,8 +1,8 @@
 {{-- HEADER --}}
 <div class="mb-6 flex items-center justify-between">
     <div>
-        <h1 class="text-xl font-semibold text-gray-900">Backtesting</h1>
-        <p class="text-sm text-gray-500">Gestiona y analiza tus estrategias históricas</p>
+        <h1 class="text-xl font-semibold text-gray-900">{{ __('labels.backtesting') }}</h1>
+        <p class="text-sm text-gray-500">{{ __('labels.bt_subtitle') }}</p>
     </div>
     <button class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
             @click="openCreate()">
@@ -16,7 +16,7 @@
                   stroke-linejoin="round"
                   d="M12 4v16m8-8H4" />
         </svg>
-        Nueva Estrategia
+        {{ __('labels.new_setup') }}
     </button>
 </div>
 
@@ -33,11 +33,11 @@
                   stroke-linejoin="round"
                   d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15l-1.575 1.57a2.25 2.25 0 01-1.591.659H7.366a2.25 2.25 0 01-1.591-.659L4.2 15m15.6 0H4.2" />
         </svg>
-        <h3 class="text-base font-medium text-gray-700">Sin estrategias todavía</h3>
-        <p class="mt-1 max-w-xs text-sm text-gray-400">Crea tu primera estrategia y empieza a anotar operaciones de backtest</p>
+        <h3 class="text-base font-medium text-gray-700">{{ __('labels.bt_no_strategies_title') }}</h3>
+        <p class="mt-1 max-w-xs text-sm text-gray-400">{{ __('labels.bt_no_strategies_text') }}</p>
         <button class="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
                 @click="openCreate()">
-            Crear estrategia
+            {{ __('labels.create_strategy') }}
         </button>
     </div>
 
@@ -69,17 +69,17 @@
                 {{-- Stats --}}
                 <div class="grid grid-cols-3 gap-3 border-t border-gray-100 pt-3">
                     <div>
-                        <p class="text-xs text-gray-400">Trades</p>
+                        <p class="text-xs text-gray-400">{{ __('labels.trades') }}</p>
                         <p class="text-sm font-semibold tabular-nums text-gray-900">{{ $totalTrades }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-400">PnL (R)</p>
+                        <p class="text-xs text-gray-400">{{ __('labels.pnl_r') }}</p>
                         <p class="{{ $pnlR >= 0 ? 'text-emerald-600' : 'text-red-500' }} text-sm font-semibold tabular-nums">
                             {{ $pnlR >= 0 ? '+' : '' }}{{ number_format($pnlR, 2) }}R
                         </p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-400">Winrate</p>
+                        <p class="text-xs text-gray-400">{{ __('labels.win_rate') }}</p>
                         <p class="{{ $winrate === null ? 'text-gray-400' : ($winrate >= 50 ? 'text-emerald-600' : 'text-red-500') }} text-sm font-semibold tabular-nums">
                             {{ $winrate !== null ? $winrate . '%' : '—' }}
                         </p>
@@ -90,7 +90,7 @@
                 <div class="flex items-center gap-2 pt-1">
                     <button class="flex-1 rounded-lg bg-blue-600 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
                             wire:click="selectStrategy({{ $strategy->id }})">
-                        Abrir
+                        {{ __('labels.open_btn') }}
                     </button>
                     <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                             type="button"

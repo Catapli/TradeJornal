@@ -19,8 +19,7 @@
             </svg>
             <p class="text-sm text-blue-700">
                 Estas reglas definen un setup válido para <strong>{{ $selectedStrategy->name }}</strong>.
-                Cuando registres un trade, el campo <em>"¿Siguió las reglas?"</em> hace referencia a este checklist.
-                El Analytics te mostrará el impacto real de seguirlas.
+                {{ __('labels.setup_rules_info_bt') }}
             </p>
         </div>
 
@@ -64,7 +63,7 @@
                                         editing = true
                                     }
                                 "
-                                        :title="editing ? 'Guardar' : 'Editar'">
+                                        :title="editing ? '{{ __('labels.save') }}' : '{{ __('labels.edit') }}'">
                                     <svg class="h-3.5 w-3.5"
                                          x-show="!editing"
                                          xmlns="http://www.w3.org/2000/svg"
@@ -94,7 +93,7 @@
                                     <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                                             type="button"
                                             wire:click="moveRule({{ $i }}, 'up')"
-                                            title="Subir">
+                                            title="{{ __('labels.move_up') }}">
                                         <svg class="h-3.5 w-3.5"
                                              xmlns="http://www.w3.org/2000/svg"
                                              fill="none"
@@ -113,7 +112,7 @@
                                     <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                                             type="button"
                                             wire:click="moveRule({{ $i }}, 'down')"
-                                            title="Bajar">
+                                            title="{{ __('labels.move_down') }}">
                                         <svg class="h-3.5 w-3.5"
                                              xmlns="http://www.w3.org/2000/svg"
                                              fill="none"
@@ -131,8 +130,8 @@
                                 <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
                                         type="button"
                                         wire:click="removeRuleFromStrategy({{ $i }})"
-                                        wire:confirm="¿Eliminar esta regla?"
-                                        title="Eliminar">
+                                        wire:confirm="{{ __('labels.delete_rule_confirm') }}"
+                                        title="{{ __('labels.delete') }}">
                                     <svg class="h-3.5 w-3.5"
                                          xmlns="http://www.w3.org/2000/svg"
                                          fill="none"
@@ -164,8 +163,8 @@
                               stroke-linejoin="round"
                               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p class="text-sm text-gray-500">Sin reglas definidas todavía</p>
-                    <p class="mt-1 text-xs text-gray-400">Añade las condiciones que debe cumplir un setup válido</p>
+                    <p class="text-sm text-gray-500">{{ __('labels.not_rules_defined') }}</p>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('labels.add_rule_conditions') }}</p>
                 </div>
             @endif
 
@@ -180,7 +179,7 @@
                     <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
                             type="button"
                             wire:click="addRuleToStrategy">
-                        Añadir
+                        {{ __('labels.add') }}
                     </button>
                 </div>
             </div>

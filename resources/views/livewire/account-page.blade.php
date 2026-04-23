@@ -203,7 +203,6 @@
                                     x-model="platformBroker">
                                 <option value="">{{ __('labels.select_platform') }}</option>
                                 <option value="mt5">MetaTrader 5</option>
-                                <option value="cTrader">cTrader</option>
                             </select>
                         </div>
 

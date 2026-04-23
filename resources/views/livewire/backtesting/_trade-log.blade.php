@@ -41,8 +41,8 @@
                   stroke-linejoin="round"
                   d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
         </svg>
-        <p class="text-sm font-medium text-gray-600">Sin trades todavía</p>
-        <p class="mt-1 text-xs text-gray-400">Pulsa "Añadir Trade" para registrar tu primera operación</p>
+        <p class="text-sm font-medium text-gray-600">{{ __('labels.no_trades_yet') }}</p>
+        <p class="mt-1 text-xs text-gray-400">{{ __('labels.bt_no_trades_text') }}</p>
     </div>
 
     {{-- TABLA --}}
@@ -54,16 +54,16 @@
                     <th class="px-4 py-3 text-left">
                         <button class="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900"
                                 wire:click="sortColumn('trade_date')">
-                            Fecha
+                            {{ __('labels.date') }}
                             @if ($sortBy === 'trade_date')
                                 <span>{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </button>
                     </th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Dir.</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Entrada</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">Salida</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">SL</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">{{ __('labels.direction') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.entry') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.exit_label') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.stop_loss') }}</th>
                     <th class="px-4 py-3 text-right">
                         <button class="ml-auto flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900"
                                 wire:click="sortColumn('pnl_r')">
@@ -73,9 +73,9 @@
                             @endif
                         </button>
                     </th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Sesión</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Rating</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Reglas</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">{{ __('labels.session') }}</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">{{ __('labels.rating') }}</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">{{ __('labels.setup_rules_section') }}</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>

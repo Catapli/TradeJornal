@@ -77,6 +77,11 @@
                                route="manage-logs"
                                icon="fa-solid fa-flag"
                                color="text-rose-500" />
+
+            <x-sidebar-element name="{{ __('menu.logs') }}"
+                               route="admin-panel"
+                               icon="fa-solid fa-screwdriver-wrench"
+                               color="text-rose-500" />
         @endif
 
         <form method="POST"

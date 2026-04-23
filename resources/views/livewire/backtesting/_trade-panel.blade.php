@@ -23,10 +23,10 @@
         <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <div>
                 <h2 class="text-sm font-bold text-gray-900">
-                    <span x-show="!isEditingTrade">Nuevo Trade</span>
-                    <span x-show="isEditingTrade">Editar Trade</span>
+                    <span x-show="!isEditingTrade">{{ __('labels.new_trade') }}</span>
+                    <span x-show="isEditingTrade">{{ __('labels.edit_trade') }}</span>
                 </h2>
-                <p class="mt-0.5 text-xs text-gray-400">Completa los datos del setup</p>
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.complete_setup_data') }}</p>
             </div>
             <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     type="button"
@@ -52,7 +52,7 @@
 
                     {{-- Fecha --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.date') }}</label>
                         <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="trade_date"
                                type="date" />
@@ -63,7 +63,7 @@
 
                     {{-- Dirección --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.direction') }}</label>
                         <div class="grid h-10 grid-cols-2 gap-2">
                             <button class="rounded-lg border text-sm font-semibold transition-all duration-150"
                                     type="button"
@@ -88,7 +88,7 @@
 
                     {{-- Entrada --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Entrada</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.entry') }}</label>
                         <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="entry_price"
                                type="number"
@@ -101,7 +101,7 @@
 
                     {{-- Salida --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Salida</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.exit_label') }}</label>
                         <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="exit_price"
                                type="number"
@@ -114,7 +114,7 @@
 
                     {{-- Stop Loss --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Stop Loss</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.stop_loss') }}</label>
                         <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="stop_loss"
                                type="number"
@@ -124,7 +124,7 @@
 
                     {{-- Resultado — solo R ──────────────────────────── --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Resultado</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.result') }}</label>
                         <div class="flex h-10 items-center justify-center rounded-lg border px-3 transition-all duration-200"
                              :class="{
                                  'border-emerald-200 bg-emerald-50': computedR > 0,
@@ -144,7 +144,7 @@
                 <button class="mt-5 flex w-full items-center justify-between border-t border-gray-100 pt-4 text-xs font-medium text-gray-400 transition-colors hover:text-gray-600"
                         type="button"
                         @click="showOptional = !showOptional">
-                    <span x-text="showOptional ? 'Ocultar detalles' : 'Añadir detalles opcionales'"></span>
+                    <span x-text="showOptional ? '{{ __('labels.hide_details') }}' : '{{ __('labels.add_optional_details') }}'"></span>
                     <svg class="h-4 w-4 transition-transform duration-200"
                          xmlns="http://www.w3.org/2000/svg"
                          :class="showOptional ? 'rotate-180' : ''"
@@ -169,7 +169,7 @@
 
                         {{-- Sesión --}}
                         <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Sesión</label>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.session') }}</label>
                             <div class="grid grid-cols-4 gap-1.5">
                                 @foreach (['london' => 'LON', 'new_york' => 'NY', 'asia' => 'ASIA', 'other' => 'Otra'] as $val => $label)
                                     <button class="rounded-lg border py-2 text-xs font-semibold transition-all duration-150"
@@ -187,7 +187,7 @@
 
                         {{-- Rating --}}
                         <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Calidad del setup</label>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.setup_quality') }}</label>
                             <div class="flex h-9 items-center gap-1.5">
                                 @foreach ([1, 2, 3, 4, 5] as $star)
                                     <button class="flex-1 rounded-lg border py-1.5 text-base transition-all duration-150"
@@ -205,8 +205,8 @@
                     {{-- ¿Siguió reglas? --}}
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-700">¿Siguió las reglas?</p>
-                            <p class="text-xs text-gray-400">El setup cumplía todos los criterios</p>
+                            <p class="text-sm font-medium text-gray-700">{{ __('labels.followed_rules_question') }}</p>
+                            <p class="text-xs text-gray-400">{{ __('labels.setup_met_criteria') }}</p>
                         </div>
                         <button class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                                 type="button"
@@ -219,7 +219,7 @@
 
                     {{-- Confluencias --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Confluencias</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.confluences') }}</label>
                         <div class="mb-2 flex flex-wrap gap-1.5">
                             @foreach ($confluences as $i => $tag)
                                 <span class="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
@@ -255,7 +255,7 @@
 
                     {{-- Notas --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Notas</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.notes') }}</label>
                         <textarea class="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   wire:model="notes"
                                   rows="2"
@@ -264,7 +264,7 @@
 
                     {{-- Screenshot --}}
                     <div>
-                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Screenshot del chart</label>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.screenshot_chart') }}</label>
                         <div class="flex w-full items-center justify-center">
                             <label class="relative flex h-48 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-gray-50 hover:bg-gray-100"
                                    :class="isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300'"
@@ -296,7 +296,7 @@
                                               stroke-linejoin="round"
                                               d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                                     </svg>
-                                    <p class="text-sm text-gray-500"><span class="font-semibold">Haz clic</span> o arrastra una imagen</p>
+                                    <p class="text-sm text-gray-500">{{ __('labels.drag_drop_or_click') }}</p>
                                     <p class="text-xs text-gray-400">PNG, JPG, WebP — máx. 10MB</p>
                                 </div>
 
@@ -319,7 +319,7 @@
                                                   fill="currentColor"
                                                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        <span class="text-sm font-semibold text-gray-600">Subiendo imagen...</span>
+                                        <span class="text-sm font-semibold text-gray-600">{{ __('labels.uploading_img') }}</span>
                                     </div>
                                 </div>
 
@@ -337,7 +337,7 @@
                                 type="button"
                                 x-show="photoPreview || existingPhotoUrl"
                                 @click="clearPhoto()">
-                            Eliminar imagen
+                            {{ __('labels.delete_image') }}
                         </button>
 
                         @error('screenshot')
@@ -353,7 +353,7 @@
                 <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-700"
                         type="button"
                         @click="closeTradePanel()">
-                    Cancelar
+                    {{ __('labels.cancel') }}
                 </button>
                 <button class="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
                         type="button"
@@ -362,8 +362,8 @@
                         wire:target="saveTrade">
                     <span wire:loading.remove
                           wire:target="saveTrade">
-                        <span x-show="!isEditingTrade">Guardar Trade</span>
-                        <span x-show="isEditingTrade">Actualizar Trade</span>
+                        <span x-show="!isEditingTrade">{{ __('labels.save_trade') }}</span>
+                        <span x-show="isEditingTrade">{{ __('labels.update_trade') }}</span>
                     </span>
                     <span class="flex items-center gap-2"
                           wire:loading
@@ -382,7 +382,7 @@
                                   fill="currentColor"
                                   d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
-                        Guardando...
+                        {{ __('labels.saving') }}
                     </span>
                 </button>
             </div>

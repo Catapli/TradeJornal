@@ -15,7 +15,7 @@
                       fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
-            Calculando métricas...
+            {{ __('labels.calculating_metrics') }}
         </div>
     </div>
 @elseif($metrics['total_trades'] === 0)
@@ -30,8 +30,8 @@
                   stroke-linejoin="round"
                   d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
         </svg>
-        <p class="text-sm font-medium text-gray-600">Sin trades todavía</p>
-        <p class="mt-1 text-xs text-gray-400">Registra al menos un trade para ver las métricas</p>
+        <p class="text-sm font-medium text-gray-600">{{ __('labels.no_trades_yet') }}</p>
+        <p class="mt-1 text-xs text-gray-400">{{ __('labels.register_trade_to_see_metrics') }}</p>
     </div>
 @else
     @php
@@ -41,18 +41,18 @@
         $eff = $m['trader_efficiency'];
 
         $sqnLabel = match (true) {
-            $m['sqn'] >= 5 => ['Excelente', 'emerald'],
-            $m['sqn'] >= 3 => ['Bueno', 'emerald'],
-            $m['sqn'] >= 2 => ['Aceptable', 'amber'],
-            $m['sqn'] >= 1 => ['Débil', 'orange'],
-            default => ['Malo', 'red'],
+            $m['sqn'] >= 5 => [__('labels.label_excellent'), 'emerald'],
+            $m['sqn'] >= 3 => [__('labels.label_good'), 'emerald'],
+            $m['sqn'] >= 2 => [__('labels.label_acceptable'), 'amber'],
+            $m['sqn'] >= 1 => [__('labels.label_weak'), 'orange'],
+            default => [__('labels.label_bad'), 'red'],
         };
 
         $effLabel = match (true) {
-            $eff['score'] >= 80 => ['Excelente', 'emerald'],
-            $eff['score'] >= 60 => ['Bueno', 'blue'],
-            $eff['score'] >= 40 => ['Regular', 'amber'],
-            default => ['Mejorable', 'red'],
+            $eff['score'] >= 80 => [__('labels.label_excellent'), 'emerald'],
+            $eff['score'] >= 60 => [__('labels.label_good'), 'blue'],
+            $eff['score'] >= 40 => [__('labels.label_regular'), 'amber'],
+            default => [__('labels.label_improvable'), 'red'],
         };
     @endphp
 
@@ -60,7 +60,7 @@
     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Operaciones</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.trades') }}</p>
             <p class="text-2xl font-bold tabular-nums text-gray-900">{{ $m['total_trades'] }}</p>
             <p class="mt-1 text-xs tabular-nums text-gray-400">
                 <span class="text-emerald-500">{{ $m['max_consecutive_wins'] }}W</span>
@@ -69,7 +69,7 @@
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Win Rate</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.win_rate') }}</p>
             <p class="{{ $m['win_rate'] >= 50 ? 'text-emerald-600' : 'text-red-500' }} text-2xl font-bold tabular-nums">
                 {{ $m['win_rate'] }}%
             </p>
@@ -80,19 +80,19 @@
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Factor de Beneficio</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.profit_factor') }}</p>
             @php
                 $pf = $m['profit_factor'];
                 $pfNumeric = is_numeric($pf) ? (float) $pf : null;
                 $pfColor = $pf === '∞' || ($pfNumeric !== null && $pfNumeric >= 1.5) ? 'text-emerald-600' : ($pfNumeric !== null && $pfNumeric >= 1 ? 'text-amber-500' : 'text-red-500');
-                $pfLabel = $pf === '∞' || ($pfNumeric !== null && $pfNumeric >= 2) ? 'Excelente' : ($pfNumeric !== null && $pfNumeric >= 1.5 ? 'Bueno' : ($pfNumeric !== null && $pfNumeric >= 1 ? 'Aceptable' : 'Negativo'));
+                $pfLabel = $pf === '∞' || ($pfNumeric !== null && $pfNumeric >= 2) ? __('labels.label_excellent') : ($pfNumeric !== null && $pfNumeric >= 1.5 ? __('labels.label_good') : ($pfNumeric !== null && $pfNumeric >= 1 ? __('labels.label_acceptable') : __('labels.label_negative')));
             @endphp
             <p class="{{ $pfColor }} text-2xl font-bold tabular-nums">{{ $pf }}</p>
             <p class="mt-1 text-xs text-gray-400">{{ $pfLabel }}</p>
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Avg R</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.avg_r') }}</p>
             <p class="{{ $m['avg_r'] >= 0 ? 'text-emerald-600' : 'text-red-500' }} text-2xl font-bold tabular-nums">
                 {{ $m['avg_r'] > 0 ? '+' : '' }}{{ $m['avg_r'] }}R
             </p>
@@ -100,7 +100,7 @@
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Ganancia Media</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.avg_profit_trade') }}</p>
             <p class="text-xl font-bold tabular-nums text-emerald-600">
                 {{ $m['avg_win'] > 0 ? '+' : '' }}{{ $m['avg_win'] }}{{ $unit }}
             </p>
@@ -108,13 +108,13 @@
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Pérdida Media</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.avg_losser_trade') }}</p>
             <p class="text-xl font-bold tabular-nums text-red-500">{{ $m['avg_loss'] }}{{ $unit }}</p>
             <p class="mt-1 text-xs text-gray-400">Mayor: <span class="font-medium text-red-400">{{ $m['biggest_loss'] }}{{ $unit }}</span></p>
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-4">
-            <p class="mb-1 text-xs text-gray-400">Max Drawdown</p>
+            <p class="mb-1 text-xs text-gray-400">{{ __('labels.max_drawdown') }}</p>
             <p class="text-xl font-bold tabular-nums text-red-500">{{ $dd['percent'] }}%</p>
             <p class="mt-1 text-xs tabular-nums text-gray-400">{{ $dd['amount'] }}{{ $unit }}</p>
         </div>
@@ -132,7 +132,7 @@
                 <p class="{{ $m['arr'] >= 0 ? 'text-emerald-600' : 'text-red-500' }} text-xl font-bold tabular-nums">
                     {{ $m['arr'] > 0 ? '+' : '' }}{{ $m['arr'] }}%
                 </p>
-                <p class="mt-1 text-xs text-gray-400">Rentabilidad anualizada</p>
+                <p class="mt-1 text-xs text-gray-400">{{ __('labels.annualized_return') }}</p>
             @endif
         </div>
 
@@ -143,7 +143,7 @@
 
         {{-- Eficiencia del trader --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 class="mb-4 text-sm font-semibold text-gray-900">Eficiencia del Trader</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-900">{{ __('labels.efficiency_of_trader') }}</h3>
 
             {{-- Score circular --}}
             <div class="mb-4 flex items-center gap-4">
@@ -171,14 +171,14 @@
                 </div>
                 <div>
                     <p class="text-{{ $effLabel[1] }}-600 text-base font-semibold">{{ $effLabel[0] }}</p>
-                    <p class="text-xs text-gray-400">Score sobre 100</p>
+                    <p class="text-xs text-gray-400">{{ __('labels.score_over_100') }}</p>
                 </div>
             </div>
 
             <div class="space-y-2.5">
                 <div>
                     <div class="mb-1 flex justify-between text-xs">
-                        <span class="text-gray-500">Disciplina (reglas)</span>
+                        <span class="text-gray-500">{{ __('labels.discipline_rules') }}</span>
                         <span class="font-medium text-gray-700">{{ $eff['rules_followed_pct'] }}%</span>
                     </div>
                     <div class="h-1.5 overflow-hidden rounded-full bg-gray-100">
@@ -188,7 +188,7 @@
                 </div>
                 <div>
                     <div class="mb-1 flex justify-between text-xs">
-                        <span class="text-gray-500">Calidad setups (≥4★)</span>
+                        <span class="text-gray-500">{{ __('labels.quality_setups') }}</span>
                         <span class="font-medium text-gray-700">{{ $eff['high_quality_pct'] }}%</span>
                     </div>
                     <div class="h-1.5 overflow-hidden rounded-full bg-gray-100">
@@ -207,7 +207,7 @@
                     </div>
                 </div>
                 <div class="flex justify-between border-t border-gray-100 pt-1 text-xs">
-                    <span class="text-gray-400">RR medio real</span>
+                    <span class="text-gray-400">{{ __('labels.avg_rr_real') }}</span>
                     <span class="font-semibold text-gray-700">{{ $eff['avg_rr'] }}R</span>
                 </div>
             </div>
@@ -216,7 +216,7 @@
         {{-- Curva de capital --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5 sm:col-span-2">
             <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-900">Curva de Capital</h3>
+                <h3 class="text-sm font-semibold text-gray-900">{{ __('labels.equity_curve_title') }}</h3>
                 <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                     {{ $m['r_mode'] ? 'Expresado en R' : $selectedStrategy->currency }}
                 </span>
@@ -315,7 +315,7 @@
 
                 {{-- Cabecera con navegación --}}
                 <div class="mb-5 flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-gray-900">Calendario de Operaciones</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">{{ __('labels.ops_calendar') }}</h3>
                     <div class="flex items-center gap-2">
                         <button class="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
                                 @click="prevMonth()">
@@ -440,15 +440,15 @@
                 <div class="mt-4 flex items-center gap-4 border-t border-gray-100 pt-3">
                     <div class="flex items-center gap-1.5">
                         <div class="h-3 w-3 rounded-sm border border-emerald-200 bg-emerald-100"></div>
-                        <span class="text-[10px] text-gray-400">Día positivo</span>
+                        <span class="text-[10px] text-gray-400">{{ __('labels.positive_day') }}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                         <div class="h-3 w-3 rounded-sm border border-red-200 bg-red-100"></div>
-                        <span class="text-[10px] text-gray-400">Día negativo</span>
+                        <span class="text-[10px] text-gray-400">{{ __('labels.negative_day') }}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                         <div class="h-1 w-8 rounded-full bg-gradient-to-r from-red-400 to-emerald-400"></div>
-                        <span class="text-[10px] text-gray-400">Barra = Win Rate</span>
+                        <span class="text-[10px] text-gray-400">{{ __('labels.bar_winrate_legend') }}</span>
                     </div>
                 </div>
             </div>
@@ -469,8 +469,8 @@
                                   stroke-linejoin="round"
                                   d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                         </svg>
-                        <p class="text-sm text-gray-400">Selecciona un día del calendario</p>
-                        <p class="mt-1 text-xs text-gray-300">Los días con operaciones están coloreados</p>
+                        <p class="text-sm text-gray-400">{{ __('labels.select_calendar_day') }}</p>
+                        <p class="mt-1 text-xs text-gray-300">{{ __('labels.days_with_ops_colored') }}</p>
                     </div>
                 </template>
 
@@ -517,7 +517,7 @@
                         <div class="flex-1 space-y-2 overflow-y-auto"
                              style="max-height: 280px">
                             <template x-if="selectedTrades.length === 0">
-                                <p class="py-4 text-center text-xs text-gray-400">Sin operaciones registradas</p>
+                                <p class="py-4 text-center text-xs text-gray-400">{{ __('labels.no_operations_registered') }}</p>
                             </template>
 
                             <template x-for="trade in selectedTrades"
@@ -617,7 +617,7 @@
 
         {{-- Win Rate por día --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 class="mb-4 text-sm font-semibold text-gray-900">Win Rate por Día</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-900">{{ __('labels.winrate_by_day') }}</h3>
             <div class="space-y-2">
                 @foreach ($m['daily_winrate'] as $day)
                     @if ($day['total'] > 0)
@@ -635,14 +635,14 @@
                 @endforeach
 
                 @if (collect($m['daily_winrate'])->sum('total') === 0)
-                    <p class="py-4 text-center text-sm text-gray-400">Sin datos</p>
+                    <p class="py-4 text-center text-sm text-gray-400">{{ __('labels.no_data') }}</p>
                 @endif
             </div>
         </div>
 
         {{-- Rendimiento por sesión --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 class="mb-4 text-sm font-semibold text-gray-900">Rendimiento por Sesión</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-900">{{ __('labels.performance_by_session') }}</h3>
             @if (!empty($m['pnl_by_session']['labels']))
                 <div class="space-y-3">
                     @foreach ($m['pnl_by_session']['labels'] as $i => $label)
@@ -674,8 +674,8 @@
                 </div>
             @else
                 <p class="py-8 text-center text-sm text-gray-400">
-                    Sin sesiones registradas.<br>
-                    <span class="text-xs">Añade la sesión al registrar los trades.</span>
+                    {{ __('labels.no_sessions_registered') }}<br>
+                    <span class="text-xs">{{ __('labels.add_session_to_trades') }}</span>
                 </p>
             @endif
         </div>
@@ -686,21 +686,21 @@
     <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 class="mb-4 text-sm font-semibold text-gray-900">Distribución de R</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-900">{{ __('labels.r_distribution') }}</h3>
             <div id="chart-r-dist"
                  style="min-height:200px"></div>
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 class="mb-1 text-sm font-semibold text-gray-900">Impacto de las Reglas</h3>
-            <p class="mb-4 text-xs text-gray-400">Siguiendo reglas vs sin seguirlas</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-900">{{ __('labels.rules_impact_title') }}</h3>
+            <p class="mb-4 text-xs text-gray-400">{{ __('labels.followed_rules_vs_not') }}</p>
             @php $ri = $m['rules_impact'] @endphp
             @if ($ri['followed']['count'] > 0 || $ri['not_followed']['count'] > 0)
                 <div class="space-y-3">
                     <div class="flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50 p-3">
                         <div class="flex items-center gap-2">
                             <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                            <span class="text-sm font-medium text-gray-700">Siguió las reglas</span>
+                            <span class="text-sm font-medium text-gray-700">{{ __('labels.followed_rules') }}</span>
                             <span class="text-xs text-gray-400">({{ $ri['followed']['count'] }})</span>
                         </div>
                         <div class="flex items-center gap-4 text-right">
@@ -717,7 +717,7 @@
                     <div class="flex items-center justify-between rounded-lg border border-red-100 bg-red-50 p-3">
                         <div class="flex items-center gap-2">
                             <span class="h-2 w-2 rounded-full bg-red-400"></span>
-                            <span class="text-sm font-medium text-gray-700">Sin seguir reglas</span>
+                            <span class="text-sm font-medium text-gray-700">{{ __('labels.not_followed_rules') }}</span>
                             <span class="text-xs text-gray-400">({{ $ri['not_followed']['count'] }})</span>
                         </div>
                         <div class="flex items-center gap-4 text-right">
@@ -733,7 +733,7 @@
                     </div>
                 </div>
             @else
-                <p class="py-6 text-center text-sm text-gray-400">Sin datos suficientes</p>
+                <p class="py-6 text-center text-sm text-gray-400">{{ __('labels.no_enough_data') }}</p>
             @endif
         </div>
 
@@ -745,8 +745,8 @@
         {{-- Rating vs Rendimiento --}}
         <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-100 px-5 py-4">
-                <h3 class="text-sm font-semibold text-gray-900">Rating vs Rendimiento</h3>
-                <p class="mt-0.5 text-xs text-gray-400">¿Tus mejores setups realmente rinden más?</p>
+                <h3 class="text-sm font-semibold text-gray-900">{{ __('labels.rating_vs_performance') }}</h3>
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.best_setups_perform_more') }}</p>
             </div>
 
             @php
@@ -755,7 +755,7 @@
             @endphp
 
             @if ($ratingRows->isEmpty())
-                <div class="px-5 py-10 text-center text-sm text-gray-400">Sin suficientes datos</div>
+                <div class="px-5 py-10 text-center text-sm text-gray-400">{{ __('labels.no_enough_data_short') }}</div>
             @else
                 <div class="p-4">
                     <div class="space-y-2">
@@ -764,11 +764,11 @@
                                 $pct = min(100, ($row['avg_r'] / $maxAbsR) * 100);
                                 $isPositive = $row['avg_r'] >= 0;
                                 [$badge, $badgeColor] = match (true) {
-                                    $row['avg_r'] >= 1.5 => ['Excelente', 'bg-emerald-100 text-emerald-700'],
-                                    $row['avg_r'] >= 0.5 => ['Bueno', 'bg-blue-100 text-blue-700'],
-                                    $row['avg_r'] >= 0 => ['Neutral', 'bg-gray-100 text-gray-500'],
-                                    $row['avg_r'] >= -0.5 => ['Débil', 'bg-amber-100 text-amber-700'],
-                                    default => ['Evitar', 'bg-red-100 text-red-600'],
+                                    $row['avg_r'] >= 1.5 => [__('labels.label_excellent'), 'bg-emerald-100 text-emerald-700'],
+                                    $row['avg_r'] >= 0.5 => [__('labels.label_good'), 'bg-blue-100 text-blue-700'],
+                                    $row['avg_r'] >= 0 => [__('labels.label_neutral'), 'bg-gray-100 text-gray-500'],
+                                    $row['avg_r'] >= -0.5 => [__('labels.label_weak'), 'bg-amber-100 text-amber-700'],
+                                    default => [__('labels.label_avoid'), 'bg-red-100 text-red-600'],
                                 };
                             @endphp
                             <div class="{{ $isPositive ? 'border-gray-100 bg-gray-50' : 'border-red-50 bg-red-50/40' }} relative overflow-hidden rounded-lg border px-4 py-3">
@@ -837,16 +837,16 @@
         {{-- Análisis de Confluencias --}}
         <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-100 px-5 py-4">
-                <h3 class="text-sm font-semibold text-gray-900">Análisis de Confluencias</h3>
-                <p class="mt-0.5 text-xs text-gray-400">Qué factores técnicos correlacionan con mejores resultados</p>
+                <h3 class="text-sm font-semibold text-gray-900">{{ __('labels.confluence_analysis_title') }}</h3>
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.technical_factors_correlation') }}</p>
             </div>
 
             @php $confluences = $m['confluence_analysis']; @endphp
 
             @if (empty($confluences))
                 <div class="flex flex-col items-center justify-center px-5 py-10 text-center">
-                    <p class="text-sm text-gray-400">Sin confluencias registradas</p>
-                    <p class="mt-1 text-xs text-gray-300">Añade confluencias al registrar trades (EMA200, FVG, POI…)</p>
+                    <p class="text-sm text-gray-400">{{ __('labels.no_confluences_registered') }}</p>
+                    <p class="mt-1 text-xs text-gray-300">{{ __('labels.add_confluences_to_trades') }}</p>
                 </div>
             @else
                 @php $maxConfR = collect($confluences)->max(fn($c) => abs($c['avg_r'])) ?: 1; @endphp

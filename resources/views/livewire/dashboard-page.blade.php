@@ -553,11 +553,11 @@
         2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
     --}}
                                             <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                                 data-path="{{ $selectedTrade?->chart_data_path ? app(\App\Services\StorageService::class)->temporaryUrl($selectedTrade->chart_data_path, 60) : '' }}"
+                                                 data-path="{{ $selectedTrade?->chart_data_path ? route('trades.chart-data', $selectedTrade->id) : '' }}"
                                                  data-entry="{{ $selectedTrade?->entry_price }}"
                                                  data-exit="{{ $selectedTrade?->exit_price }}"
                                                  data-dir="{{ $selectedTrade?->direction }}"
-                                                 x-data="chartViewer('{{ $selectedTrade?->chart_data_path ? 'chart' : 'image' }}')"
+                                                 x-data="chartViewer({{ $selectedTrade?->chart_data_path ? '\'chart\'' : '\'image\'' }})"
                                                  {{-- DATOS SEGUROS (PHP -> HTML) --}}
                                                  {{-- EVENTO NATIVO (Se encarga de escuchar cambios si el modal no se recarga) --}}
                                                  @trade-selected.window="load($event.detail.path, $event.detail.entry, $event.detail.exit, $event.detail.direction)"

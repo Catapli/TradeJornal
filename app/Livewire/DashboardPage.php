@@ -705,7 +705,14 @@ class DashboardPage extends Component
 
 
             // 6. Petición a Gemini con timeout de 15 segundos
-            $response = Http::timeout(15)
+            $response = Http::withoutVerifying()
+                ->timeout(15)
+                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
+                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                        return in_array($exception->response->status(), [429, 503]);
+                    }
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+                }, throw: false)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [
@@ -719,6 +726,8 @@ class DashboardPage extends Component
                         'temperature' => 0.4,
                     ],
                 ]);
+
+
 
             if ($response->successful()) {
                 $this->aiAnalysis = $response->json()['candidates'][0]['content']['parts'][0]['text'];
@@ -1056,7 +1065,14 @@ class DashboardPage extends Component
             }
 
             // 6. Petición a Gemini con timeout
-            $response = Http::timeout(20) // Más tiempo porque envía imagen
+            $response = Http::withoutVerifying()
+                ->timeout(20) // Más tiempo porque envía imagen
+                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
+                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                        return in_array($exception->response->status(), [429, 503]);
+                    }
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+                }, throw: false)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [

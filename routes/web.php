@@ -155,6 +155,10 @@ Route::middleware(['auth', 'superadmin'])->group(function () {
     Route::get('/admin/logs', function () {
         return view('admin.logs.index');
     })->name('manage-logs');
+
+    Route::get('/admin/panel', function () {
+        return view('admin.panel.index');
+    })->name('admin-panel');
 });
 
 

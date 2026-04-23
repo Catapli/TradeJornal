@@ -18,10 +18,10 @@
         <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <div>
                 <h2 class="text-sm font-bold text-gray-900">
-                    <span x-show="!isEditing">Nueva estrategia</span>
-                    <span x-show="isEditing">Editar estrategia</span>
+                    <span x-show="!isEditing">{{ __('labels.new_strategy_title') }}</span>
+                    <span x-show="isEditing">{{ __('labels.edit_strategy_title') }}</span>
                 </h2>
-                <p class="mt-0.5 text-xs text-gray-400">Define los parámetros del sistema</p>
+                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.define_system_params') }}</p>
             </div>
             <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     type="button"
@@ -46,7 +46,7 @@
 
                 {{-- ── Nombre ────────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre</label>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.name_field') }}</label>
                     <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                            wire:model="name"
                            type="text"
@@ -59,7 +59,7 @@
                 {{-- ── Símbolo + Timeframe ───────────────── --}}
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Símbolo</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.symbol') }}</label>
                         <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm uppercase text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="symbol"
                                type="text"
@@ -69,7 +69,7 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Timeframe</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.timeframe') }}</label>
                         <select class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 wire:model="timeframe">
                             @foreach (['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'] as $tf)
@@ -81,9 +81,9 @@
 
                 {{-- ── Dirección ─────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Dirección</label>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.direction') }}</label>
                     <div class="grid grid-cols-3 gap-2">
-                        @foreach (['both' => 'Long & Short', 'long' => 'Solo Long', 'short' => 'Solo Short'] as $val => $label)
+                        @foreach (['both' => __('labels.dir_both'), 'long' => __('labels.dir_long_only'), 'short' => __('labels.dir_short_only')] as $val => $label)
                             <button class="{{ $direction === $val ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300' }} h-9 rounded-lg border text-xs font-semibold transition-colors"
                                     type="button"
                                     wire:click="$set('direction', '{{ $val }}')">
@@ -96,14 +96,14 @@
                 {{-- ── Separador Setup ───────────────────── --}}
                 <div class="flex items-center gap-3 pt-1">
                     <div class="h-px flex-1 bg-gray-100"></div>
-                    <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">Setup</span>
+                    <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">{{ __('labels.setup') }}</span>
                     <div class="h-px flex-1 bg-gray-100"></div>
                 </div>
 
                 {{-- ── Descripción ───────────────────────── --}}
                 <div>
                     <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Descripción <span class="font-normal normal-case text-gray-400">(opcional)</span>
+                        {{ __('labels.description') }} <span class="font-normal normal-case text-gray-400">({{ __('labels.optional') }})</span>
                     </label>
                     <textarea class="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                               wire:model="description"
@@ -113,7 +113,7 @@
 
                 {{-- ── Reglas ────────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">Reglas del setup</label>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.setup_rules_section') }}</label>
                     @if (count($rules))
                         <ul class="mb-2 space-y-1">
                             @foreach ($rules as $i => $rule)
@@ -157,12 +157,12 @@
                 <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
                         type="button"
                         @click="closeModal()">
-                    Cancelar
+                    {{ __('labels.cancel') }}
                 </button>
                 <button class="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
                         type="submit">
-                    <span x-show="!isEditing">Crear estrategia</span>
-                    <span x-show="isEditing">Guardar cambios</span>
+                    <span x-show="!isEditing">{{ __('labels.create_strategy') }}</span>
+                    <span x-show="isEditing">{{ __('labels.save_changes') }}</span>
                 </button>
             </div>
 

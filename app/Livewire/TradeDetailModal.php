@@ -245,7 +245,14 @@ class TradeDetailModal extends Component
                 }
             }
 
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+            $response = Http::withoutVerifying()
+                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
+                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                        return in_array($exception->response->status(), [429, 503]);
+                    }
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+                }, throw: false)
+                ->withHeaders(['Content-Type' => 'application/json'])
                 ->post(
                     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='
                         . config('services.gemini.key'),
