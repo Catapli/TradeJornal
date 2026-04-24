@@ -230,42 +230,32 @@ class TradeDetailModal extends Component
                 __('ai.labels.future')     . ": {$futureAnalysis}",
             ]);
 
-            $parts = [['text' => __('ai.audit_prompt', ['context' => $contextoDatos])]];
+            $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
 
-            // Adjuntar imagen con mime real del disco
-            if ($trade->screenshot) {
-                $imageContent = $this->storage->getContents($trade->screenshot);
-                if ($imageContent) {
-                    $parts[] = [
-                        'inline_data' => [
-                            'mime_type' => $this->storage->getMimeType($trade->screenshot),
-                            'data'      => base64_encode($imageContent),
-                        ],
-                    ];
-                }
-            }
-
-            $response = Http::withoutVerifying()
+            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
                 ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
                     if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                         return in_array($exception->response->status(), [429, 503]);
                     }
                     return $exception instanceof \Illuminate\Http\Client\ConnectionException;
                 }, throw: false)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='
-                        . config('services.gemini.key'),
-                    [
-                        'contents'         => [['parts' => $parts]],
-                        'generationConfig' => ['temperature' => 0.4],
-                    ]
-                );
+                ->withHeaders([
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile',
+                    'temperature' => 0.4,
+                    'max_tokens'  => 1024,
+                    'messages'    => [
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
 
             if ($response->successful()) {
-                $analysisText = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+                $analysisText = $response->json()['choices'][0]['message']['content'];
 
-                // Persistir en BD y consumir crédito solo si Gemini respondió OK
+                // Persistir en BD y consumir crédito solo si Groq respondió OK
                 Trade::whereKey($this->selectedTradeId)->update(['ai_analysis' => $analysisText]);
                 $this->consumeAiCredit();
 
@@ -277,7 +267,7 @@ class TradeDetailModal extends Component
                     new \RuntimeException($response->body()),
                     'analyzeIndividualTrade',
                     'TradeDetailModal',
-                    "Gemini {$response->status()} - Trade ID: {$trade->id}"
+                    "Groq {$response->status()} - Trade ID: {$trade->id}"
                 );
                 $this->dispatch('notify', __('labels.error_gemini') . $response->status());
             }

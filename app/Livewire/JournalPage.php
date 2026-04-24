@@ -514,24 +514,30 @@ class JournalPage extends Component
             'trades' => $tradesContext
         ]);
 
-        // 4. Llamada a Gemini
+        // 4. Llamada a Groq
         try {
-            $apiKey = env('GEMINI_API_KEY');
-            $response = Http::withoutVerifying()
+            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
                 ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
                     if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                         return in_array($exception->response->status(), [429, 503]);
                     }
                     return $exception instanceof \Illuminate\Http\Client\ConnectionException;
                 }, throw: false)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => ['temperature' => 0.7] // Un poco más creativo para redactar
+                ->withHeaders([
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile',
+                    'temperature' => 0.7,
+                    'max_tokens'  => 1024,
+                    'messages'    => [
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
                 ]);
 
             if ($response->successful()) {
-                $text = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+                $text = $response->json()['choices'][0]['message']['content'];
 
                 // LIMPIEZA AGRESIVA
                 $text = str_replace(['```html', '```'], '', $text);

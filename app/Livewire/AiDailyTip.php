@@ -94,56 +94,56 @@ class AiDailyTip extends Component
         $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
         try {
-            $apiKey = env('GEMINI_API_KEY');
-
-            $response = Http::withoutVerifying()
+            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
                 ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
                     if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                         return in_array($exception->response->status(), [429, 503]);
                     }
                     return $exception instanceof \Illuminate\Http\Client\ConnectionException;
                 }, throw: false)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [
-                        ['parts' => [['text' => $prompt]]]
-                    ],
-                    'generationConfig' => [
-                        'temperature'     => 0.5,
+                ->withHeaders([
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile', // Gratis, rápido y potente
+                    'temperature' => 0.5,
+                    'max_tokens'  => 350,
+                    'messages'    => [
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                 ]);
 
             if ($response->successful()) {
                 $json         = $response->json();
-                $finishReason = $json['candidates'][0]['finishReason'] ?? 'UNKNOWN';
-                $content      = $json['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                $finishReason = $json['choices'][0]['finish_reason'] ?? 'unknown';
+                $content      = $json['choices'][0]['message']['content'] ?? null;
 
-                if ($finishReason === 'MAX_TOKENS') {
-                    Log::warning('AI Tip cortado por MAX_TOKENS en Gemini.');
-                    $this->tip = __('labels.ai_tip_error');
+                if ($finishReason === 'length') {
+                    Log::warning('AI Tip cortado por max_tokens en Groq.');
+                    $this->tip = '⚠️ La respuesta fue cortada. Reintenta.';
                     $this->isLoading = false;
                     return;
                 }
 
-                if ($finishReason === 'STOP' && $content) {
+                if ($finishReason === 'stop' && $content) {
                     $this->tip = trim($content);
                     $this->consumeAiCredit();
-                    Cache::put($this->getCacheKey(), $this->tip, Carbon::now()->endOfDay());
                 }
             } else {
                 $statusCode = $response->status();
                 $errorMsg   = $response->json()['error']['message'] ?? 'Error desconocido';
 
-                Log::warning("AI Tip Gemini error {$statusCode}: {$errorMsg}");
+                Log::warning("AI Tip Groq error {$statusCode}: {$errorMsg}");
 
                 $this->tip = match ($statusCode) {
                     429     => '⏳ Límite de peticiones alcanzado. Reintenta en unos segundos.',
-                    503     => '🌐 El servicio de IA está saturado. Reintenta más tarde.',
+                    503     => '🌐 El servicio está saturado. Reintenta más tarde.',
                     default => "⚠️ No se pudo generar el tip ({$statusCode}). Reintenta.",
                 };
             }
         } catch (\Throwable $e) {
-            Log::error("Error AI Tip Gemini: " . $e->getMessage());
+            Log::error("Error AI Tip Groq: " . $e->getMessage());
             $this->tip = '⚠️ Error inesperado al conectar con el servicio de IA.';
         }
 

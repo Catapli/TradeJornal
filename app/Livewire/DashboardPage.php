@@ -655,8 +655,7 @@ class DashboardPage extends Component
     {
         try {
             // 1. Validar API Key
-            $apiKey = env('GEMINI_API_KEY');
-            if (empty($apiKey)) {
+            if (empty(env('GROQ_API_KEY'))) {
                 $this->aiAnalysis = __('labels.gemini_api_key_missing');
                 $this->isAnalyzing = false;
                 return;
@@ -704,33 +703,31 @@ class DashboardPage extends Component
 
 
 
-            // 6. Petición a Gemini con timeout de 15 segundos
-            $response = Http::withoutVerifying()
-                ->timeout(15)
+            // 6. Petición a Groq
+            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
                 ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
                     if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                         return in_array($exception->response->status(), [429, 503]);
                     }
                     return $exception instanceof \Illuminate\Http\Client\ConnectionException;
                 }, throw: false)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['text' => $prompt]
-                            ]
-                        ]
-                    ],
-                    'generationConfig' => [
-                        'temperature' => 0.4,
+                ->withHeaders([
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile',
+                    'temperature' => 0.4,
+                    'max_tokens'  => 1024,
+                    'messages'    => [
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                 ]);
 
 
 
             if ($response->successful()) {
-                $this->aiAnalysis = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+                $this->aiAnalysis = $response->json()['choices'][0]['message']['content'];
 
                 // ----------------------------------------------------
                 // 2. CONSUMIR CRÉDITO (NUEVO)
@@ -740,16 +737,16 @@ class DashboardPage extends Component
             } else {
                 // Log del error con el cuerpo completo de la respuesta
                 $this->logError(
-                    new \Exception('Gemini API Error: ' . $response->body()),
+                    new \Exception('Groq API Error: ' . $response->body()),
                     'AnalyzeDayWithAi',
                     'DashboardPage',
-                    'Error en la respuesta de Gemini API'
+                    'Error en la respuesta de Groq API'
                 );
                 $this->aiAnalysis = __("labels.coach_IA_not_available");
             }
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             // Timeout o error de red
-            $this->logError($e, 'AnalyzeDayWithAi', 'DashboardPage', 'Timeout o error de conexión con Gemini');
+            $this->logError($e, 'AnalyzeDayWithAi', 'DashboardPage', 'Timeout o error de conexión con Groq');
             $this->aiAnalysis = __("labels.coach_IA_timeout");
         } catch (\Exception $e) {
             // Cualquier otro error
@@ -1022,8 +1019,7 @@ class DashboardPage extends Component
                 return; // Detener ejecución
             }
 
-            $apiKey = env('GEMINI_API_KEY');
-            if (empty($apiKey)) {
+            if (empty(env('GROQ_API_KEY'))) {
                 $this->dispatch('notify', __('labels.gemini_api_key_missing'));
                 return;
             }
@@ -1044,47 +1040,29 @@ class DashboardPage extends Component
             // 3. Obtener el prompt traducido
             $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
 
-            // 4. Preparar el payload
-            $parts = [
-                ['text' => $prompt]
-            ];
-
-            // 5. Añadir imagen SI EXISTE y es válida
-            if ($trade->screenshot) {
-                $imageContent = $this->storage->getContents($trade->screenshot);
-                if ($imageContent && strlen($imageContent) <= 4 * 1024 * 1024) {
-                    $parts[] = [
-                        'inline_data' => [
-                            'mime_type' => $this->storage->getMimeType($trade->screenshot),
-                            'data'      => base64_encode($imageContent),
-                        ],
-                    ];
-                } elseif ($imageContent) {
-                    $this->dispatch('notify', __('labels.screenshottoolarge'));
-                }
-            }
-
-            // 6. Petición a Gemini con timeout
-            $response = Http::withoutVerifying()
-                ->timeout(20) // Más tiempo porque envía imagen
+            // 4. Petición a Groq
+            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
                 ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
                     if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                         return in_array($exception->response->status(), [429, 503]);
                     }
                     return $exception instanceof \Illuminate\Http\Client\ConnectionException;
                 }, throw: false)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => [
-                        ['parts' => $parts]
-                    ],
-                    'generationConfig' => [
-                        'temperature' => 0.4,
+                ->withHeaders([
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'       => 'llama-3.3-70b-versatile',
+                    'temperature' => 0.4,
+                    'max_tokens'  => 1024,
+                    'messages'    => [
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                 ]);
 
             if ($response->successful()) {
-                $analysisText = $response->json()['candidates'][0]['content']['parts'][0]['text'];
+                $analysisText = $response->json()['choices'][0]['message']['content'];
 
                 // Guardar en BD
                 $trade->update(['ai_analysis' => $analysisText]);
@@ -1099,15 +1077,15 @@ class DashboardPage extends Component
                 $this->selectedTrade->ai_analysis = $analysisText;
             } else {
                 $this->logError(
-                    new \Exception('Gemini API Error: ' . $response->body()),
+                    new \Exception('Groq API Error: ' . $response->body()),
                     'AnalyzeIndividualTrade',
                     'DashboardPage',
-                    'Error en respuesta de Gemini al analizar trade individual'
+                    'Error en respuesta de Groq al analizar trade individual'
                 );
                 $this->dispatch('notify', __('labels.coach_IA_not_available'));
             }
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Timeout o error de conexión con Gemini');
+            $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Timeout o error de conexión con Groq');
             $this->dispatch('notify', __('labels.coach_IA_timeout'));
         } catch (\Exception $e) {
             $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Error general al analizar trade individual');
