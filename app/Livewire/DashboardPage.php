@@ -156,7 +156,7 @@ class DashboardPage extends Component
             $parsedTo   = Carbon::parse($to)->endOfDay();
 
             if ($parsedFrom->gt($parsedTo)) {
-                $this->dispatch('notify', __('labels.invalid_date_range'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.invalid_date_range')]);
                 return;
             }
 
@@ -517,7 +517,7 @@ class DashboardPage extends Component
             } catch (Exception $retryException) {
                 // Si falla incluso con 'all', loguear y mostrar valores vacíos
                 $this->logError($retryException, 'UpdatedSelectedAccountsRetry', 'DashboardPage', 'Error al reintentar con todas las cuentas');
-                $this->dispatch('notify', __('labels.error_loading_accounts'));
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_loading_accounts')]);
             }
         }
     }
@@ -666,7 +666,7 @@ class DashboardPage extends Component
             // ----------------------------------------------------
             if (!$this->checkAiLimit()) {
                 $this->isAnalyzingTrade = false; // Apagar spinner
-                $this->dispatch('notify', __('labels.limit_ai_reached'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.limit_ai_reached')]);
                 return; // Detener ejecución
             }
 
@@ -764,7 +764,7 @@ class DashboardPage extends Component
     {
         try {
             if (!$date || !strtotime($date)) {
-                $this->dispatch('notify', __('labels.invalid_date'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.invalid_date')]);
                 return;
             }
 
@@ -814,7 +814,7 @@ class DashboardPage extends Component
             $this->dayTrades = collect([]);
             $this->journalEntry = null;
             $this->showDayModal = true;
-            $this->dispatch('notify', __('labels.error_loading_day_details'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_loading_day_details')]);
         }
     }
 
@@ -850,7 +850,7 @@ class DashboardPage extends Component
     {
         try {
             if (!is_numeric($tradeId) || $tradeId <= 0) {
-                $this->dispatch('notify', __('labels.invalid_trade_id'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.invalid_trade_id')]);
                 return;
             }
 
@@ -894,7 +894,7 @@ class DashboardPage extends Component
                 ->find($tradeId);
 
             if (!$this->selectedTrade) {
-                $this->dispatch('notify', __('labels.trade_not_found'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.trade_not_found')]);
                 return;
             }
 
@@ -918,7 +918,7 @@ class DashboardPage extends Component
             $this->selectedTrade = null;
             $this->notes = '';
             $this->currentScreenshot = null;
-            $this->dispatch('notify', __('labels.error_loading_trade'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_loading_trade')]);
         }
     }
 
@@ -936,7 +936,7 @@ class DashboardPage extends Component
             ]);
 
             if (!$this->selectedTrade) {
-                $this->dispatch('notify', __('labels.notradeselected'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.notradeselected')]);
                 $this->reset('uploadedScreenshot');
                 return;
             }
@@ -961,10 +961,10 @@ class DashboardPage extends Component
             $this->reset('uploadedScreenshot');
             $this->dispatch('screenshot-updated');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->dispatch('notify', $e->validator->errors()->first());
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => $e->validator->errors()->first()]);
         } catch (\Throwable $e) {
             $this->logError($e, 'UploadScreenshot', 'DashboardPage', "Trade ID: {$this->selectedTrade?->id}");
-            $this->dispatch('notify', __('labels.screenshotuploadfailed'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.screenshotuploadfailed')]);
             $this->reset('uploadedScreenshot');
         }
     }
@@ -975,7 +975,7 @@ class DashboardPage extends Component
     {
         try {
             if (!$this->selectedTrade) {
-                $this->dispatch('notify', __('labels.no_trade_selected'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.no_trade_selected')]);
                 return;
             }
 
@@ -993,7 +993,7 @@ class DashboardPage extends Component
 
         } catch (Exception $e) {
             $this->logError($e, 'SaveNotes', 'DashboardPage', 'Error al guardar notas del trade');
-            $this->dispatch('notify', __('labels.notes_save_failed'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.notes_save_failed')]);
         } finally {
             $this->isSavingNotes = false;
         }
@@ -1006,7 +1006,7 @@ class DashboardPage extends Component
         try {
             // 1. Validaciones previas
             if (!$this->selectedTrade) {
-                $this->dispatch('notify', __('labels.no_trade_selected'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.no_trade_selected')]);
                 return;
             }
 
@@ -1015,12 +1015,12 @@ class DashboardPage extends Component
             // ----------------------------------------------------
             if (!$this->checkAiLimit()) {
                 $this->isAnalyzingTrade = false; // Apagar spinner
-                $this->dispatch('notify', __('labels.limit_ai_reached'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.limit_ai_reached')]);
                 return; // Detener ejecución
             }
 
             if (empty(env('GROQ_API_KEY'))) {
-                $this->dispatch('notify', __('labels.gemini_api_key_missing'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.gemini_api_key_missing')]);
                 return;
             }
 
@@ -1082,14 +1082,14 @@ class DashboardPage extends Component
                     'DashboardPage',
                     'Error en respuesta de Groq al analizar trade individual'
                 );
-                $this->dispatch('notify', __('labels.coach_IA_not_available'));
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_not_available')]);
             }
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Timeout o error de conexión con Groq');
-            $this->dispatch('notify', __('labels.coach_IA_timeout'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_timeout')]);
         } catch (\Exception $e) {
             $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Error general al analizar trade individual');
-            $this->dispatch('notify', __('labels.coach_IA_error'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_error')]);
         } finally {
             $this->isAnalyzingTrade = false;
         }
@@ -1100,7 +1100,7 @@ class DashboardPage extends Component
     {
         try {
             if (!is_numeric($tradeId) || $tradeId <= 0) {
-                $this->dispatch('notify', __('labels.invalid_trade_id'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.invalid_trade_id')]);
                 return;
             }
 
@@ -1114,7 +1114,7 @@ class DashboardPage extends Component
                 ->toArray();
 
             if (!in_array($tradeId, $ids)) {
-                $this->dispatch('notify', __('labels.trade_not_in_list'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.trade_not_in_list')]);
                 return;
             }
 
@@ -1125,7 +1125,7 @@ class DashboardPage extends Component
             );
         } catch (\Exception $e) {
             $this->logError($e, 'OpenTradeFromNotes', 'DashboardPage', "Error al abrir trade desde notas: {$tradeId}");
-            $this->dispatch('notify', __('labels.error_opening_trade'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_opening_trade')]);
         }
     }
 
@@ -1135,7 +1135,7 @@ class DashboardPage extends Component
         try {
             // 1. Validar ID
             if (!is_numeric($tradeId) || $tradeId <= 0) {
-                $this->dispatch('notify', __('labels.invalid_trade_id'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.invalid_trade_id')]);
                 return;
             }
 
@@ -1144,7 +1144,7 @@ class DashboardPage extends Component
 
             // 3. Validar que el trade está en la lista
             if (!in_array($tradeId, $ids)) {
-                $this->dispatch('notify', __('labels.trade_not_in_list'));
+                $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.trade_not_in_list')]);
                 return;
             }
 
@@ -1156,7 +1156,7 @@ class DashboardPage extends Component
             );
         } catch (\Exception $e) {
             $this->logError($e, 'OpenTradeFromTable', 'DashboardPage', "Error al abrir trade desde tabla: {$tradeId}");
-            $this->dispatch('notify', __('labels.error_opening_trade'));
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_opening_trade')]);
         }
     }
 
@@ -1171,7 +1171,7 @@ class DashboardPage extends Component
             $this->loadRecentNotes();
 
             // Opcional: Notificar al usuario (si tienes sistema de toast)
-            // $this->dispatch('notify', __('labels.notes_updated'));
+            // $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.notes_updated')]);
 
         } catch (Exception $e) {
             $this->logError($e, 'RefreshRecentNotes', 'DashboardPage', 'Error al refrescar notas tras actualización');
