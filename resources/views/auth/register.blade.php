@@ -7,7 +7,7 @@
             <div class="mb-8 flex justify-center lg:justify-start">
                 <a href="/">
                     <img class="h-auto max-h-20 w-auto object-contain"
-                         src="{{ asset('img/logo_trader_h.png') }}"
+                         src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
                 </a>
             </div>

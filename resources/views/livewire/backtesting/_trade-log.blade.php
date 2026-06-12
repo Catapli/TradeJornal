@@ -81,8 +81,9 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @foreach ($trades as $trade)
+                    {{-- data-trade alimenta el modal de detalle y su navegación ←/→ (lee filas hermanas del DOM) --}}
                     <tr class="transition-colors hover:cursor-pointer hover:bg-gray-50"
-                        @click.stop="openTradeDetail({{ Js::from([
+                        data-trade="{{ json_encode([
                             'id' => $trade->id,
                             'date' => $trade->trade_date->format('d/m/Y'),
                             'direction' => $trade->direction,
@@ -97,7 +98,8 @@
                             'confluences' => $trade->confluences ?? [],
                             'notes' => $trade->notes,
                             'screenshot' => $trade->screenshot_url,
-                        ]) }})">
+                        ]) }}"
+                        @click.stop="openTradeDetailFromRow($event.currentTarget)">
                         <td class="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
                             {{ $trade->trade_date->format('d/m/Y') }}
                         </td>
@@ -157,4 +159,11 @@
             </tbody>
         </table>
     </div>
+
+    {{-- PAGINACIÓN --}}
+    @if ($trades->hasPages())
+        <div class="mt-4">
+            {{ $trades->links() }}
+        </div>
+    @endif
 @endif

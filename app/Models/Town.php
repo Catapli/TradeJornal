@@ -10,7 +10,9 @@ class Town extends Model
     //
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'town',
+    ];
 
     public function users()
     {

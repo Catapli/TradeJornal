@@ -18,13 +18,6 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap"
               rel="stylesheet" />
 
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-        <link rel="icon"
-              href="{{ asset('img/favicon/logo_only.ico') }}"
-              type="image/x-icon">
-
-
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -33,26 +26,6 @@
     </head>
 
     <livewire:trade-detail-modal />
-
-    <!-- En tu layout, antes de </body> -->
-    <script>
-        // Refresca el token cada 30 minutos (antes del timeout de sesión)
-        setInterval(async () => {
-            const {
-                token
-            } = await fetch('/csrf-refresh').then(r => r.json());
-            // Actualiza el token en Livewire v3
-            if (window.livewireScriptConfig) {
-                window.livewireScriptConfig.csrf = token;
-            }
-            // Actualiza el meta tag si lo usas
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            if (meta) meta.setAttribute('content', token);
-        }, 30 * 60 * 1000);
-    </script>
-
-
-
 
     <body class="overflow-x-hidden font-sans antialiased">
         <livewire:language-manager />
@@ -160,23 +133,9 @@
         @livewireScripts
     </body>
 
+    {{-- Solo datos de Blade hacia JS; la lógica vive en resources/js/core/ --}}
     <script>
         window.translations = @json($translations);
-        document.addEventListener('livewire:init', () => {
-            Livewire.hook('request', ({
-                fail
-            }) => {
-                fail(({
-                    status,
-                    preventDefault
-                }) => {
-                    if (status === 419) {
-                        preventDefault(); // Evita el alert nativo de Livewire
-                        window.location.reload(); // Recarga con token fresco
-                    }
-                });
-            });
-        });
     </script>
 
 </html>

@@ -32,6 +32,21 @@
     </div>
 
 
+    {{-- Loader de navegación listado ↔ detalle (mismo loader que la carga inicial) --}}
+    {{-- !mt-0: anula el margin-top que inyecta el space-y-6 del contenedor
+         (su selector tiene más especificidad que .mt-0 normal) --}}
+    <div class="fixed inset-0 z-[9999] !mt-0 flex items-center justify-center bg-white"
+         wire:loading.flex
+         x-transition:leave="transition ease-in duration-500"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         wire:target="selectStrategy, backToList">
+        <div class="flex flex-col items-center">
+            <x-loader />
+            <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+        </div>
+    </div>
+
     {{-- Modal Confirmar Eliminar Trade --}}
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
          x-show="showDeleteConfirm"
@@ -94,8 +109,9 @@
     </div>
 
 
-    {{-- TOGGLE ARCHIVADAS --}}
-    <div class="mt-8 border-t border-gray-100 pt-6">
+    {{-- TOGGLE ARCHIVADAS (solo tiene sentido en el listado) --}}
+    <div class="mt-8 border-t border-gray-100 pt-6"
+         x-show="!$wire.selectedStrategyId">
         <button class="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gray-600"
                 wire:click="toggleArchived">
             <svg class="h-4 w-4"
@@ -111,7 +127,7 @@
             {{ $showArchived ? __('labels.hide_archived') : __('labels.view_archived_strategies') }}
             @if (!$showArchived)
                 <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
-                    {{ \App\Models\BacktestStrategy::where('user_id', auth()->id())->where('status', 'archived')->count() }}
+                    {{ $archivedCount }}
                 </span>
             @endif
         </button>

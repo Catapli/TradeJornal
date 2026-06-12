@@ -7,7 +7,16 @@ use Illuminate\Support\Facades\DB;
 
 class EconomicEvent extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'date',
+        'time',
+        'currency',
+        'event',
+        'impact',
+        'actual',
+        'previous',
+        'forecast',
+    ];
 
     protected $casts = [
         'date' => 'date',

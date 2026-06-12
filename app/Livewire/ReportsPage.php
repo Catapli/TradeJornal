@@ -121,7 +121,7 @@ class ReportsPage extends Component
                 'tradeAsset',         // Para símbolos (si usas $trade->tradeAsset->symbol)
                 'strategy',           // Para filtros por estrategia (opcional)
             ])
-                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->forUser()
                 ->orderBy('entry_time', 'asc');
 
             // ⚡ OPTIMIZACIÓN 2: SELECT SOLO LOS CAMPOS NECESARIOS

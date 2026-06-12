@@ -1,5 +1,5 @@
 <a href="/">
     <img class="rounded-xl border border-black object-scale-down"
-         src="{{ asset('img/logo_trader_h.png') }}"
+         src="{{ asset('img/logo_trader_h.webp') }}"
          alt="">
 </a>

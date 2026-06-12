@@ -10,8 +10,8 @@ use App\Models\Trade;
 use App\Models\Traffic;
 use App\Services\StorageService;
 use Carbon\Carbon;
+use App\Services\AiService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
@@ -34,7 +34,6 @@ class DashboardPage extends Component
     public $availableAccounts = [];
     // Datos para el gráfico
     public $winRateChartData = [];
-    public $user;
 
     public $avgPnLChartData = []; // Variable para el gráfico
     public $dailyWinLossData = []; // Diario Ganancias Perdidas
@@ -46,7 +45,6 @@ class DashboardPage extends Component
     // PROPIEDADES NUEVAS PARA EL MODAL
     public $showDayModal = false;
     public $selectedDate = null;
-    public $dayTrades = [];
 
     public $evolutionChartData = [];
     public $dailyPnLChartData = [];
@@ -60,7 +58,6 @@ class DashboardPage extends Component
 
     // Propiedades para el Journal
     // PROPIEDADES PÚBLICAS
-    public $journalEntry;
     public $journalContent = '';
     public $journalMood = null;
     public $tags = [];
@@ -73,7 +70,10 @@ class DashboardPage extends Component
     // 1. Añade esto a las propiedades públicas
     public $heatmapData = [];
 
-    public $recentNotes = []; // <--- NUEVA PROPIEDAD
+    // KPIs extra y comparativa (calculados en calculateStats)
+    public $extraKpis = [];
+    public $comparison = null;
+    public $assetBreakdown = [];
 
     // NUEVO: Propiedad para la subida de imagen temporal
     public $uploadedScreenshot;
@@ -82,8 +82,6 @@ class DashboardPage extends Component
     public $currentScreenshot = null;
 
     // 👇 NUEVAS PROPIEDADES PRIVADAS (no se envían al navegador)
-    private $_dayTradesCache = null;
-    private $_cachedDate = null;
     private $_recentTradesCache = null;
 
     // Rango de fechas (solo se aplican juntas)
@@ -111,10 +109,8 @@ class DashboardPage extends Component
     public function mount()
     {
         try {
-            $this->user = Auth::user();
-
             // 👇 SIN CACHÉ - Query directa (versión original)
-            $this->availableAccounts = Account::where('user_id', $this->user->id)
+            $this->availableAccounts = Account::where('user_id', Auth::id())
                 ->where('status', '!=', 'burned')
                 ->get()
                 ->map(function ($acc) {
@@ -143,7 +139,6 @@ class DashboardPage extends Component
             $this->pnlTotal = 0;
             $this->pnlTotal_perc = 0;
             $this->calendarGrid = [];
-            $this->recentNotes = collect([]);
             $this->planStatus = [];
         }
     }
@@ -187,7 +182,11 @@ class DashboardPage extends Component
 
 
 
-    public function getTradesQuery()
+    /**
+     * Query base: filtros de usuario y cuentas, SIN rango de fechas.
+     * La usa también la comparativa con el periodo anterior.
+     */
+    private function getBaseTradesQuery()
     {
         $query = Trade::query();
 
@@ -196,15 +195,13 @@ class DashboardPage extends Component
             $query->whereIn('account_id', $this->selectedAccounts);
         }
 
-        // 2. Filtro de seguridad por usuario Y CONSISTENCIA DE ESTADO
-        $query->whereHas('account', function ($q) {
-            $q->where('user_id', $this->user->id);
+        // 2. Filtro de seguridad por usuario, excluyendo cuentas quemadas (igual que el mount)
+        return $query->forUserActiveAccounts(Auth::id());
+    }
 
-            // 👇 AQUÍ ESTÁ EL FIX:
-            // Debemos excluir las cuentas quemadas igual que hiciste en el mount().
-            // De lo contrario, "ALL" incluye cuentas zombis que no están en el select.
-            $q->where('status', '!=', 'burned');
-        });
+    public function getTradesQuery()
+    {
+        $query = $this->getBaseTradesQuery();
 
         // 👇 Filtro de rango — solo si AMBAS fechas están definidas
         if (!empty($this->dateFrom) && !empty($this->dateTo)) {
@@ -219,64 +216,38 @@ class DashboardPage extends Component
 
     private function calculateStats()
     {
-        // --- 1. WIN RATE ---
+        // --- 1. KPIs CONSOLIDADOS: win rate + PnL total + medias + PF/expectancy en UNA sola query ---
         try {
-            $query = $this->getTradesQuery();
-            $stats = $query->selectRaw('
+            $stats = $this->getTradesQuery()->selectRaw('
             COUNT(*) as total_trades,
-            SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning_trades
+            SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning_trades,
+            COALESCE(SUM(pnl), 0) as total_pnl,
+            COALESCE(SUM(pnl_percentage), 0) as total_pnl_perc,
+            AVG(CASE WHEN pnl > 0 THEN pnl END) as avg_win,
+            AVG(CASE WHEN pnl < 0 THEN pnl END) as avg_loss,
+            COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as gross_profit,
+            COALESCE(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END), 0) as gross_loss,
+            MAX(pnl) as best_trade,
+            MIN(pnl) as worst_trade
         ')->first();
 
-            $total = $stats->total_trades ?? 0;
-            $wins = $stats->winning_trades ?? 0;
+            $total = (int) ($stats->total_trades ?? 0);
+            $wins = (int) ($stats->winning_trades ?? 0);
             $losses = $total - $wins;
             $winRate = $total > 0 ? round(($wins / $total) * 100, 2) : 0;
 
             $this->winRateChartData = [
-                'series' => [(int)$wins, (int)$losses],
+                'series' => [$wins, $losses],
                 'rate' => $winRate,
-                'count_wins' => (int)$wins,
-                'count_losses' => (int)$losses
+                'count_wins' => $wins,
+                'count_losses' => $losses
             ];
-        } catch (Exception $e) {
-            $this->logError($e, 'CalculateWinRate', 'DashboardPage', 'Error al calcular Win Rate');
-            $this->winRateChartData = ['series' => [0, 0], 'rate' => 0, 'count_wins' => 0, 'count_losses' => 0];
-        }
 
+            $this->pnlTotal = $stats->total_pnl;
+            $this->pnlTotal_perc = $stats->total_pnl_perc;
 
-
-        // --- 2. RECENT NOTES ---
-        try {
-            $this->loadRecentNotes();
-        } catch (Exception $e) {
-            $this->logError($e, 'CalculateRecentNotes', 'DashboardPage', 'Error al cargar notas recientes');
-            $this->recentNotes = collect([]);
-        }
-
-        // --- 3. PNL TOTAL ---
-        try {
-            $this->pnlTotal = $query->sum('pnl');
-            $this->pnlTotal_perc = $query->sum('pnl_percentage');
-        } catch (Exception $e) {
-            $this->logError($e, 'CalculatePnLTotal', 'DashboardPage', 'Error al calcular PnL Total');
-            $this->pnlTotal = 0;
-            $this->pnlTotal_perc = 0;
-        }
-
-
-        // ------------------------------------------------------
-        // 3. CÁLCULO DE MEDIAS (AVG WIN vs AVG LOSS)
-        // ------------------------------------------------------
-        // Reutilizamos la query de trades (con los filtros de cuentas aplicados)
-        try {
-            $query = $this->getTradesQuery();
-            $avgs = $query->selectRaw('
-            AVG(CASE WHEN pnl > 0 THEN pnl END) as avg_win,
-            AVG(CASE WHEN pnl < 0 THEN pnl END) as avg_loss
-        ')->first();
-
-            $avgWin = $avgs->avg_win ? round($avgs->avg_win, 2) : 0;
-            $avgLoss = $avgs->avg_loss ? round($avgs->avg_loss, 2) : 0;
+            $avgWin = $stats->avg_win ? round($stats->avg_win, 2) : 0;
+            $avgLoss = $stats->avg_loss ? round($stats->avg_loss, 2) : 0;
             $rrRatio = ($avgLoss != 0) ? abs($avgWin / $avgLoss) : 0;
 
             $this->avgPnLChartData = [
@@ -284,9 +255,47 @@ class DashboardPage extends Component
                 'avg_loss' => $avgLoss,
                 'rr_ratio' => round($rrRatio, 2)
             ];
+
+            // --- KPIs EXTRA: Profit Factor, Expectancy y racha actual ---
+            $grossLossAbs = abs((float) $stats->gross_loss);
+            $profitFactor = $grossLossAbs > 0
+                ? round((float) $stats->gross_profit / $grossLossAbs, 2)
+                : ((float) $stats->gross_profit > 0 ? null : 0); // null = ∞ (sin pérdidas)
+
+            $expectancy = $total > 0
+                ? round((($wins / $total) * $avgWin) + ((($total - $wins) / $total) * $avgLoss), 2)
+                : 0;
+
+            $this->extraKpis = [
+                'profit_factor' => $profitFactor,
+                'expectancy' => $expectancy,
+                'streak' => $this->calculateCurrentStreak(),
+                'best_trade' => $stats->best_trade !== null ? round((float) $stats->best_trade, 2) : null,
+                'worst_trade' => $stats->worst_trade !== null ? round((float) $stats->worst_trade, 2) : null,
+            ];
         } catch (Exception $e) {
-            $this->logError($e, 'CalculateAvgPnL', 'DashboardPage', 'Error al calcular Avg Win/Loss');
+            $this->logError($e, 'CalculateKpis', 'DashboardPage', 'Error al calcular KPIs consolidados');
+            $this->winRateChartData = ['series' => [0, 0], 'rate' => 0, 'count_wins' => 0, 'count_losses' => 0];
+            $this->pnlTotal = 0;
+            $this->pnlTotal_perc = 0;
             $this->avgPnLChartData = ['avg_win' => 0, 'avg_loss' => 0, 'rr_ratio' => 0];
+            $this->extraKpis = ['profit_factor' => 0, 'expectancy' => 0, 'streak' => ['type' => null, 'count' => 0], 'best_trade' => null, 'worst_trade' => null];
+        }
+
+        // --- 2. COMPARATIVA CON EL PERIODO ANTERIOR (solo si hay rango activo) ---
+        try {
+            $this->calculateComparison();
+        } catch (Exception $e) {
+            $this->logError($e, 'CalculateComparison', 'DashboardPage', 'Error al calcular comparativa de periodo');
+            $this->comparison = null;
+        }
+
+        // --- 3. TOP / PEORES ACTIVOS DEL PERIODO ---
+        try {
+            $this->calculateAssetBreakdown();
+        } catch (Exception $e) {
+            $this->logError($e, 'CalculateAssetBreakdown', 'DashboardPage', 'Error al calcular desglose por activo');
+            $this->assetBreakdown = [];
         }
 
         // ------------------------------------------------------
@@ -315,19 +324,14 @@ class DashboardPage extends Component
             $this->dailyWinLossData = ['series' => [0, 0], 'rate' => 0, 'count_wins' => 0, 'count_losses' => 0];
         }
 
-        // 5. CÁLCULO DE EVOLUCIÓN (AREA CHART)
+        // 5+6. EVOLUCIÓN + BARRAS DIARIAS (comparten una sola query agrupada por día en SQL)
         try {
-            $this->calculateEvolution();
+            $dailyPnl = $this->getDailyPnlByExitDate();
+            $this->calculateEvolution($dailyPnl);
+            $this->calculateDailyBars($dailyPnl);
         } catch (Exception $e) {
-            $this->logError($e, 'CalculateEvolution', 'DashboardPage', 'Error al calcular evolución');
+            $this->logError($e, 'CalculateDailyCharts', 'DashboardPage', 'Error al calcular gráficos diarios');
             $this->evolutionChartData = ['categories' => [], 'data' => [], 'is_positive' => true];
-        }
-
-        // --- 6. DAILY PNL BARS ---
-        try {
-            $this->calculateDailyBars();
-        } catch (Exception $e) {
-            $this->logError($e, 'CalculateDailyBars', 'DashboardPage', 'Error al calcular barras diarias');
             $this->dailyPnLChartData = ['categories' => [], 'data' => []];
         }
 
@@ -350,6 +354,177 @@ class DashboardPage extends Component
 
         // 👇 AÑADIR al final
 
+    }
+
+    /**
+     * Racha actual de wins/losses consecutivos (desde el trade más reciente hacia atrás).
+     * Solo mira los últimos 50 trades del filtro activo: suficiente y barato.
+     */
+    private function calculateCurrentStreak(): array
+    {
+        $pnls = $this->getTradesQuery()
+            ->whereNotNull('exit_time')
+            ->orderByDesc('exit_time')
+            ->limit(50)
+            ->pluck('pnl');
+
+        $type = null;
+        $count = 0;
+
+        foreach ($pnls as $pnl) {
+            $sign = $pnl > 0 ? 'win' : ($pnl < 0 ? 'loss' : null);
+            if ($sign === null) break; // break-even corta la racha
+
+            if ($type === null) {
+                $type = $sign;
+                $count = 1;
+            } elseif ($sign === $type) {
+                $count++;
+            } else {
+                break;
+            }
+        }
+
+        return ['type' => $type, 'count' => $count];
+    }
+
+    /**
+     * PnL y win rate del periodo equivalente anterior (misma duración, justo antes).
+     * Solo aplica cuando hay rango de fechas activo.
+     */
+    private function calculateComparison(): void
+    {
+        $this->comparison = null;
+
+        if (empty($this->dateFrom) || empty($this->dateTo)) {
+            return;
+        }
+
+        $from = Carbon::parse($this->dateFrom)->startOfDay();
+        $to = Carbon::parse($this->dateTo)->endOfDay();
+        $days = $from->diffInDays($to) + 1;
+
+        $prevTo = $from->copy()->subDay()->endOfDay();
+        $prevFrom = $prevTo->copy()->subDays($days - 1)->startOfDay();
+
+        $prev = $this->getBaseTradesQuery()
+            ->whereBetween('exit_time', [$prevFrom, $prevTo])
+            ->selectRaw('
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as winning_trades,
+                COALESCE(SUM(pnl), 0) as total_pnl
+            ')->first();
+
+        $prevTotal = (int) ($prev->total_trades ?? 0);
+
+        if ($prevTotal === 0) {
+            return; // sin datos previos no hay comparativa honesta
+        }
+
+        $prevPnl = (float) $prev->total_pnl;
+        $prevWr = round(((int) $prev->winning_trades / $prevTotal) * 100, 2);
+
+        $this->comparison = [
+            'prev_label' => $prevFrom->format('d/m') . ' → ' . $prevTo->format('d/m'),
+            'pnl_prev' => round($prevPnl, 2),
+            'pnl_diff' => round((float) $this->pnlTotal - $prevPnl, 2),
+            'wr_prev' => $prevWr,
+            'wr_diff' => round(($this->winRateChartData['rate'] ?? 0) - $prevWr, 2),
+        ];
+    }
+
+    /**
+     * Mejores y peores símbolos del periodo filtrado, por PnL acumulado.
+     */
+    private function calculateAssetBreakdown(): void
+    {
+        $rows = $this->getTradesQuery()
+            ->join('trade_assets', 'trade_assets.id', '=', 'trades.trade_asset_id')
+            ->selectRaw('trade_assets.name as asset, COUNT(*) as trades_count, COALESCE(SUM(trades.pnl), 0) as total_pnl')
+            ->groupBy('trade_assets.name')
+            ->orderByDesc('total_pnl')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            $this->assetBreakdown = [];
+            return;
+        }
+
+        $this->assetBreakdown = [
+            'top' => $rows->take(3)->map(fn ($r) => [
+                'asset' => $r->asset,
+                'trades' => (int) $r->trades_count,
+                'pnl' => round((float) $r->total_pnl, 2),
+            ])->values()->toArray(),
+            'worst' => $rows->reverse()->take(3)
+                ->filter(fn ($r) => (float) $r->total_pnl < 0)
+                ->map(fn ($r) => [
+                    'asset' => $r->asset,
+                    'trades' => (int) $r->trades_count,
+                    'pnl' => round((float) $r->total_pnl, 2),
+                ])->values()->toArray(),
+        ];
+    }
+
+    /**
+     * Trades del día seleccionado en el modal. Computed: se cachea por request
+     * y NO viaja en el estado Livewire (antes era una colección de modelos
+     * que se rehidrataba con N+1 en cada interacción del modal).
+     */
+    #[Computed]
+    public function dayTrades()
+    {
+        if (!$this->selectedDate) {
+            return collect();
+        }
+
+        return $this->getTradesQuery()
+            ->whereDate('exit_time', $this->selectedDate)
+            ->with([
+                'account:id,name',
+                'tradeAsset:id,name,symbol'
+            ])
+            ->select([
+                'id',
+                'account_id',
+                'trade_asset_id',
+                'exit_time',
+                'entry_price',
+                'exit_price',
+                'direction',
+                'size',
+                'pnl',
+                'mae_price',
+                'mfe_price',
+                'notes',
+                'screenshot',
+                'duration_minutes',
+            ])
+            ->orderBy('exit_time', 'asc')
+            ->get();
+    }
+
+    /**
+     * Últimas 4 notas de trades. Computed por el mismo motivo que dayTrades.
+     */
+    #[Computed]
+    public function recentNotes()
+    {
+        return $this->getTradesQuery()
+            ->whereNotNull('notes')
+            ->where('notes', '!=', '')
+            ->with('tradeAsset:id,name,symbol')
+            ->select([
+                'id',
+                'trade_asset_id',
+                'exit_time',
+                'notes',
+                'direction',
+                'pnl',
+            ])
+            ->orderBy('exit_time', 'desc')
+            ->take(4)
+            ->get();
     }
 
     public function getRecentTradesProperty()
@@ -416,11 +591,14 @@ class DashboardPage extends Component
                 __('labels.friday')
             ];
 
+            // Indexar por día-hora para lookup O(1) en vez de recorrer la colección 120 veces
+            $statsByCell = $rawStats->keyBy(fn ($s) => $s->day_index . '-' . $s->hour);
+
             $chartData = [];
             foreach ($days as $index => $dayName) {
                 $hourlyData = [];
                 for ($h = 0; $h < 24; $h++) {
-                    $stat = $rawStats->where('day_index', $index)->where('hour', $h)->first();
+                    $stat = $statsByCell->get($index . '-' . $h);
                     $hourlyData[] = [
                         'x' => sprintf('%02d:00', $h),
                         'y' => $stat ? round($stat->total_pnl, 2) : 0
@@ -443,31 +621,30 @@ class DashboardPage extends Component
 
 
 
-    private function calculateEvolution()
+    /**
+     * PnL agrupado por día de cierre, calculado en SQL.
+     * Alimenta a la vez el gráfico de evolución y las barras diarias.
+     */
+    private function getDailyPnlByExitDate()
+    {
+        return $this->getTradesQuery()
+            ->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl')
+            ->whereNotNull('exit_time')
+            ->groupByRaw('DATE(exit_time)')
+            ->orderBy('date', 'asc')
+            ->get();
+    }
+
+    private function calculateEvolution($dailyPnl)
     {
         try {
-            $query = $this->getTradesQuery();
-            $trades = $query->select(['exit_time', 'pnl'])
-                ->whereNotNull('exit_time')
-                ->orderBy('exit_time', 'asc')
-                ->get();
-
-            $dailyPnL = $trades->groupBy(function ($trade) {
-                return $trade->exit_time->format('Y-m-d');
-            })->map(function ($dayTrades) {
-                return $dayTrades->sum('pnl');
-            });
-
-            $labels = [];
-            $data = [];
-
-            $labels[] = __('labels.start_without_flag');
-            $data[] = 0;
+            $labels = [__('labels.start_without_flag')];
+            $data = [0];
 
             $runningTotal = 0;
-            foreach ($dailyPnL as $date => $pnl) {
-                $runningTotal += $pnl;
-                $labels[] = $date;
+            foreach ($dailyPnl as $day) {
+                $runningTotal += $day->daily_pnl;
+                $labels[] = $day->date;
                 $data[] = round($runningTotal, 2);
             }
 
@@ -577,7 +754,7 @@ class DashboardPage extends Component
                 ->keyBy('date');
 
             // 3. Journals
-            $journals = JournalEntry::where('user_id', $this->user->id)
+            $journals = JournalEntry::where('user_id', Auth::id())
                 ->whereBetween('date', [$startOfCalendar, $endOfCalendar])
                 ->get()
                 ->keyBy('date');
@@ -620,20 +797,13 @@ class DashboardPage extends Component
 
 
 
-    private function calculateDailyBars()
+    private function calculateDailyBars($dailyPnl)
     {
         try {
-            $query = $this->getTradesQuery();
-            $trades = $query->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl')
-                ->whereNotNull('exit_time')
-                ->groupByRaw('DATE(exit_time)')
-                ->orderBy('date', 'asc')
-                ->get();
-
             $categories = [];
             $data = [];
 
-            foreach ($trades as $day) {
+            foreach ($dailyPnl as $day) {
                 $categories[] = \Carbon\Carbon::parse($day->date)->translatedFormat('d M');
                 $data[] = round($day->daily_pnl, 2);
             }
@@ -651,11 +821,11 @@ class DashboardPage extends Component
 
 
 
-    public function analyzeDayWithAi()
+    public function analyzeDayWithAi(AiService $ai)
     {
         try {
             // 1. Validar API Key
-            if (empty(env('GROQ_API_KEY'))) {
+            if (!$ai->isConfigured()) {
                 $this->aiAnalysis = __('labels.gemini_api_key_missing');
                 $this->isAnalyzing = false;
                 return;
@@ -665,7 +835,7 @@ class DashboardPage extends Component
             // 2. VALIDACIÓN DE LÍMITE (NUEVO)
             // ----------------------------------------------------
             if (!$this->checkAiLimit()) {
-                $this->isAnalyzingTrade = false; // Apagar spinner
+                $this->isAnalyzing = false; // Apagar spinner
                 $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.limit_ai_reached')]);
                 return; // Detener ejecución
             }
@@ -703,51 +873,24 @@ class DashboardPage extends Component
 
 
 
-            // 6. Petición a Groq
-            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
-                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
-                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                        return in_array($exception->response->status(), [429, 503]);
-                    }
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-                }, throw: false)
-                ->withHeaders([
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
-                ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile',
-                    'temperature' => 0.4,
-                    'max_tokens'  => 1024,
-                    'messages'    => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                ]);
+            // 6. Petición a Groq (cacheada por usuario + día; mismos datos no repiten llamada)
+            $result = $ai->complete(
+                $prompt,
+                temperature: 0.4,
+                maxTokens: 1024,
+                cacheKey: 'session:' . Auth::id() . ':' . $this->selectedDate,
+            );
 
+            if ($result->ok) {
+                $this->aiAnalysis = $result->content;
 
-
-            if ($response->successful()) {
-                $this->aiAnalysis = $response->json()['choices'][0]['message']['content'];
-
-                // ----------------------------------------------------
-                // 2. CONSUMIR CRÉDITO (NUEVO)
-                // Solo restamos si la IA respondió bien.
-                // ----------------------------------------------------
-                $this->consumeAiCredit();
+                // Solo restamos crédito si hubo llamada real a la IA
+                if (!$result->fromCache) {
+                    $this->consumeAiCredit();
+                }
             } else {
-                // Log del error con el cuerpo completo de la respuesta
-                $this->logError(
-                    new \Exception('Groq API Error: ' . $response->body()),
-                    'AnalyzeDayWithAi',
-                    'DashboardPage',
-                    'Error en la respuesta de Groq API'
-                );
-                $this->aiAnalysis = __("labels.coach_IA_not_available");
+                $this->aiAnalysis = $result->userMessage();
             }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            // Timeout o error de red
-            $this->logError($e, 'AnalyzeDayWithAi', 'DashboardPage', 'Timeout o error de conexión con Groq');
-            $this->aiAnalysis = __("labels.coach_IA_timeout");
         } catch (\Exception $e) {
             // Cualquier otro error
             $this->logError($e, 'AnalyzeDayWithAi', 'DashboardPage', 'Error general al analizar día con IA');
@@ -768,51 +911,15 @@ class DashboardPage extends Component
                 return;
             }
 
-            $this->selectedDate = $date;
-
-            // 👇 OPTIMIZACIÓN: Solo cargar si cambia la fecha
-            if ($this->_cachedDate !== $date) {
-                $query = $this->getTradesQuery();
-                $this->_dayTradesCache = $query->whereDate('exit_time', $date)
-                    ->with([
-                        'account:id,name',
-                        'tradeAsset:id,name,symbol'
-                    ])
-                    ->select([
-                        'id',
-                        'account_id',
-                        'trade_asset_id',
-                        'exit_time',
-                        'entry_price',
-                        'exit_price',
-                        'direction',
-                        'size',
-                        'pnl',
-                        'mae_price',
-                        'mfe_price',
-                        'notes',
-                        'screenshot',
-                        'duration_minutes',
-                    ])
-                    ->orderBy('exit_time', 'asc')
-                    ->get();
-
-                // Marcar la fecha como cacheada
-                $this->_cachedDate = $date;
+            // El computed dayTrades depende de selectedDate: invalidar al cambiar de día
+            if ($this->selectedDate !== $date) {
+                unset($this->dayTrades);
             }
 
-            // Asignar la cache a la propiedad pública (para que Blade la vea)
-            $this->dayTrades = $this->_dayTradesCache;
-
-            $this->journalEntry = JournalEntry::where('user_id', $this->user->id)
-                ->where('date', $this->selectedDate)
-                ->first();
-
+            $this->selectedDate = $date;
             $this->showDayModal = true;
         } catch (\Exception $e) {
             $this->logError($e, 'OpenDayDetails', 'DashboardPage', "Error al abrir detalles del día: {$date}");
-            $this->dayTrades = collect([]);
-            $this->journalEntry = null;
             $this->showDayModal = true;
             $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_loading_day_details')]);
         }
@@ -823,25 +930,11 @@ class DashboardPage extends Component
 
     public function closeDayModal()
     {
-        try {
-            $this->showDayModal = false;
-            $this->dayTrades = [];
-            $this->selectedTrade = null;
-            $this->aiAnalysis = null;
-
-            // 👇 NUEVO: Limpiar cache privada
-            $this->_dayTradesCache = null;
-            $this->_cachedDate = null;
-        } catch (Exception $e) {
-            $this->logError($e, 'CloseDayModal', 'DashboardPage', 'Error al cerrar modal de día');
-            $this->showDayModal = false;
-            $this->dayTrades = [];
-            $this->selectedTrade = null;
-
-            // Limpiar cache también en caso de error
-            $this->_dayTradesCache = null;
-            $this->_cachedDate = null;
-        }
+        $this->showDayModal = false;
+        $this->selectedDate = null;
+        $this->selectedTrade = null;
+        $this->aiAnalysis = null;
+        unset($this->dayTrades);
     }
 
 
@@ -859,9 +952,7 @@ class DashboardPage extends Component
 
             // 👇 OPTIMIZACIÓN: Eager Loading selectivo + SELECT específico
             $this->selectedTrade = Trade::query()
-                ->whereHas('account', function ($q) {
-                    $q->where('user_id', $this->user->id);
-                })
+                ->forUser(Auth::id())
                 // Solo cargar relaciones esenciales
                 ->with([
                     'tradeAsset:id,name,symbol',
@@ -949,7 +1040,7 @@ class DashboardPage extends Component
             // Guardar en R2 con path estandarizado
             $ext  = $this->uploadedScreenshot->getClientOriginalExtension() ?: 'png';
             $path = $this->storage->tradeScreenshotPath(
-                $this->user->id,
+                Auth::id(),
                 $this->selectedTrade->ticket,
                 $ext
             );
@@ -986,11 +1077,8 @@ class DashboardPage extends Component
             ]);
 
             // Despachar evento para actualizar dashboard si es necesario
+            // (el feedback visual lo da wire:loading, sin dormir el servidor)
             $this->dispatch('trade-updated');
-
-            // Feedback visual breve
-            usleep(200000); // 0.2 segundos
-
         } catch (Exception $e) {
             $this->logError($e, 'SaveNotes', 'DashboardPage', 'Error al guardar notas del trade');
             $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.notes_save_failed')]);
@@ -1001,7 +1089,7 @@ class DashboardPage extends Component
 
 
 
-    public function analyzeIndividualTrade()
+    public function analyzeIndividualTrade(AiService $ai)
     {
         try {
             // 1. Validaciones previas
@@ -1019,7 +1107,7 @@ class DashboardPage extends Component
                 return; // Detener ejecución
             }
 
-            if (empty(env('GROQ_API_KEY'))) {
+            if (!$ai->isConfigured()) {
                 $this->dispatch('show-alert', ['type' => 'warn', 'message' => __('labels.gemini_api_key_missing')]);
                 return;
             }
@@ -1040,53 +1128,28 @@ class DashboardPage extends Component
             // 3. Obtener el prompt traducido
             $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
 
-            // 4. Petición a Groq
-            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
-                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
-                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                        return in_array($exception->response->status(), [429, 503]);
-                    }
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-                }, throw: false)
-                ->withHeaders([
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
-                ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile',
-                    'temperature' => 0.4,
-                    'max_tokens'  => 1024,
-                    'messages'    => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                ]);
+            // 4. Petición a Groq (cacheada por trade; mismos datos no repiten llamada)
+            $result = $ai->complete(
+                $prompt,
+                temperature: 0.4,
+                maxTokens: 1024,
+                cacheKey: 'audit:' . $trade->id,
+            );
 
-            if ($response->successful()) {
-                $analysisText = $response->json()['choices'][0]['message']['content'];
-
+            if ($result->ok) {
                 // Guardar en BD
-                $trade->update(['ai_analysis' => $analysisText]);
+                $trade->update(['ai_analysis' => $result->content]);
 
-                // ----------------------------------------------------
-                // 2. CONSUMIR CRÉDITO (NUEVO)
-                // Solo restamos si la IA respondió bien.
-                // ----------------------------------------------------
-                $this->consumeAiCredit();
+                // Solo restamos crédito si hubo llamada real a la IA
+                if (!$result->fromCache) {
+                    $this->consumeAiCredit();
+                }
 
                 // Actualizar la propiedad local
-                $this->selectedTrade->ai_analysis = $analysisText;
+                $this->selectedTrade->ai_analysis = $result->content;
             } else {
-                $this->logError(
-                    new \Exception('Groq API Error: ' . $response->body()),
-                    'AnalyzeIndividualTrade',
-                    'DashboardPage',
-                    'Error en respuesta de Groq al analizar trade individual'
-                );
-                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_not_available')]);
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => $result->userMessage()]);
             }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Timeout o error de conexión con Groq');
-            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_timeout')]);
         } catch (\Exception $e) {
             $this->logError($e, 'AnalyzeIndividualTrade', 'DashboardPage', 'Error general al analizar trade individual');
             $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.coach_IA_error')]);
@@ -1165,41 +1228,8 @@ class DashboardPage extends Component
      */
     public function refreshRecentNotes()
     {
-        try {
-
-            // Recargar solo las notas recientes
-            $this->loadRecentNotes();
-
-            // Opcional: Notificar al usuario (si tienes sistema de toast)
-            // $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.notes_updated')]);
-
-        } catch (Exception $e) {
-            $this->logError($e, 'RefreshRecentNotes', 'DashboardPage', 'Error al refrescar notas tras actualización');
-        }
-    }
-
-    private function loadRecentNotes()
-    {
-        try {
-            $this->recentNotes = $this->getTradesQuery()
-                ->whereNotNull('notes')
-                ->where('notes', '!=', '')
-                ->with('tradeAsset:id,name,symbol')
-                ->select([
-                    'id',
-                    'trade_asset_id',
-                    'exit_time',
-                    'notes',
-                    'direction',
-                    'pnl',
-                ])
-                ->orderBy('exit_time', 'desc')
-                ->take(4)
-                ->get();
-        } catch (\Exception $e) {
-            $this->logError($e, 'LoadRecentNotes', 'DashboardPage', 'Error al cargar notas recientes');
-            $this->recentNotes = collect([]);
-        }
+        // Invalida el computed: la próxima lectura recarga las notas
+        unset($this->recentNotes);
     }
 
     public function render()

@@ -5,10 +5,10 @@ namespace App\Livewire;
 use App\LogActions;
 use App\WithAiLimits;
 use App\Models\Trade;
+use App\Services\AiService;
 use App\Services\StorageService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
@@ -58,7 +58,7 @@ class TradeDetailModal extends Component
         if (!$this->selectedTradeId) return null;
 
         return Trade::with(['account', 'tradeAsset', 'mistakes'])
-            ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            ->forUser()
             ->find($this->selectedTradeId);
     }
 
@@ -205,7 +205,7 @@ class TradeDetailModal extends Component
      * Mejora 7: mime_content_type() para la imagen ya almacenada en disco.
      * Mejora 12: accede al computed $this->trade; invalida cache post-update.
      */
-    public function analyzeIndividualTrade(): void
+    public function analyzeIndividualTrade(AiService $ai): void
     {
         if (!$this->selectedTradeId) return;
         if (!$this->checkAiLimit()) return;
@@ -232,44 +232,27 @@ class TradeDetailModal extends Component
 
             $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
 
-            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
-                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
-                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                        return in_array($exception->response->status(), [429, 503]);
-                    }
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-                }, throw: false)
-                ->withHeaders([
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
-                ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile',
-                    'temperature' => 0.4,
-                    'max_tokens'  => 1024,
-                    'messages'    => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                ]);
+            // Cacheada por trade: mismos datos no repiten llamada ni consumen crédito
+            $result = $ai->complete(
+                $prompt,
+                temperature: 0.4,
+                maxTokens: 1024,
+                cacheKey: 'audit:' . $trade->id,
+            );
 
-            if ($response->successful()) {
-                $analysisText = $response->json()['choices'][0]['message']['content'];
-
+            if ($result->ok) {
                 // Persistir en BD y consumir crédito solo si Groq respondió OK
-                Trade::whereKey($this->selectedTradeId)->update(['ai_analysis' => $analysisText]);
-                $this->consumeAiCredit();
+                Trade::whereKey($this->selectedTradeId)->update(['ai_analysis' => $result->content]);
+
+                if (!$result->fromCache) {
+                    $this->consumeAiCredit();
+                }
 
                 // Doble invalidación: trade (para mostrar ai_analysis) y aiCreditsLeft (contador)
                 unset($this->trade);
                 unset($this->aiCreditsLeft);
             } else {
-                $this->logError(
-                    new \RuntimeException($response->body()),
-                    'analyzeIndividualTrade',
-                    'TradeDetailModal',
-                    "Groq {$response->status()} - Trade ID: {$trade->id}"
-                );
-                $this->dispatch('notify', __('labels.error_gemini') . $response->status());
+                $this->dispatch('notify', $result->userMessage());
             }
         } catch (\Throwable $e) {
             $this->logError($e, 'analyzeIndividualTrade', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
@@ -362,7 +345,7 @@ class TradeDetailModal extends Component
         // Opción B: Fallback SQL (cubierto por índice compuesto [exit_time, id])
         $currentDate = $trade->exit_time->format('Y-m-d');
 
-        $baseQuery = fn() => Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+        $baseQuery = fn() => Trade::forUser()
             ->whereDate('exit_time', $currentDate)
             ->select('id');
 

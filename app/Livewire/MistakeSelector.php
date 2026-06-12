@@ -37,9 +37,7 @@ class MistakeSelector extends Component
         // ---------------------------------------------------------
         // CASO 1: REVENGE TRADING (La Venganza)
         // ---------------------------------------------------------
-        $prevTrade = Trade::whereHas('account', function ($q) {
-            $q->where('user_id', Auth::id());
-        })
+        $prevTrade = Trade::forUser()
             ->where('exit_time', '<', $this->trade->entry_time)
             ->orderBy('exit_time', 'desc')
             ->first();
@@ -69,9 +67,7 @@ class MistakeSelector extends Component
 
         // Contamos cuántos trades hubo ese mismo día que cerraron ANTES o AL MISMO TIEMPO que este.
         // Esto nos da su "número de ticket" en la cola del día.
-        $dailyOrder = Trade::whereHas('account', function ($q) {
-            $q->where('user_id', Auth::id());
-        })
+        $dailyOrder = Trade::forUser()
             ->whereDate('exit_time', $this->trade->exit_time)
             ->where(function ($query) {
                 // Condición A: Hora de salida anterior

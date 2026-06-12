@@ -26,6 +26,8 @@ document.addEventListener("alpine:init", () => {
         // ── Modal detalle trade ────────────────────────────────
         showTradeDetail: false,
         detailTrade: null,
+        detailRow: null, // <tr> de la fila abierta: permite navegar a sus hermanas
+        zoomImage: false,
 
         // ── Modal confirm borrar ───────────────────────────────
         showDeleteConfirm: false,
@@ -161,15 +163,49 @@ document.addEventListener("alpine:init", () => {
         // MODAL DETALLE TRADE
         // ─────────────────────────────────────────────────────
 
+        // Apertura directa con objeto (calendario de Analytics): sin navegación ←/→
         openTradeDetail(trade) {
+            this.detailRow = null;
             this.detailTrade = trade;
             this.showTradeDetail = true;
         },
 
+        openTradeDetailFromRow(row) {
+            if (!row?.dataset?.trade) return;
+            this.detailRow = row;
+            this.detailTrade = JSON.parse(row.dataset.trade);
+            this.showTradeDetail = true;
+        },
+
+        // Navega al trade anterior/siguiente leyendo las filas hermanas del DOM,
+        // así respeta siempre el filtro/orden/página visibles.
+        detailNav(dir) {
+            if (!this.detailRow) return;
+            const target =
+                dir === "next"
+                    ? this.detailRow.nextElementSibling
+                    : this.detailRow.previousElementSibling;
+
+            if (target?.dataset?.trade) {
+                this.detailRow = target;
+                this.detailTrade = JSON.parse(target.dataset.trade);
+            }
+        },
+
+        get hasPrevTrade() {
+            return !!this.detailRow?.previousElementSibling?.dataset?.trade;
+        },
+
+        get hasNextTrade() {
+            return !!this.detailRow?.nextElementSibling?.dataset?.trade;
+        },
+
         closeTradeDetail() {
             this.showTradeDetail = false;
+            this.zoomImage = false;
             setTimeout(() => {
                 this.detailTrade = null;
+                this.detailRow = null;
             }, 200);
         },
 
@@ -292,11 +328,41 @@ document.addEventListener("alpine:init", () => {
                 this.filterOutcome = "";
                 this.filterSession = "";
                 this.activeTab = "log";
+                window.__btMetrics = null; // evita hidratar el calendario con la estrategia anterior
             });
 
             window.addEventListener("analytics-ready", (e) => {
+                // Stash para componentes que se renderizan después del evento
+                // (calendario de analytics lee window.__btMetrics en su init)
+                window.__btMetrics = e.detail.metrics;
                 this.$nextTick(() => {
                     window.initBacktestCharts(e.detail.metrics, this.$wire);
+                });
+            });
+
+            // Toast visible para los avisos del servidor (límite IA, errores, confirmaciones).
+            // Antes esta página no escuchaba 'notify' y los mensajes se perdían.
+            this.$wire.on("notify", (payload) => {
+                const data = Array.isArray(payload) ? payload[0] : payload;
+                const message =
+                    typeof data === "string" ? data : (data?.message ?? "");
+                if (!message || !window.Swal) return;
+
+                const type = typeof data === "object" ? data?.type : "success";
+                const icon = ["success", "error", "warning", "info"].includes(
+                    type,
+                )
+                    ? type
+                    : "success";
+
+                window.Swal.fire({
+                    toast: true,
+                    position: "top-end",
+                    icon,
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
                 });
             });
         },

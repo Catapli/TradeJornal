@@ -5,16 +5,22 @@ namespace App\Livewire;
 use App\Actions\Backtesting\CalculateStrategyMetrics;
 use App\Models\BacktestStrategy;
 use App\Models\BacktestTrade;
+use App\Services\AiService;
 use App\Services\StorageService;
+use App\WithAiLimits;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 #[Title('Backtesting')]
 class BacktestingPage extends Component
 {
     use WithFileUploads;
+    use WithPagination;
+    use WithAiLimits;
 
     protected StorageService $storage;
 
@@ -64,51 +70,19 @@ class BacktestingPage extends Component
     public bool  $metricsLoaded = false;
 
     // ─────────────────────────────────────────────────────────────
-    // VALIDACIÓN
-    // ─────────────────────────────────────────────────────────────
-
-    protected function rules(): array
-    {
-        return [
-            // Estrategia
-            'name'        => 'required|string|max:100',
-            'symbol'      => 'required|string|max:20',
-            'timeframe'   => 'required|string|max:10',
-            'direction'   => 'required|in:long,short,both',
-            'description' => 'nullable|string|max:500',
-            // Trade
-            'trade_date'     => 'required|date',
-            'direction_t'    => 'required|in:long,short',
-            'entry_price'    => 'required|numeric|min:0',
-            'exit_price'     => 'required|numeric|min:0',
-            'stop_loss'      => 'nullable|numeric|min:0',
-            'session'        => 'nullable|in:london,new_york,asia,other',
-            'setup_rating'   => 'nullable|integer|min:1|max:5',
-            'followed_rules' => 'boolean',
-            'confluences'    => 'nullable|array',
-            'notes'          => 'nullable|string|max:1000',
-            'screenshot'     => 'nullable|image|max:10240',
-        ];
-    }
-
-    // ─────────────────────────────────────────────────────────────
     // RENDER
     // ─────────────────────────────────────────────────────────────
 
     public function render()
     {
-        $strategies = BacktestStrategy::where('user_id', Auth::id())
-            ->where('status', 'active')
-            ->withCount('trades')
-            ->withCount(['trades as winning_trades_count' => fn($q) => $q->where('pnl_r', '>', 0)])
-            ->withSum('trades', 'pnl_r')
-            ->orderByDesc('updated_at')
-            ->get();
-
-        $selectedStrategy = null;
-        $trades           = collect();
+        $strategies         = collect();
+        $archivedStrategies = collect();
+        $archivedCount      = 0;
+        $selectedStrategy   = null;
+        $trades             = collect();
 
         if ($this->selectedStrategyId) {
+            // Vista detalle: el listado está oculto, no hace falta calcularlo
             $selectedStrategy = BacktestStrategy::where('user_id', Auth::id())
                 ->findOrFail($this->selectedStrategyId);
 
@@ -118,25 +92,37 @@ class BacktestingPage extends Component
                 ->when($this->filterOutcome === 'be',   fn($q) => $q->whereBetween('pnl_r', [-0.01, 0.01]))
                 ->when($this->filterSession,            fn($q) => $q->where('session', $this->filterSession))
                 ->orderBy($this->sortBy, $this->sortDir)
-                ->get()
-                ->map(function ($trade) {
+                ->orderBy('id', $this->sortDir)
+                ->paginate(25)
+                ->through(function ($trade) {
                     $trade->screenshot_url = $trade->screenshot
                         ? $this->storage->temporaryUrl($trade->screenshot)
                         : null;
                     return $trade;
                 });
+        } else {
+            $strategies = BacktestStrategy::where('user_id', Auth::id())
+                ->where('status', 'active')
+                ->withCount('trades')
+                ->withCount(['trades as winning_trades_count' => fn($q) => $q->where('pnl_r', '>', 0)])
+                ->withSum('trades', 'pnl_r')
+                ->orderByDesc('updated_at')
+                ->get();
+
+            $archivedCount = BacktestStrategy::where('user_id', Auth::id())
+                ->where('status', 'archived')
+                ->count();
+
+            if ($this->showArchived) {
+                $archivedStrategies = BacktestStrategy::where('user_id', Auth::id())
+                    ->where('status', 'archived')
+                    ->withCount('trades')
+                    ->orderByDesc('updated_at')
+                    ->get();
+            }
         }
 
-        $archivedStrategies = $this->showArchived
-            ? BacktestStrategy::where('user_id', Auth::id())
-            ->where('status', 'archived')
-            ->withCount('trades')
-            ->orderByDesc('updated_at')
-            ->get()
-            : collect();
-
-
-        return view('livewire.backtesting-page', compact('strategies', 'archivedStrategies', 'selectedStrategy', 'trades'));
+        return view('livewire.backtesting-page', compact('strategies', 'archivedStrategies', 'archivedCount', 'selectedStrategy', 'trades'));
     }
 
 
@@ -183,7 +169,14 @@ class BacktestingPage extends Component
 
     public function save(): void
     {
-        $this->validateOnly('name,symbol,timeframe,direction,description');
+        // Antes: validateOnly('name,symbol,...') — cadena inválida que no validaba nada
+        $this->validate([
+            'name'        => 'required|string|max:100',
+            'symbol'      => 'required|string|max:20',
+            'timeframe'   => 'required|string|max:10',
+            'direction'   => 'required|in:long,short,both',
+            'description' => 'nullable|string|max:500',
+        ]);
 
         $data = [
             'user_id'     => Auth::id(),
@@ -251,8 +244,20 @@ class BacktestingPage extends Component
         $this->selectedStrategyId = $id;
         $this->filterOutcome      = '';
         $this->filterSession      = '';
+        $this->metricsLoaded      = false;
+        $this->resetPage();
         $this->resetTradeForm();
         $this->dispatch('strategy-selected');
+    }
+
+    public function updatedFilterOutcome(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterSession(): void
+    {
+        $this->resetPage();
     }
 
     public function backToList(): void
@@ -374,6 +379,7 @@ class BacktestingPage extends Component
 
         $this->resetTradeForm();
         $this->metricsLoaded = false;
+        Cache::forget($this->metricsCacheKey());
         $this->dispatch('close-trade-panel', saved: true);
     }
 
@@ -390,6 +396,7 @@ class BacktestingPage extends Component
         $trade->delete();
 
         $this->metricsLoaded = false;
+        Cache::forget($this->metricsCacheKey());
         $this->dispatch('notify', type: 'success', message: 'Trade eliminado');
     }
 
@@ -399,6 +406,7 @@ class BacktestingPage extends Component
             ? ($this->sortDir === 'asc' ? 'desc' : 'asc')
             : 'desc';
         $this->sortBy = $column;
+        $this->resetPage();
     }
 
     public function addConfluence(): void
@@ -423,12 +431,102 @@ class BacktestingPage extends Component
     {
         if (!$this->selectedStrategyId) return;
 
+        $full = $this->getFullMetrics();
+
+        // El estado Livewire solo guarda lo que renderiza el blade (KPIs y tablas).
+        // Las series por-trade (trades_list, calendar_data) pesan mucho y viajarían
+        // ida y vuelta en CADA interacción: van una sola vez en el evento y viven en JS.
+        $this->metrics = array_diff_key($full, array_flip(['trades_list', 'calendar_data']));
+        $this->metricsLoaded = true;
+
+        $this->dispatch('analytics-ready', metrics: $full);
+    }
+
+    private function getFullMetrics(): array
+    {
         $strategy = BacktestStrategy::where('user_id', Auth::id())
             ->findOrFail($this->selectedStrategyId);
 
-        $this->metrics = app(CalculateStrategyMetrics::class)->execute($strategy);
-        $this->metricsLoaded = true;
-        $this->dispatch('analytics-ready', metrics: $this->metrics);
+        return Cache::remember(
+            $this->metricsCacheKey(),
+            now()->addMinutes(10),
+            fn () => app(CalculateStrategyMetrics::class)->execute($strategy)
+        );
+    }
+
+    private function metricsCacheKey(): string
+    {
+        return 'bt:metrics:' . $this->selectedStrategyId;
+    }
+
+    /**
+     * Analiza la estrategia con IA a partir de sus métricas.
+     * Cacheado por estrategia (mismos datos no repiten llamada ni consumen crédito).
+     */
+    public function analyzeStrategyWithAi(AiService $ai): void
+    {
+        if (!$this->selectedStrategyId) return;
+
+        if (!$ai->isConfigured()) {
+            $this->dispatch('notify', type: 'error', message: __('labels.gemini_api_key_missing'));
+            return;
+        }
+
+        if (!$this->checkAiLimit()) return;
+
+        $strategy = BacktestStrategy::where('user_id', Auth::id())
+            ->findOrFail($this->selectedStrategyId);
+
+        $metrics = $this->getFullMetrics();
+
+        if (($metrics['total_trades'] ?? 0) < 5) {
+            $this->dispatch('notify', type: 'warning', message: __('labels.need_min_5_trades'));
+            return;
+        }
+
+        $prompt = __('ai.backtest_prompt', ['context' => $this->buildAiContext($strategy, $metrics)]);
+
+        $result = $ai->complete(
+            $prompt,
+            temperature: 0.4,
+            maxTokens: 1024,
+            cacheKey: 'backtest:' . $strategy->id,
+        );
+
+        if ($result->ok) {
+            $strategy->update(['ai_analysis' => $result->content]);
+
+            if (!$result->fromCache) {
+                $this->consumeAiCredit();
+            }
+
+            $this->dispatch('notify', type: 'success', message: 'Análisis generado');
+        } else {
+            $this->dispatch('notify', type: 'error', message: $result->userMessage());
+        }
+    }
+
+    private function buildAiContext(BacktestStrategy $strategy, array $m): string
+    {
+        $dd  = $m['max_drawdown'];
+        $ri  = $m['rules_impact'];
+        $eff = $m['trader_efficiency'];
+
+        $lines = [
+            "Estrategia: {$strategy->name} | {$strategy->symbol} {$strategy->timeframe} | Dirección: {$strategy->direction}",
+            'Reglas del setup: ' . (empty($strategy->rules) ? 'sin definir' : implode(' / ', $strategy->rules)),
+            "Trades: {$m['total_trades']} | Win rate: {$m['win_rate']}% | Profit factor: {$m['profit_factor']}",
+            "Avg win: {$m['avg_win']}R | Avg loss: {$m['avg_loss']}R | Expectancy: {$m['expectancy']}R | PnL total: {$m['total_pnl']}R",
+            "Max drawdown: {$dd['amount']}R ({$dd['percent']}%) | SQN: {$m['sqn']} | Rachas: {$m['max_consecutive_wins']}W / {$m['max_consecutive_losses']}L",
+            'Con reglas seguidas: ' . json_encode($ri['followed']) . ' | Sin seguir reglas: ' . json_encode($ri['not_followed']),
+            'Por sesión (labels/pnl/wr/counts): ' . json_encode($m['pnl_by_session']),
+            'Por día de la semana: ' . json_encode($m['daily_winrate']),
+            'Por calidad de setup (1-5): ' . json_encode($m['rating_impact']),
+            'Top confluencias: ' . json_encode(array_slice($m['confluence_analysis'], 0, 5)),
+            "Disciplina: {$eff['rules_followed_pct']}% reglas seguidas | {$eff['high_quality_pct']}% setups A+",
+        ];
+
+        return implode("\n", $lines);
     }
 
     // ─────────────────────────────────────────────────────────────

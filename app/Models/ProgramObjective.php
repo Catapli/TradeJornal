@@ -11,8 +11,17 @@ class ProgramObjective extends Model
 {
     use HasFactory;
 
-    // Permitimos asignación masiva (útil para los Seeders)
-    protected $guarded = [];
+    protected $fillable = [
+        'program_level_id',
+        'name',
+        'phase_number',
+        'profit_target_percent',
+        'max_daily_loss_percent',
+        'max_total_loss_percent',
+        'min_trading_days',
+        'loss_type',
+        'rules_metadata',
+    ];
 
     // Transformación automática de datos
     protected $casts = [

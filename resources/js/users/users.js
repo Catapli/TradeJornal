@@ -1,3 +1,13 @@
+// jQuery + DataTables solo se usan en esta página: se cargan con import()
+// dinámico al montar el componente, así no pesan en el bundle global.
+async function loadDataTables() {
+    const { default: $ } = await import("jquery");
+    window.$ = window.jQuery = $;
+    await import("datatables.net-dt");
+    await import("datatables.net-dt/css/dataTables.dataTables.min.css");
+    return $;
+}
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("users", () => ({
         showLoading: false,
@@ -9,10 +19,11 @@ document.addEventListener("alpine:init", () => {
         height: "auto",
         isInitialized: false,
         registerSelected: false,
-        init() {
+        async init() {
             if (this.isInitialized) return; // Coomprobar que esta inicializado
             this.isInitialized = true;
             const self = this;
+            const $ = await loadDataTables();
 
             if (!$.fn.DataTable.isDataTable("#table_users")) {
                 self.tableTowns = $("#table_users")

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 class Trade extends Model
 {
@@ -30,6 +31,27 @@ class Trade extends Model
         'executions_data' => 'array',
         'pips_traveled' => 'decimal:2',
     ];
+
+    /**
+     * Trades cuyas cuentas pertenecen al usuario (por defecto, el autenticado).
+     */
+    public function scopeForUser($query, $userId = null)
+    {
+        return $query->whereHas('account', function ($q) use ($userId) {
+            $q->where('user_id', $userId ?? Auth::id());
+        });
+    }
+
+    /**
+     * Igual que forUser, pero excluyendo cuentas quemadas (filtro estándar de los dashboards).
+     */
+    public function scopeForUserActiveAccounts($query, $userId = null)
+    {
+        return $query->whereHas('account', function ($q) use ($userId) {
+            $q->where('user_id', $userId ?? Auth::id())
+                ->where('status', '!=', 'burned');
+        });
+    }
 
     public function account(): BelongsTo
     {

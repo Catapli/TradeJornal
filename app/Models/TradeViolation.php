@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class TradeViolation extends Model
 {
 
-    protected $guarded = [];
+    protected $fillable = [
+        'trade_id',
+        'rule_key',
+        'message',
+    ];
 
     protected $casts = [
         'created_at' => 'datetime',

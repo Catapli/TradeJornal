@@ -107,6 +107,32 @@ REQUIRED RESPONSE FORMAT (Use these icons):
 ",
 
 
+    'backtest_prompt' => "
+        Act as a quantitative trading analyst. Audit this backtesting strategy using its real metrics.
+        Be strict, objective and professional.
+
+        STRATEGY DATA:
+        :context
+
+        ANALYSIS INSTRUCTIONS:
+        1. STATISTICAL EDGE: Do the expectancy and profit factor justify trading it live? Is the sample size sufficient?
+        2. STRENGTHS: Sessions, days, setup quality or confluences where the strategy clearly excels.
+        3. WEAKNESSES: Where it loses money (bad sessions/days/ratings), drawdown, streaks, impact of breaking the rules.
+        4. CONCRETE ACTIONS: Specific filters that would improve the numbers (e.g. 'trade London only', 'discard setups rated < 3').
+
+        FORMAT RULES:
+        - Do NOT write introductions or greetings. Start DIRECTLY with the first point.
+        - ALWAYS reply in English.
+        - Be concrete: quote the numbers from the data when arguing.
+
+        REQUIRED RESPONSE FORMAT (use these icons):
+        - **📊 Edge Verdict:** [Tradeable / Promising but insufficient / No edge] + brief justification.
+        - **✅ Strengths:** 2-3 points with numbers.
+        - **⚠️ Weaknesses:** 2-3 points with numbers.
+        - **🔧 Optimizations:** 2-3 concrete, measurable filters/actions.
+        - **🏆 Strategy Score:** [0/10].
+    ",
+
     // Labels for data fields
     'labels' => [
         'asset' => 'Asset',
@@ -125,5 +151,15 @@ REQUIRED RESPONSE FORMAT (Use these icons):
         'profit' => 'Profit',
         'loss' => 'Loss',
         'ai_draft_header' => '🤖 AI Draft',
-    ]
+    ],
+
+    // AI service error messages
+    'errors' => [
+        'not_configured' => '⚠️ The AI service is not configured.',
+        'rate_limited' => '⏳ Request limit reached. Try again in a few seconds.',
+        'unavailable' => '🌐 The service is overloaded. Try again later.',
+        'truncated' => '⚠️ The response was cut off. Try again.',
+        'connection' => '⚠️ Unexpected error connecting to the AI service.',
+        'generic' => '⚠️ Could not generate the response (:status). Try again.',
+    ],
 ];

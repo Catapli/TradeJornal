@@ -584,9 +584,7 @@ class SessionPage extends Component
 
             // ✅ OPTIMIZADO: Query con whereHas
             $updated = Trade::where('id', $tradeId)
-                ->whereHas('account', function ($query) {
-                    $query->where('user_id', Auth::id());
-                })
+                ->forUser()
                 ->update(['mood' => $mood]);
 
             if (!$updated) {

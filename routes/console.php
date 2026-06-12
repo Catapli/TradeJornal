@@ -8,10 +8,15 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote')->hourly();
 
-// 2. Aquí programamos tu comando de Snapshots para las 00:00
+// Snapshot diario de balance/equity a las 00:00 (DESACTIVADO por ahora).
+// Alimenta today_starting_balance/equity (drawdown diario) y account_daily_metrics (histórico).
+// Para activarlo: descomentar y tener el scheduler corriendo
+// (local: `php artisan schedule:work` | producción: cron cada minuto `php artisan schedule:run`).
 // Schedule::command('accounts:update-snapshots')
 //     ->dailyAt('00:00')
-//     ->timezone('Europe/Madrid'); // <--- 3. OJO CON ESTO (Leer nota abajo)
+//     ->timezone('Europe/Madrid')
+//     ->withoutOverlapping()
+//     ->runInBackground();
 
 // Ejecutar cada 6 horas para actualizar datos "Actual" y nuevas previsiones
 // Schedule::command('calendar:sync --range=week --source=merged')

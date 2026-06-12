@@ -1,12 +1,11 @@
-import "datatables.net-dt";
-import "datatables.net-dt/css/dataTables.dataTables.min.css";
 import "@dmuy/timepicker/dist/mdtimepicker.css";
 import mdtimepicker from "@dmuy/timepicker";
-import Chart from "chart.js/auto";
 import ApexCharts from "apexcharts";
+import Swal from "sweetalert2";
 import { createChart } from "lightweight-charts"; // 1. Importamos librería
-import $ from "jquery";
 import "./bootstrap";
+import "./core/session-guard.js";
+import "./core/trade-toast.js";
 import translations from "./plugins/translations";
 
 import flatpickr from "flatpickr";
@@ -15,9 +14,9 @@ import { Spanish } from "flatpickr/dist/l10n/es.js";
 
 // ============================================================
 // 2. ASIGNAR VARIABLES GLOBALES (ANTES DE CARGAR TUS SCRIPTS)
+// jQuery + DataTables viven ahora en users/users.js (única página que los usa)
 // ============================================================
-window.$ = window.jQuery = $;
-window.Chart = Chart;
+window.Swal = Swal;
 window.ApexCharts = ApexCharts;
 window.createChart = createChart; // <--- ¡AQUÍ LA HACEMOS GLOBAL!
 window.mdtimepicker = mdtimepicker;
@@ -31,6 +30,9 @@ window.flatpickr = flatpickr;
 
 // ============================================================
 // 3. IMPORTAR TUS SCRIPTS (AHORA YA PUEDEN VER LAS GLOBALES)
+// Todos estáticos para garantizar el registro en alpine:init antes de que
+// Livewire arranque Alpine. Lo pesado (jQuery+DataTables) se carga con
+// import() dinámico dentro de users.js solo cuando se monta esa página.
 // ============================================================
 import "./logs/logs.js";
 import "./users/users.js";
@@ -38,7 +40,6 @@ import "./accounts/accounts.js";
 import "./dashboard/dashboard.js";
 import "./journal/journal.js";
 import "./trades/trades.js";
-import "./economic/economic.js";
 import "./playbook/playbook.js";
 import "./session/session.js";
 import "./session_history/session_history.js";

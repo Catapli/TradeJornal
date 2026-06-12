@@ -2,8 +2,8 @@
 
 namespace App;
 
+use App\Models\AiUsage;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
 
 trait WithAiLimits
 {
@@ -13,43 +13,52 @@ trait WithAiLimits
      */
     public function checkAiLimit()
     {
-        $key = 'ai_limit:' . Auth::id();
-        $maxAttempts = 10; // Límite diario
-
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
-            // Formatear mensaje de error
-            $hours = ceil($seconds / 3600);
-
-            $this->dispatch('notify', "⚠️ Has alcanzado tu límite diario de $maxAttempts análisis. Se reinicia en $hours horas.");
-            return false;
+        if ($this->getAiCreditsLeft() > 0) {
+            return true;
         }
 
-        return true;
+        $hours = (int) ceil(now()->diffInMinutes(now()->endOfDay()) / 60);
+        $limit = $this->aiDailyLimit();
+
+        $this->dispatch('notify', "⚠️ Has alcanzado tu límite diario de $limit análisis. Se reinicia en $hours horas.");
+
+        return false;
     }
 
     /**
-     * Consume un crédito. Llamar a esto SOLO si la petición a Gemini fue exitosa.
+     * Consume un crédito. Llamar a esto SOLO si la petición a la IA fue exitosa.
+     * Persistido en BD: sobrevive a limpiezas de caché y permite métricas de uso.
      */
     public function consumeAiCredit()
     {
-        $key = 'ai_limit:' . Auth::id();
+        $usage = AiUsage::firstOrCreate(
+            ['user_id' => Auth::id(), 'date' => today()->toDateString()],
+            ['count' => 0]
+        );
 
-        // Calculamos segundos hasta la medianoche para que se resetee al acabar el día
-        $secondsUntilMidnight = now()->diffInSeconds(now()->endOfDay());
-
-        RateLimiter::hit($key, $secondsUntilMidnight);
+        $usage->increment('count');
     }
 
     /**
-     * (Opcional) Obtener créditos restantes para mostrar en la vista
+     * Créditos restantes del día (para mostrar en la vista).
      */
     public function getAiCreditsLeft()
     {
-        $key = 'ai_limit:' . Auth::id();
-        $maxAttempts = 10;
-        $attempts = RateLimiter::attempts($key);
+        $used = AiUsage::where('user_id', Auth::id())
+            ->where('date', today()->toDateString())
+            ->value('count') ?? 0;
 
-        return max(0, $maxAttempts - $attempts);
+        return max(0, $this->aiDailyLimit() - $used);
+    }
+
+    /**
+     * Límite diario según el plan del usuario (free vs suscripción activa).
+     */
+    private function aiDailyLimit(): int
+    {
+        $user = Auth::user();
+        $isPro = $user && $user->subscribed('default');
+
+        return (int) config($isPro ? 'services.groq.daily_limit_pro' : 'services.groq.daily_limit_free');
     }
 }

@@ -8,7 +8,12 @@ class Mistake extends Model
 {
     //
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'color',
+        'weight',
+    ];
 
     // 👇 ESTE ES EL MÉTODO QUE FALTA 👇
     public function scopeForUser($query, $userId)

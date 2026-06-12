@@ -102,6 +102,32 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
             '🔥 Estás en racha destructiva: apaga el ordenador tras 2 pérdidas o quemarás la cuenta.' (Prioriza conducta)
             '🛑 Tu obsesión por operar la apertura de Nueva York te está costando cara; espera 30 minutos.' (Prioriza horario)
     ",
+    'backtest_prompt' => "
+        Actúa como un analista cuantitativo de trading. Audita esta estrategia de backtesting con sus métricas reales.
+        Sé estricto, objetivo y profesional.
+
+        DATOS DE LA ESTRATEGIA:
+        :context
+
+        INSTRUCCIONES DE ANÁLISIS:
+        1. EDGE ESTADÍSTICO: ¿La expectancy y el profit factor justifican operarla en real? ¿La muestra es suficiente?
+        2. PUNTOS FUERTES: Sesiones, días, calidad de setup o confluencias donde la estrategia destaca claramente.
+        3. PUNTOS DÉBILES: Dónde pierde dinero (sesiones/días/ratings malos), drawdown, rachas, impacto de saltarse las reglas.
+        4. ACCIONES CONCRETAS: Filtros específicos que mejorarían los números (ej: 'opera solo Londres', 'descarta setups de rating < 3').
+
+        REGLAS DE FORMATO:
+        - NO escribas introducciones ni saludos. Empieza DIRECTAMENTE con el primer punto.
+        - Responde SIEMPRE en Español.
+        - Sé concreto: cita los números de los datos al argumentar.
+
+        FORMATO DE RESPUESTA REQUERIDO (usa estos iconos):
+        - **📊 Veredicto del Edge:** [Operable / Prometedora pero insuficiente / Sin edge] + justificación breve.
+        - **✅ Fortalezas:** 2-3 puntos con números.
+        - **⚠️ Debilidades:** 2-3 puntos con números.
+        - **🔧 Optimizaciones:** 2-3 filtros/acciones concretas y medibles.
+        - **🏆 Nota de la Estrategia:** [0/10].
+    ",
+
     // Etiquetas para los datos
     'labels' => [
         'asset' => 'Activo',
@@ -120,5 +146,15 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
         'profit' => 'Beneficio',
         'loss' => 'Pérdida',
         'ai_draft_header' => '🤖 Borrador IA',
-    ]
+    ],
+
+    // Mensajes de error del servicio de IA
+    'errors' => [
+        'not_configured' => '⚠️ El servicio de IA no está configurado.',
+        'rate_limited' => '⏳ Límite de peticiones alcanzado. Reintenta en unos segundos.',
+        'unavailable' => '🌐 El servicio está saturado. Reintenta más tarde.',
+        'truncated' => '⚠️ La respuesta fue cortada. Reintenta.',
+        'connection' => '⚠️ Error inesperado al conectar con el servicio de IA.',
+        'generic' => '⚠️ No se pudo generar la respuesta (:status). Reintenta.',
+    ],
 ];

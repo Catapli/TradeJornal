@@ -37,7 +37,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT')
+        'redirect' => env('GOOGLE_REDIRECT', env('GOOGLE_CALLBACK_REDIRECTS'))
     ],
     'firebase' => [
         'key_path' => public_path(env('FIREBASE_CREDENTIALS'))
@@ -51,8 +51,12 @@ return [
         'base_url' => 'https://www.jblanked.com/news/api',
     ],
 
-    'gemini' => [
-        'key' => env('GEMINI_API_KEY'),
+    'groq' => [
+        'key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'url' => env('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions'),
+        'daily_limit_free' => (int) env('AI_DAILY_LIMIT_FREE', 3),
+        'daily_limit_pro' => (int) env('AI_DAILY_LIMIT_PRO', 15),
     ],
 
     'cloudflare' => [

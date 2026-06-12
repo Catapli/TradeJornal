@@ -120,7 +120,7 @@ class TradesPage extends Component
 
         try {
             $trade = Trade::where('id', $id)
-                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->forUser()
                 ->firstOrFail();
 
             $this->editingTradeId = $trade->id;
@@ -172,8 +172,9 @@ class TradesPage extends Component
                 return $value === '' ? null : $value;
             })->toArray();
 
-            // Calculamos % antes de guardar
-            $account = Account::find($this->form['account_id']);
+            // Calculamos % antes de guardar.
+            // findOrFail scopeado al usuario: impide crear/mover trades a cuentas ajenas.
+            $account = Account::where('user_id', Auth::id())->findOrFail($this->form['account_id']);
             $balance = $account->initial_balance > 0 ? $account->initial_balance : 1;
 
             $data = array_merge($cleanData, ['duration_minutes' => $duration]);
@@ -184,10 +185,7 @@ class TradesPage extends Component
             if ($this->isEditMode) {
                 $trade = Trade::findOrFail($this->editingTradeId);
 
-                // Seguridad adicional: Verificar propiedad
-                if ($trade->account->user_id !== Auth::id()) {
-                    throw new \Exception(__('labels.error_loading_trade') . $this->editingTradeId);
-                }
+                $this->authorize('update', $trade);
 
                 $trade->update($data);
 
@@ -218,7 +216,7 @@ class TradesPage extends Component
     {
         try {
             $trade = Trade::where('id', $id)
-                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->forUser()
                 ->firstOrFail();
 
             $ticket = $trade->ticket;
@@ -259,7 +257,7 @@ class TradesPage extends Component
     private function getTradesQuery()
     {
         return Trade::query()
-            ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            ->forUser()
             ->when(
                 $this->search,
                 fn($q) =>
@@ -334,7 +332,7 @@ class TradesPage extends Component
             if ($this->bulkStrategyId) {
                 // 1. Captura estrategias antiguas ANTES del update (solo las que van a cambiar)
                 $oldStrategyIds = Trade::whereIn('id', $this->selectedTrades)
-                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                    ->forUser()
                     ->where('strategy_id', '!=', $this->bulkStrategyId) // Solo trades que SÍ cambian
                     ->whereNotNull('strategy_id')
                     ->distinct()
@@ -343,7 +341,7 @@ class TradesPage extends Component
 
                 // 2. Update masivo
                 Trade::whereIn('id', $this->selectedTrades)
-                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                    ->forUser()
                     ->update(['strategy_id' => $this->bulkStrategyId]);
 
                 // 3. Estrategias afectadas = antiguas + nueva
@@ -352,7 +350,7 @@ class TradesPage extends Component
 
             if (!empty($this->bulkMistakes)) {
                 $trades = Trade::whereIn('id', $this->selectedTrades)
-                    ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                    ->forUser()
                     ->get();
 
                 foreach ($trades as $trade) {
@@ -396,7 +394,7 @@ class TradesPage extends Component
 
             // Borrado masivo seguro: Verificamos que los IDs pertenezcan a cuentas del usuario
             Trade::whereIn('id', $this->selectedTrades)
-                ->whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+                ->forUser()
                 ->delete();
 
             $this->insertLog('Bulk Delete', self::COMPONENT_FORM, "Eliminados $count trades");

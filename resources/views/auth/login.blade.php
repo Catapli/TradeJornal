@@ -8,7 +8,7 @@
             <div class="mb-8 flex justify-center lg:justify-start">
                 <a href="/">
                     <img class="h-auto max-h-20 w-auto object-contain"
-                         src="{{ asset('img/logo_trader_h.png') }}"
+                         src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
                 </a>
             </div>
@@ -148,7 +148,7 @@
 
             <div class="absolute bottom-0 left-0 p-20 text-white">
                 <img class="h-52 w-auto brightness-0 invert"
-                     src="{{ asset('img/logo_o.png') }}"
+                     src="{{ asset('img/logo_o.webp') }}"
                      alt="">
                 <h2 class="text-4xl font-bold leading-tight">Domina tu psicología,<br>maximiza tu rendimiento.</h2>
                 <p class="mt-4 text-lg text-gray-300">La herramienta definitiva para traders que buscan consistencia matemática.</p>

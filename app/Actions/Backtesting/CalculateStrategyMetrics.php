@@ -24,6 +24,10 @@ class CalculateStrategyMetrics
         $winners = $trades->filter(fn($t) => (float) $t->pnl_r > 0);
         $losers  = $trades->filter(fn($t) => (float) $t->pnl_r < 0);
 
+        // Calculados una sola vez: se reutilizan en varias claves de la respuesta
+        $bySession = $this->pnlBySession($trades);
+        $byWeekday = $this->dailyWinrate($trades);
+
         return [
             // ── KPIs ──────────────────────────────────────────────
             'total_trades'           => $trades->count(),
@@ -46,14 +50,14 @@ class CalculateStrategyMetrics
             // ── Series para gráficos ───────────────────────────────
             'equity_curve'           => $this->equityCurve($trades),
             'r_distribution'         => $this->rDistribution($trades),
-            'pnl_by_session'         => $this->pnlBySession($trades),
-            'winrate_by_session'     => $this->pnlBySession($trades),
-            'pnl_by_weekday'         => $this->dailyWinrate($trades),
+            'pnl_by_session'         => $bySession,
+            'winrate_by_session'     => $bySession,
+            'pnl_by_weekday'         => $byWeekday,
             'rules_impact'           => $this->rulesImpact($trades),
             'rating_impact'          => $this->ratingImpact($trades),
             'rolling_winrate'        => $this->rollingWinrate($trades, 10),
             'calendar_data'          => $this->calendarData($trades),
-            'daily_winrate'          => $this->dailyWinrate($trades),
+            'daily_winrate'          => $byWeekday,
             'trader_efficiency'      => $this->traderEfficiency($trades),
             'confluence_analysis' => $this->confluenceAnalysis($trades),
             'trades_list' => $trades->map(fn($t) => [

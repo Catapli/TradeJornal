@@ -56,6 +56,52 @@
         };
     @endphp
 
+    {{-- ═══ ANÁLISIS IA ═══════════════════════════════════════════ --}}
+    <div class="mb-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-white p-4">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-lg">
+                    🤖
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-gray-900">{{ __('labels.bt_ai_title') }}</p>
+                    <p class="text-xs text-gray-500">{{ __('labels.bt_ai_subtitle') }}</p>
+                </div>
+            </div>
+            <button class="flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-60"
+                    type="button"
+                    wire:click="analyzeStrategyWithAi"
+                    wire:loading.attr="disabled"
+                    wire:target="analyzeStrategyWithAi">
+                <span wire:loading.remove
+                      wire:target="analyzeStrategyWithAi">{{ __('labels.bt_ai_button') }}</span>
+                <span class="flex items-center gap-2"
+                      wire:loading
+                      wire:target="analyzeStrategyWithAi">
+                    <svg class="h-4 w-4 animate-spin"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                        <circle class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"></circle>
+                        <path class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ __('labels.bt_ai_analyzing') }}
+                </span>
+            </button>
+        </div>
+
+        @if ($selectedStrategy->ai_analysis)
+            <div class="prose prose-sm mt-4 max-w-none rounded-lg border border-indigo-100/60 bg-white p-4 text-sm leading-relaxed text-gray-700">{!! \Illuminate\Support\Str::of($selectedStrategy->ai_analysis)->stripTags()->markdown(['html_input' => 'strip']) !!}</div>
+        @endif
+    </div>
+
     {{-- ═══ FILA 1: Estadísticas ══════════════════════════════════ --}}
     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
@@ -228,13 +274,28 @@
     </div>
 
     {{-- ═══ FILA 3: Calendario + Detalle del día ══════════════════ --}}
+    {{-- Los datos por-trade llegan vía el evento 'analytics-ready' (window.__btMetrics),
+         no embebidos en el HTML: así no viajan en cada render de Livewire --}}
     <div class="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white"
          x-data="{
              selectedDate: null,
              selectedDayData: null,
-             calendarData: {{ Js::from($m['calendar_data']) }},
-             trades: {{ Js::from($m['trades_list']) }},
-         
+             calendarData: {},
+             trades: [],
+
+             init() {
+                 this.hydrate(window.__btMetrics)
+                 window.addEventListener('analytics-ready', (e) => this.hydrate(e.detail.metrics))
+             },
+
+             hydrate(metrics) {
+                 if (!metrics) return
+                 this.calendarData = metrics.calendar_data ?? {}
+                 this.trades = metrics.trades_list ?? []
+                 this.selectedDate = null
+                 this.selectedDayData = null
+             },
+
              selectDay(dateKey, dayData) {
                  if (!dayData) return
                  this.selectedDate = dateKey

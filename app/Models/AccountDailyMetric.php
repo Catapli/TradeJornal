@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccountDailyMetric extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'account_id',
+        'date',
+        'balance',
+        'equity',
+    ];
 
     // Castear la fecha para que Carbon funcione directo
     protected $casts = [

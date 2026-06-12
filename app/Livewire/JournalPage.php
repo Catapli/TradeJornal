@@ -6,11 +6,11 @@ use App\LogActions;
 use App\Models\JournalEntry;
 use App\Models\Trade;
 use App\Models\TradingObjective;
+use App\Services\AiService;
 use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -97,7 +97,7 @@ class JournalPage extends Component
             }
 
             // 3. Cargar Trades — MEJORA 18 incluida: eager load tradeAsset
-            $trades = Trade::whereHas('account', fn($q) => $q->where('user_id', Auth::id()))
+            $trades = Trade::forUser()
                 ->whereDate('exit_time', $this->date)
                 ->with(['mistakes', 'tradeAsset'])  // ← tradeAsset añadido (Mejora 18)
                 ->orderBy('exit_time', 'asc')
@@ -514,30 +514,12 @@ class JournalPage extends Component
             'trades' => $tradesContext
         ]);
 
-        // 4. Llamada a Groq
+        // 4. Llamada a Groq (sin caché: el borrador es creativo y se puede regenerar)
         try {
-            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
-                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
-                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                        return in_array($exception->response->status(), [429, 503]);
-                    }
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-                }, throw: false)
-                ->withHeaders([
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
-                ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile',
-                    'temperature' => 0.7,
-                    'max_tokens'  => 1024,
-                    'messages'    => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                ]);
+            $result = app(AiService::class)->complete($prompt, temperature: 0.7, maxTokens: 1024);
 
-            if ($response->successful()) {
-                $text = $response->json()['choices'][0]['message']['content'];
+            if ($result->ok) {
+                $text = $result->content;
 
                 // LIMPIEZA AGRESIVA
                 $text = str_replace(['```html', '```'], '', $text);
@@ -562,9 +544,11 @@ class JournalPage extends Component
                 // ENVÍO SIMPLE:
                 $this->dispatch('editor-content-updated', $this->content);
                 $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.draft_generated_ok')]);
+            } else {
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => $result->userMessage()]);
             }
         } catch (\Exception $e) {
-            $this->logError($e, 'generateAiDraft', 'JournalPage', 'Error llamada a Gemini para borrador IA');
+            $this->logError($e, 'generateAiDraft', 'JournalPage', 'Error llamada a la IA para borrador');
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_conect_IA'));
         }
     }

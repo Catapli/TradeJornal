@@ -5,12 +5,11 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Reactive; // Importante
 use App\Models\Trade;
+use App\Services\AiService;
 use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class AiDailyTip extends Component
 {
@@ -66,15 +65,12 @@ class AiDailyTip extends Component
             return;
         }
 
-        $trades = Trade::select('trades.*')
-            ->join('accounts', 'accounts.id', '=', 'trades.account_id')
-            ->where('accounts.user_id', Auth::id())
-            ->where('accounts.status', '!=', 'burned')
+        $trades = Trade::forUserActiveAccounts()
             ->when(
                 !empty($this->selectedAccounts) && !in_array('all', $this->selectedAccounts),
-                fn($q) => $q->whereIn('trades.account_id', $this->selectedAccounts)
+                fn($q) => $q->whereIn('account_id', $this->selectedAccounts)
             )
-            ->orderBy('trades.exit_time', 'desc')
+            ->orderBy('exit_time', 'desc')
             ->take(20)
             ->with('tradeAsset')
             ->get();
@@ -93,58 +89,15 @@ class AiDailyTip extends Component
 
         $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
-        try {
-            $response = Http::when(app()->isLocal(), fn($http) => $http->withoutVerifying())
-                ->retry(3, 3000, function (\Throwable $exception, \Illuminate\Http\Client\PendingRequest $request) {
-                    if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                        return in_array($exception->response->status(), [429, 503]);
-                    }
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-                }, throw: false)
-                ->withHeaders([
-                    'Content-Type'  => 'application/json',
-                    'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
-                ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model'       => 'llama-3.3-70b-versatile', // Gratis, rápido y potente
-                    'temperature' => 0.5,
-                    'max_tokens'  => 350,
-                    'messages'    => [
-                        ['role' => 'user', 'content' => $prompt],
-                    ],
-                ]);
+        $result = app(AiService::class)->complete($prompt, temperature: 0.5, maxTokens: 350);
 
-            if ($response->successful()) {
-                $json         = $response->json();
-                $finishReason = $json['choices'][0]['finish_reason'] ?? 'unknown';
-                $content      = $json['choices'][0]['message']['content'] ?? null;
-
-                if ($finishReason === 'length') {
-                    Log::warning('AI Tip cortado por max_tokens en Groq.');
-                    $this->tip = '⚠️ La respuesta fue cortada. Reintenta.';
-                    $this->isLoading = false;
-                    return;
-                }
-
-                if ($finishReason === 'stop' && $content) {
-                    $this->tip = trim($content);
-                    $this->consumeAiCredit();
-                }
-            } else {
-                $statusCode = $response->status();
-                $errorMsg   = $response->json()['error']['message'] ?? 'Error desconocido';
-
-                Log::warning("AI Tip Groq error {$statusCode}: {$errorMsg}");
-
-                $this->tip = match ($statusCode) {
-                    429     => '⏳ Límite de peticiones alcanzado. Reintenta en unos segundos.',
-                    503     => '🌐 El servicio está saturado. Reintenta más tarde.',
-                    default => "⚠️ No se pudo generar el tip ({$statusCode}). Reintenta.",
-                };
-            }
-        } catch (\Throwable $e) {
-            Log::error("Error AI Tip Groq: " . $e->getMessage());
-            $this->tip = '⚠️ Error inesperado al conectar con el servicio de IA.';
+        if ($result->ok) {
+            $this->tip = $result->content;
+            // Persistir el tip del día para que loadTipFromCache() lo recupere
+            Cache::put($this->getCacheKey(), $this->tip, now()->endOfDay());
+            $this->consumeAiCredit();
+        } else {
+            $this->tip = $result->userMessage();
         }
 
         $this->isLoading = false;

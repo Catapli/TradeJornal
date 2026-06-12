@@ -122,7 +122,7 @@
                                     <div class="max-h-[55vh] flex-grow overflow-x-auto"
                                          wire:loading.remove
                                          wire:target="openDayDetails">
-                                        @if (count($dayTrades) > 0)
+                                        @if (count($this->dayTrades) > 0)
                                             <table class="h-full min-w-full divide-y divide-gray-200">
                                                 <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
                                                     <tr>
@@ -136,8 +136,8 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-200 bg-white">
-                                                    @foreach ($dayTrades as $trade)
-                                                        {{-- @dd($dayTrades) --}}
+                                                    @foreach ($this->dayTrades as $trade)
+                                                        {{-- @dd($this->dayTrades) --}}
                                                         {{-- COPIAR AQUÍ TU TR DENTRO DEL FOREACH EXACTAMENTE COMO LO TENÍAS --}}
                                                         <tr class="group cursor-pointer transition hover:bg-indigo-50"
                                                             @click="currentView = 'detail'; $wire.selectTrade({{ $trade->id }})">
@@ -269,12 +269,12 @@
                                                 </tbody>
                                                 <tfoot class="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 shadow-sm">
                                                     @php
-                                                        $count = $dayTrades->count();
+                                                        $count = $this->dayTrades->count();
                                                         // Lógica de colores para el contador: <3 verde, <6 naranja, >=6 rojo
                                                         $countColor = $count < 3 ? 'text-emerald-600' : ($count < 6 ? 'text-orange-500' : 'text-rose-600');
 
-                                                        $totalPnl = $dayTrades->sum('pnl');
-                                                        $totalPnlPct = $dayTrades->avg('pnl_percentage') ?? 0;
+                                                        $totalPnl = $this->dayTrades->sum('pnl');
+                                                        $totalPnlPct = $this->dayTrades->avg('pnl_percentage') ?? 0;
                                                     @endphp
                                                     <tr>
                                                         {{-- 1. Título de Operaciones (Colspan 3 para ocupar Hour, Symbol, Type) --}}
@@ -922,7 +922,21 @@
                  open() {
                      if (this.fp) this.fp.open();
                  },
-             
+
+                 // Presets rápidos: reutilizan el flujo de flatpickr (setDate dispara onChange → applyDateRange)
+                 preset(key) {
+                     const to = new Date();
+                     let from = new Date();
+
+                     if (key === 'ytd') {
+                         from = new Date(to.getFullYear(), 0, 1);
+                     } else if (key !== 'today') {
+                         from.setDate(to.getDate() - (key - 1));
+                     }
+
+                     if (this.fp) this.fp.setDate([from, to], true);
+                 },
+
                  clear() {
                      if (this.fp) {
                          this.fp.clear();
@@ -939,6 +953,25 @@
                    type="text"
                    readonly
                    tabindex="-1" />
+
+            {{-- Presets de rango rápido --}}
+            <div class="flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-xs font-medium text-gray-600 shadow-sm">
+                <button class="h-full px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        type="button"
+                        @click="preset('today')">{{ __('labels.preset_today') }}</button>
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        type="button"
+                        @click="preset(7)">7D</button>
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        type="button"
+                        @click="preset(30)">30D</button>
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        type="button"
+                        @click="preset(90)">90D</button>
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                        type="button"
+                        @click="preset('ytd')">{{ __('labels.preset_ytd') }}</button>
+            </div>
 
             {{-- Botón trigger --}}
             <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
@@ -971,7 +1004,7 @@
 
     <div class="col-span-12 grid grid-cols-12 gap-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
         {{-- WIDGET: FLASH DE LECCIONES (Notas Recientes) --}}
-        @if ($recentNotes)
+        @if ($this->recentNotes)
             <div class="col-span-9 flex h-full flex-col overflow-hidden">
 
                 {{-- Header --}}
@@ -983,7 +1016,7 @@
                 </div>
                 {{-- Cuerpo: Scroll Horizontal --}}
                 <div class="flex flex-row gap-4 overflow-x-auto"> {{-- pb-6 da espacio para la barra de scroll si aparece --}}
-                    @forelse($recentNotes as $noteTrade)
+                    @forelse($this->recentNotes as $noteTrade)
                         {{-- Tarjeta: Ancho fijo y flex-shrink-0 para que no se aplasten --}}
                         <div class="bg--gray-50 group relative flex min-w-[250px] max-w-[250px] flex-shrink-0 cursor-pointer flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:border-yellow-200 hover:bg-yellow-50 hover:shadow-sm"
                              wire:click="openTradeFromNotes({{ $noteTrade->id }})">
@@ -1153,6 +1186,16 @@
                                   x-text="$store.viewMode.format({{ $pnlTotal }}, {{ $pnlTotal_perc ?? 0 }})"></span>
 
                         </div>
+
+                        {{-- Comparativa vs periodo anterior (solo con rango de fechas activo) --}}
+                        @if ($comparison)
+                            <span class="{{ $comparison['pnl_diff'] >= 0 ? 'text-emerald-600' : 'text-rose-500' }} mt-1 inline-flex items-center gap-1 text-xs font-bold"
+                                  title="{{ __('labels.prev_period') }}: {{ $comparison['prev_label'] }} ({{ number_format($comparison['pnl_prev'], 2) }} $)">
+                                <i class="fa-solid {{ $comparison['pnl_diff'] >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i>
+                                {{ ($comparison['pnl_diff'] >= 0 ? '+' : '') . number_format($comparison['pnl_diff'], 2) }} $
+                                <span class="font-normal text-gray-400">{{ __('labels.vs_prev_period') }}</span>
+                            </span>
+                        @endif
                     </div>
 
 
@@ -1175,6 +1218,17 @@
                              x-text="$wire.winRateChartData?.rate + '%'">
                             0%
                         </div>
+
+                        {{-- Comparativa vs periodo anterior (vía $wire: la tarjeta es wire:ignore) --}}
+                        <span class="mt-1 inline-flex items-center gap-1 text-xs font-bold"
+                              x-show="$wire.comparison"
+                              x-cloak
+                              :class="($wire.comparison?.wr_diff ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'">
+                            <i class="fa-solid"
+                               :class="($wire.comparison?.wr_diff ?? 0) >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'"></i>
+                            <span x-text="(($wire.comparison?.wr_diff ?? 0) >= 0 ? '+' : '') + ($wire.comparison?.wr_diff ?? 0) + ' pts'"></span>
+                            <span class="font-normal text-gray-400">{{ __('labels.vs_prev_period') }}</span>
+                        </span>
                     </div>
 
                     {{-- DERECHA: Gráfico y Pastillas --}}
@@ -1320,7 +1374,91 @@
             </div>
 
 
-            {{-- Aquí irían más tarjetas... --}}
+            {{-- CARD: RENDIMIENTO (Profit Factor + Expectancy + Racha) --}}
+            <div class="content-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <h3 class="mb-3 text-sm font-medium text-gray-500">{{ __('labels.performance') }}</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    {{-- Profit Factor --}}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-400"
+                              title="{{ __('labels.profit_factor_help') }}">{{ __('labels.profit_factor') }}</span>
+                        @php $pf = $extraKpis['profit_factor'] ?? 0; @endphp
+                        <span class="{{ $pf === null || $pf >= 1 ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
+                            {{ $pf === null ? '∞' : number_format($pf, 2) }}
+                        </span>
+                    </div>
+                    {{-- Expectancy --}}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-400"
+                              title="{{ __('labels.expectancy_help') }}">{{ __('labels.expectancy') }}</span>
+                        @php $exp = $extraKpis['expectancy'] ?? 0; @endphp
+                        <span class="{{ $exp >= 0 ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
+                            {{ ($exp >= 0 ? '+' : '') . number_format($exp, 2) }} $
+                        </span>
+                    </div>
+                    {{-- Racha actual --}}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-400">{{ __('labels.current_streak') }}</span>
+                        @php $streak = $extraKpis['streak'] ?? ['type' => null, 'count' => 0]; @endphp
+                        @if ($streak['type'])
+                            <span class="{{ $streak['type'] === 'win' ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
+                                {{ $streak['count'] }}{{ $streak['type'] === 'win' ? 'W' : 'L' }}
+                                <i class="fa-solid {{ $streak['type'] === 'win' ? 'fa-fire' : 'fa-snowflake' }} text-sm"></i>
+                            </span>
+                        @else
+                            <span class="text-xl font-black text-gray-300">—</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- CARD: TOP / PEORES ACTIVOS --}}
+            @if (!empty($assetBreakdown['top']))
+                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:col-span-2 lg:col-span-2">
+                    <div class="grid grid-cols-2 gap-4">
+                        {{-- Top --}}
+                        <div>
+                            <h3 class="mb-2 text-sm font-medium text-gray-500">
+                                <i class="fa-solid fa-trophy mr-1 text-amber-400"></i>{{ __('labels.top_assets') }}
+                            </h3>
+                            <div class="space-y-1.5">
+                                @foreach ($assetBreakdown['top'] as $row)
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="truncate font-medium text-gray-700">{{ $row['asset'] }}
+                                            <span class="text-xs text-gray-400">({{ $row['trades'] }})</span>
+                                        </span>
+                                        <span class="{{ $row['pnl'] >= 0 ? 'text-emerald-600' : 'text-rose-500' }} font-bold tabular-nums">
+                                            {{ ($row['pnl'] >= 0 ? '+' : '') . number_format($row['pnl'], 2) }} $
+                                        </span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        {{-- Peores --}}
+                        <div class="border-l border-gray-100 pl-4">
+                            <h3 class="mb-2 text-sm font-medium text-gray-500">
+                                <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>{{ __('labels.worst_assets') }}
+                            </h3>
+                            @if (!empty($assetBreakdown['worst']))
+                                <div class="space-y-1.5">
+                                    @foreach ($assetBreakdown['worst'] as $row)
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="truncate font-medium text-gray-700">{{ $row['asset'] }}
+                                                <span class="text-xs text-gray-400">({{ $row['trades'] }})</span>
+                                            </span>
+                                            <span class="font-bold tabular-nums text-rose-500">
+                                                {{ number_format($row['pnl'], 2) }} $
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-xs text-gray-400">{{ __('labels.no_losing_assets') }}</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
 
         </div>
 

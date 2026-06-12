@@ -6,7 +6,7 @@
         <a class="block"
            href="{{ route('dashboard') }}">
             <img class="h-10 w-10 brightness-0 invert"
-                 src="{{ asset('img/logo_o.png') }}"
+                 src="{{ asset('img/logo_o.webp') }}"
                  alt="">
         </a>
     </div>
