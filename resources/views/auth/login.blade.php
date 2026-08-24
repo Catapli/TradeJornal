@@ -7,14 +7,15 @@
             <!-- Logo Móvil / Pequeño -->
             <div class="mb-8 flex justify-center lg:justify-start">
                 <a href="/">
-                    {{-- Claro: logo a color. Oscuro: mismo logo en blanco, como el del panel
-                         derecho (brightness-0 invert) — el texto oscuro del original se
-                         pierde contra el fondo dark:bg-gray-900. --}}
+                    {{-- Claro: wordmark a color. Oscuro: el logo-icono en blanco
+                         (brightness-0 invert), igual que el de la columna derecha de
+                         aquí abajo — el wordmark completo invertido salía ilegible a
+                         este tamaño, el icono sí funciona en blanco. --}}
                     <img class="h-auto max-h-20 w-auto object-contain dark:hidden"
                          src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
                     <img class="hidden h-auto max-h-20 w-auto object-contain brightness-0 invert dark:block"
-                         src="{{ asset('img/logo_trader_h.webp') }}"
+                         src="{{ asset('img/logo_o.webp') }}"
                          alt="TradeForge">
                 </a>
             </div>
