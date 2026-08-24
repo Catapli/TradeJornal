@@ -413,8 +413,9 @@ it('mide el drawdown sobre equity sea cual sea el loss_type del programa', funct
     // mide sobre equity. Con `relative` (drawdown trailing sobre el máximo alcanzado)
     // la diferencia es aún mayor y hoy no está implementado.
     //
-    // Si algún día se respeta `loss_type`, este test falla y avisa de que hay que
-    // repasar las tres reglas de arriba.
+    // Decisión de Jordi (2026-08-24): la columna no la lee nadie, así que se deja como
+    // está. Este test no es una tarea pendiente, es el candado: si algún día se respeta
+    // `loss_type`, falla y avisa de que hay que repasar las tres reglas de arriba.
     $account = accountWithObjective(
         ['max_total_loss_percent' => 10, 'loss_type' => 'balance_based'],
         ['current_balance' => 100000, 'current_equity' => 93000],

@@ -291,12 +291,14 @@ fallo señale exactamente qué cálculo se ha roto.
 
 #### Lo que ha salido a la luz al cubrirlo (nada roto, pero anotado)
 
-1. **`loss_type` está en la BD y el código lo ignora.** El enum admite
+1. **`loss_type` está en la BD y el código lo ignora** — **APARCADO por decisión de Jordi
+   (2026-08-24): la columna no la lee nadie, se deja como está.** El enum admite
    `balance_based | equity_based | relative`, todos los seeders lo pueblan a `balance_based`
    y las tres reglas miden **siempre sobre equity**. Para las firmas cuyo drawdown es
    `relative` (trailing sobre el máximo alcanzado) el cálculo directamente no existe.
-   Hay un test que **fija la premisa actual a propósito**: si algún día se respeta
-   `loss_type`, falla y avisa. **Es la deuda más peligrosa que queda del módulo.**
+   Queda un test que **fija la premisa actual a propósito**: si algún día se respeta
+   `loss_type`, falla y avisa de que hay que repasar las tres reglas.
+   Retomarlo solo si se da de alta una prop firm con drawdown trailing.
 2. **`getHardRulesAttribute()` es código muerto y además revienta**: nadie lo usa, y con una
    cuenta sin `currentObjective` lanza fatal al leer `$rules->profit_target_percent` sobre
    null. Borrarlo.
@@ -460,7 +462,7 @@ provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducc
 
 ### 🛡️ Sprint 2.5 — Reglas de prop firm (en curso)
 1. ~~Tests de `ProgramObjective`: daily drawdown, max drawdown, profit target, días mínimos.~~ ✅ §2.2.b
-2. Implementar `loss_type` (`balance_based` / `equity_based` / `relative`) — hoy se ignora. **Prioridad 1.**
+2. ~~Implementar `loss_type`~~ — **aparcado** (24/08). Ver §2.2.b punto 1.
 3. Borrar `getHardRulesAttribute()` y el cast huérfano `max_balance`.
 4. Unificar `entry_time` / `exit_time` en el conteo de días operados.
 5. `TradeObserver`: tests de invalidación de caché.
