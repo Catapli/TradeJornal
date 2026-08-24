@@ -457,6 +457,50 @@ Laravel resuelve las claves en ambos locales, no solo que existan en el fichero.
 **Queda pendiente:** revisar si `lang/en/labels.php` tiene claves con traducciones
 provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducción directa.
 
+### 2.5.e Pantallas de Auth — 4 fallos reales arreglados (2026-08-24)
+
+Encontrados por Jordi al probar el flujo manualmente.
+
+1. [x] **`forgot-password.blade.php` sin traducir** — pasaba texto en inglés literal a
+   `__()` (`'Forgot your password? No problem...'`) sin que existiera esa clave en
+   ningún fichero de idioma, así que salía tal cual sin importar el locale. Traducido al
+   español literal, mismo patrón que usan ya `login.blade.php` / `register.blade.php`
+   (cadenas en español directamente como clave de `__()`, sin pasar por `labels.php`).
+   **Nota:** `reset-password`, `confirm-password`, `two-factor-challenge` y `verify-email`
+   tienen el mismo problema — son los stubs de Jetstream sin tocar, en inglés. No se han
+   tocado porque no se pidieron; quedan aquí anotados para cuando toque.
+2. [x] **Logo ilegible en modo oscuro** en login/register/forgot-password. El logo de marca
+   (`logo_trader_h.webp`, texto en azul marino) se pintaba tal cual sobre el fondo
+   `dark:bg-gray-900`, casi sin contraste — en `authentication-card-logo.blade.php` (usado
+   por 7 vistas) y en el logo pequeño de `login`/`register`. Arreglado con la misma técnica
+   que ya usaba el logo del panel derecho de `login.blade.php` (`brightness-0 invert`): en
+   claro se ve el logo a color, en oscuro el mismo logo pero en blanco.
+3. [x] **Google OAuth: `Error 400: redirect_uri_mismatch`.** Causa de fondo:
+   `SocialiteController` tomaba el `redirect_uri` de `config('services.google.redirect')`,
+   que a su vez viene de `GOOGLE_CALLBACK_REDIRECTS` en `.env` — un valor fijo
+   (`http://localhost:8000/auth/google-callback`) independiente de `APP_URL`
+   (`http://192.168.253.11` en este entorno). Si el proyecto de Google Cloud tiene
+   registrada una URI distinta a la que realmente se envía, Google la rechaza.
+   **Arreglado en código:** `googleLogin()` y `googleAuthentication()` ahora usan
+   `->redirectUrl(route('auth.google-callback'))`, calculado a partir de `APP_URL` — una
+   sola fuente de verdad en vez de dos que podían desincronizarse.
+   **Esto no basta por sí solo.** Sigue pendiente, y es cosa tuya, no de código:
+   - En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → el
+     cliente OAuth de este proyecto → "URIs de redirección autorizados": debe estar dada
+     de alta **exactamente** la URL que resuelva `route('auth.google-callback')` con tu
+     `APP_URL` actual (hoy sería `http://192.168.253.11/auth/google-callback`).
+   - **Aviso:** Google solo permite URIs `http://` sin TLS para `localhost` / `127.0.0.1`.
+     Una IP de LAN como `192.168.253.11` en `http://` puede seguir sin funcionar aunque la
+     des de alta, porque no cumple esa regla. Para desarrollo local con Laragon, lo más
+     fiable es un host virtual tipo `http://tradejornal.test` (o volver a `localhost` con
+     el puerto que uses) y registrar esa URI en Google, en vez de la IP.
+4. [x] **`register.blade.php`: el ojo de "Confirmar Contraseña" no existía.** El campo
+   `password_confirmation` estaba enlazado a la misma variable Alpine `showPassword` del
+   campo de contraseña, pero **no tenía su propio botón de ojo** (ni el `pr-10` para dejarle
+   sitio) — visualmente parecía que no se podía revisar lo escrito ahí. Añadido su propio
+   toggle independiente (`showPasswordConfirmation`), con el mismo icono/posición que el de
+   la contraseña.
+
 ### 2.6 Seguridad / operación
 - [ ] `clockwork` y `laravel-debugbar`: verificar que están desactivados en producción.
 - [ ] Rate limiting en los endpoints de IA (`AiService`) además del límite por usuario de `WithAiLimits`.

@@ -6,7 +6,13 @@
 
             <div class="mb-8 flex justify-center lg:justify-start">
                 <a href="/">
-                    <img class="h-auto max-h-20 w-auto object-contain"
+                    {{-- Claro: logo a color. Oscuro: mismo logo en blanco, como el del panel
+                         derecho (brightness-0 invert) — el texto oscuro del original se
+                         pierde contra el fondo dark:bg-gray-900. --}}
+                    <img class="h-auto max-h-20 w-auto object-contain dark:hidden"
+                         src="{{ asset('img/logo_trader_h.webp') }}"
+                         alt="TradeForge">
+                    <img class="hidden h-auto max-h-20 w-auto object-contain brightness-0 invert dark:block"
                          src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
                 </a>
@@ -23,7 +29,7 @@
                 <form class="space-y-5"
                       method="POST"
                       action="{{ route('register') }}"
-                      x-data="{ showPassword: false }">
+                      x-data="{ showPassword: false, showPasswordConfirmation: false }">
                     @csrf
 
                     <!-- Nombre -->
@@ -83,10 +89,16 @@
                         <div class="relative mt-1">
                             <input id="password_confirmation"
                                    name="password_confirmation"
-                                   class="block w-full rounded-md border-gray-300 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
-                                   :type="showPassword ? 'text' : 'password'"
+                                   class="block w-full rounded-md border-gray-300 py-3 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
+                                   :type="showPasswordConfirmation ? 'text' : 'password'"
                                    required
                                    autocomplete="new-password" />
+                            <button class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-gray-500 dark:hover:text-gray-300"
+                                    type="button"
+                                    @click="showPasswordConfirmation = !showPasswordConfirmation">
+                                <i class="fa-regular"
+                                   :class="showPasswordConfirmation ? 'fa-eye-slash' : 'fa-eye'"></i>
+                            </button>
                         </div>
                     </div>
 
