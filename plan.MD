@@ -1,6 +1,8 @@
 # TradeForge — Plan de Afinado
 
-> Documento vivo. Auditoría realizada el 2026-08-21 sobre `main` (con ~70 ficheros modificados sin commitear).
+> Documento vivo. Auditoría inicial el 2026-08-21 sobre `main`. Última actualización:
+> **2026-08-24** — todo commiteado (`666c37d` + `4e3a2ae`), árbol limpio, suite en verde
+> con 78 tests.
 
 ---
 
@@ -192,7 +194,8 @@ patrón que `drop_trade_violations_table` — con el `down()` completo por si ha
 
 ### 2.2 Testing — ✅ SUITE EN VERDE + PRIMEROS TESTS DE DOMINIO (2026-08-21)
 
-**Antes:** 24 fallaban, 4 pasaban, 4 se saltaban. **Ahora: 53 pasan, 0 fallan, 4 se saltan.**
+**Antes:** 24 fallaban, 4 pasaban, 4 se saltaban. **Ahora: 78 pasan, 0 fallan, 4 se saltan.**
+(53 tras el sprint del 21/08 · +25 de objetivos de prop firm el 24/08, ver §2.2.b.)
 
 #### Cómo se desbloqueó
 `phpunit.xml` tenía comentadas `DB_CONNECTION` y `DB_DATABASE`, así que los tests atacaban
@@ -265,13 +268,59 @@ hay que repasar todas esas consultas, que ahora dan por hecho que todo trade est
 
 #### Siguientes tests (por orden)
 - [x] ~~`GenerateBalanceChartData`~~ — **10 tests**: acumulación de PnL, agrupación por día, ventana de timeframes, aislamiento entre cuentas, longitud de series y caché.
+- [x] ~~Objetivos de prop firm (`ProgramObjective`)~~ — **25 tests**. Ver §2.2.b.
 - [ ] `CalculateStrategyMetrics` (backtesting).
 - [ ] `TradeObserver` — invalidación de caché al crear/editar/borrar trade.
-- [ ] Objetivos de prop firm (`ProgramObjective`) — límites de daily y max drawdown.
 - [ ] Smoke tests Livewire: cada página monta para usuario free y pro.
 - [ ] CI en GitHub Actions con Pint + Pest.
 
+### 2.2.b Objetivos de prop firm — ✅ CUBIERTOS (2026-08-24)
+
+`tests/Feature/Accounts/ObjectivesProgressTest.php` — **25 tests, 69 aserciones** sobre
+`Account::getObjectivesProgressAttribute()`, que es lo que decide si una cuenta va en verde
+o está quemada. Cada test habilita una sola regla (los demás porcentajes a 0) para que el
+fallo señale exactamente qué cálculo se ha roto.
+
+| Regla | Qué se fija |
+|---|---|
+| **Profit target** | Se mide sobre el **balance cerrado**, no sobre equity (el flotante no cuenta) · progreso cortado en 0 si la cuenta va en pérdidas · el corte `>=` es inclusivo |
+| **Max daily loss** | Drawdown = `today_starting_equity − equity actual` · **fallback** sin snapshot = `balance − PnL cerrado hoy`, y los trades de días anteriores quedan fuera · el límite es % del balance **inicial**, no del vivo · nunca negativo en día verde · la pérdida flotante sí cuenta |
+| **Max total loss** | Drawdown = `balance inicial − equity` · la pérdida flotante puede quemar la cuenta con el balance intacto · `current_equity` null (cuenta sin sincronizar aún) cae al balance |
+| **Min trading days** | Umbral del 0,3% del balance inicial · agrupa por fecha, no por trade · un día en rojo no cuenta |
+| **Config / aislamiento** | Sin fase asignada → sin objetivos · solo se evalúan las reglas con porcentaje > 0 · los trades de otra cuenta no contaminan · la divisa se arrastra a cada regla |
+
+#### Lo que ha salido a la luz al cubrirlo (nada roto, pero anotado)
+
+1. **`loss_type` está en la BD y el código lo ignora.** El enum admite
+   `balance_based | equity_based | relative`, todos los seeders lo pueblan a `balance_based`
+   y las tres reglas miden **siempre sobre equity**. Para las firmas cuyo drawdown es
+   `relative` (trailing sobre el máximo alcanzado) el cálculo directamente no existe.
+   Hay un test que **fija la premisa actual a propósito**: si algún día se respeta
+   `loss_type`, falla y avisa. **Es la deuda más peligrosa que queda del módulo.**
+2. **`getHardRulesAttribute()` es código muerto y además revienta**: nadie lo usa, y con una
+   cuenta sin `currentObjective` lanza fatal al leer `$rules->profit_target_percent` sobre
+   null. Borrarlo.
+3. **`Account` castea `max_balance` a `decimal:2` y esa columna no existe** en ninguna
+   migración. Cast huérfano.
+4. **`min_trading_days` agrupa por `entry_time`** mientras el resto del cálculo diario usa
+   `exit_time`: un trade abierto el viernes y cerrado el lunes cuenta como día del viernes.
+5. **El profit target usa un literal traducido como `type`** (`__('labels.profit_target')`)
+   mientras las otras tres usan claves estables (`max_daily_loss`, …). Cualquier `firstWhere`
+   sobre ese campo depende del idioma del usuario.
+6. **`objectives_progress` devuelve `[]` (array) sin objetivo y `Collection` con él.** Hoy
+   sobrevive porque la vista solo hace `@if` y `@foreach`; un `->isEmpty()` reventaría.
+7. Nota de tests: los helpers de Pest son **funciones globales**, así que colisionan entre
+   ficheros (`closedTrade` ya estaba tomado por `GenerateBalanceChartDataTest`). Si crecen,
+   moverlos a un `tests/Helpers.php`.
+
 ### 2.3 Rendimiento
+
+> **Decisión de Jordi (2026-08-24) sobre la caché:** se **mantiene** la que hay y se
+> optimiza si hace falta, pero **no se añaden usos nuevos por ahora**. Los 22 `Cache::`
+> viven en 11 ficheros: `CalculateAccountStatistics`, `GenerateBalanceChartData`, los tres
+> `Actions/Admin/*`, `AccountPage`, `Admin\PropFirmsManager`, `AiDailyTip`,
+> `BacktestingPage`, `AccountObserver` y `AiService`.
+
 - ✅ Ya bien: 22 usos de `Cache::`, 26 `#[Computed]`, invalidación por Observers.
 - [ ] **`DashboardPage.php` (1.270 L)** + `dashboard-page.blade.php` (1.815 L) es el mayor foco de deuda. Extraer a Actions (`Dashboard/GetEquityCurve`, `GetPerformanceByHour`, `GetMistakeBreakdown`) siguiendo el patrón que ya usas en `app/Actions/`.
 - [ ] Auditar N+1: solo 20 `with()` en 24 componentes Livewire. Activar `Model::preventLazyLoading()` en local y arreglar lo que salte.
@@ -377,10 +426,20 @@ provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducc
 - [ ] Política de retención: `app/Models/Log.php` puede crecer sin límite; añadir purga programada.
 
 ### 2.7 DX
-- [ ] Normalización CRLF: `git diff` está lleno de avisos "CRLF will be replaced by LF". Configurar `.gitattributes` y hacer un commit de normalización.
-- [ ] **Commitear el trabajo actual**: 70 ficheros modificados y 12 borrados sin commitear (eliminación de MT5, alerts, TradeViolation). Riesgo de pérdida.
-- [ ] Mensajes de commit descriptivos ("Cambio Dashboard", "V.1" no dicen nada).
-- [ ] Añadir `pint.json` y pasar Pint a todo el proyecto.
+- [x] ~~Normalización CRLF~~ — **HECHO (2026-08-24)**, commit `4e3a2ae`. El índice ya
+      estaba 100% en LF, pero el árbol de trabajo tenía **98 ficheros en CRLF/mixto** y
+      `core.autocrlf=true` los reconvertía: de ahí el aviso en cada `git diff`. Ahora
+      `core.autocrlf=false` + `core.eol=lf` (manda el `eol=lf` de `.gitattributes`), los 98
+      ficheros reescritos desde el índice, y `.gitattributes` declara explícitamente los
+      binarios (`exe/ico/png/webp/ttf`…), los lockfiles como `-diff merge=binary` y
+      `*.bat|cmd|ps1` en CRLF. Coincide con el `end_of_line = lf` de `.editorconfig`.
+- [x] ~~**Commitear el trabajo actual**~~ — los 206 ficheros entraron en `666c37d`.
+- [ ] Mensajes de commit descriptivos: `666c37d "Cambios"` agrupa **206 ficheros
+      (+4.023 / −8.475)** de tres trabajos distintos (tema oscuro, limpieza de código
+      muerto, tests y bugfixes). Decisión de Jordi (24/08): **se deja como está**, no se
+      trocea. A partir de aquí, un commit por tema.
+- [ ] Añadir `pint.json` y pasar Pint a todo el proyecto. (Pint ya está instalado y con la
+      config por defecto pasa limpio sobre los tests nuevos.)
 
 ---
 
@@ -393,11 +452,18 @@ provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducc
 4. Helper `tjTheme` + gráficos ApexCharts + toasts (FASE F) — permite quitar los `!important`.
 5. Panel admin (FASE C).
 
-### ⚡ Sprint 2 — Limpieza y estabilidad
-1. Commitear y normalizar el estado actual del repo.
-2. Borrar código muerto (Town, traffic, economic si se descarta).
-3. Reescribir README + absorber `TODO.md` en este documento.
-4. Arreglar el script `npm test` y escribir los 6 tests de dominio prioritarios.
+### ⚡ Sprint 2 — Limpieza y estabilidad — ✅ COMPLETO
+1. ~~Commitear y normalizar el estado actual del repo.~~ (`666c37d`, `4e3a2ae`)
+2. ~~Borrar código muerto (Town, traffic, economic).~~
+3. ~~Reescribir README + absorber `TODO.md` en este documento.~~
+4. ~~Arreglar el script `npm test` y escribir los tests de dominio prioritarios.~~
+
+### 🛡️ Sprint 2.5 — Reglas de prop firm (en curso)
+1. ~~Tests de `ProgramObjective`: daily drawdown, max drawdown, profit target, días mínimos.~~ ✅ §2.2.b
+2. Implementar `loss_type` (`balance_based` / `equity_based` / `relative`) — hoy se ignora. **Prioridad 1.**
+3. Borrar `getHardRulesAttribute()` y el cast huérfano `max_balance`.
+4. Unificar `entry_time` / `exit_time` en el conteo de días operados.
+5. `TradeObserver`: tests de invalidación de caché.
 
 ### 🚀 Sprint 3 — Rendimiento y refactor
 1. Trocear `DashboardPage` y su Blade.
