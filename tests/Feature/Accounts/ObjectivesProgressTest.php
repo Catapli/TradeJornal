@@ -76,7 +76,10 @@ it('mide el profit target contra el balance inicial y lo marca en curso mientras
 
     $rule = onlyRule($account);
 
-    expect($rule['target_value'])->toBe(8000.0)
+    // `type` es una clave estable, no el literal traducido: `card-objectives`
+    // la usa en un `match` para elegir el icono del trofeo.
+    expect($rule['type'])->toBe('profit_target')
+        ->and($rule['target_value'])->toBe(8000.0)
         ->and($rule['current_value'])->toBe(4000.0)
         ->and($rule['status'])->toBe('ongoing')
         ->and($rule['is_hard_rule'])->toBeFalse();
@@ -343,6 +346,31 @@ it('no cuenta un día cerrado en pérdidas como día operado', function () {
     expect(onlyRule($account)['current_value'])->toBe(0);
 });
 
+it('imputa el día operado a la fecha de cierre, no a la de apertura', function () {
+    // El PnL se realiza al cerrar. Una posición abierta el viernes y cerrada el
+    // lunes es un día operado el lunes: agrupar por `entry_time` mientras se suma
+    // el PnL realizado mezclaba dos criterios distintos.
+    //
+    // Umbral = 300. Los dos trades cierran el mismo día y suman 400, así que por
+    // cierre es 1 día válido; por apertura serían dos días de 200 y ninguno valdría.
+    $account = accountWithObjective(['min_trading_days' => 1]);
+    $abre = now()->subDays(3)->startOfDay()->addHours(22);
+    $cierra = now()->subDays(2)->startOfDay()->addHours(11);
+
+    Trade::factory()->for($account)->create([
+        'pnl' => 200,
+        'entry_time' => $abre,
+        'exit_time' => $cierra,
+        'duration_minutes' => 780,
+    ]);
+    objectiveTrade($account, 200, '-2 days', 10);
+
+    $rule = onlyRule($account);
+
+    expect($rule['current_value'])->toBe(1)
+        ->and($rule['status'])->toBe('passed');
+});
+
 // ---------------------------------------------------------------------------
 // CONFIGURACIÓN Y AISLAMIENTO
 // ---------------------------------------------------------------------------
@@ -351,7 +379,11 @@ it('no devuelve ningún objetivo cuando la cuenta no tiene fase asignada', funct
     $account = accountWithObjective();
     $account->setRelation('currentObjective', null);
 
-    expect($account->objectives_progress)->toBeEmpty();
+    // Colección vacía, no array: la vista puede encadenar métodos de Collection
+    // sin comprobar antes el tipo.
+    expect($account->objectives_progress)
+        ->toBeInstanceOf(Illuminate\Support\Collection::class)
+        ->toBeEmpty();
 });
 
 it('omite las reglas desactivadas y solo evalúa las configuradas', function () {

@@ -17,7 +17,6 @@ class Account extends Model
         'last_sync' => 'datetime',
         'initial_balance' => 'decimal:2',
         'current_balance' => 'decimal:2',
-        'max_balance' => 'decimal:2',
     ];
 
     public function currentObjective()
@@ -78,19 +77,19 @@ class Account extends Model
         return __('labels.without_objective');
     }
 
-    public function getHardRulesAttribute()
-    {
-        $rules = $this->currentObjective;
-        return [
-            'target_amount' => $this->initial_balance * ($rules->profit_target_percent / 100),
-            'daily_loss_limit' => $this->initial_balance * ($rules->max_daily_loss_percent / 100),
-        ];
-    }
-
-    public function getObjectivesProgressAttribute()
+    /**
+     * Progreso de la cuenta contra las reglas de su fase actual.
+     *
+     * Devuelve siempre una colección (vacía si la cuenta no tiene fase), con una
+     * entrada por regla configurada. `type` es una clave estable, no un literal
+     * traducido: `card-objectives.blade.php` la usa para elegir icono y color.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function getObjectivesProgressAttribute(): \Illuminate\Support\Collection
     {
         $objective = $this->currentObjective;
-        if (!$objective) return [];
+        if (!$objective) return collect();
 
         $results = [];
         $initial = (float) $this->initial_balance;
@@ -106,8 +105,8 @@ class Account extends Model
             $currentProfit = $currentBalance - $initial;
 
             $results[] = [
-                'type' => __('labels.profit_target'),
-                'label' => 'Profit Target (' . $objective->profit_target_percent . '%)',
+                'type' => 'profit_target',
+                'label' => __('labels.profit_target') . ' (' . $objective->profit_target_percent . '%)',
                 'target_value' => $target,
                 // Si estás en negativo, el progreso hacia el target es 0, no negativo
                 'current_value' => max(0, $currentProfit),
@@ -184,10 +183,12 @@ class Account extends Model
             // Umbral: Un día cuenta si se ganó al menos el 0.3% del balance inicial
             $dailyProfitThreshold = $initial * 0.003;
 
-            // Consulta compatible con PostgreSQL para agrupar por fecha y sumar PnL
+            // Se agrupa por `exit_time`, no por `entry_time`: el PnL se realiza al cerrar,
+            // así que un trade abierto el viernes y cerrado el lunes cuenta como lunes.
+            // Es el mismo criterio que usa el drawdown diario de arriba.
             $profitableDays = $this->trades()
-                ->selectRaw('DATE(entry_time) as trade_date')
-                ->groupByRaw('DATE(entry_time)')
+                ->selectRaw('DATE(exit_time) as trade_date')
+                ->groupByRaw('DATE(exit_time)')
                 ->havingRaw('SUM(pnl) >= ?', [$dailyProfitThreshold])
                 ->get()
                 ->count();

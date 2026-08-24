@@ -1,8 +1,7 @@
 # TradeForge — Plan de Afinado
 
 > Documento vivo. Auditoría inicial el 2026-08-21 sobre `main`. Última actualización:
-> **2026-08-24** — todo commiteado (`666c37d` + `4e3a2ae`), árbol limpio, suite en verde
-> con 78 tests.
+> **2026-08-24** — árbol limpio, suite en verde con 92 tests.
 
 ---
 
@@ -194,8 +193,8 @@ patrón que `drop_trade_violations_table` — con el `down()` completo por si ha
 
 ### 2.2 Testing — ✅ SUITE EN VERDE + PRIMEROS TESTS DE DOMINIO (2026-08-21)
 
-**Antes:** 24 fallaban, 4 pasaban, 4 se saltaban. **Ahora: 78 pasan, 0 fallan, 4 se saltan.**
-(53 tras el sprint del 21/08 · +25 de objetivos de prop firm el 24/08, ver §2.2.b.)
+**Antes:** 24 fallaban, 4 pasaban, 4 se saltaban. **Ahora: 92 pasan, 0 fallan, 4 se saltan.**
+(53 tras el sprint del 21/08 · +26 de objetivos de prop firm y +13 de `TradeObserver` el 24/08, ver §2.2.b y §2.2.c.)
 
 #### Cómo se desbloqueó
 `phpunit.xml` tenía comentadas `DB_CONNECTION` y `DB_DATABASE`, así que los tests atacaban
@@ -268,9 +267,9 @@ hay que repasar todas esas consultas, que ahora dan por hecho que todo trade est
 
 #### Siguientes tests (por orden)
 - [x] ~~`GenerateBalanceChartData`~~ — **10 tests**: acumulación de PnL, agrupación por día, ventana de timeframes, aislamiento entre cuentas, longitud de series y caché.
-- [x] ~~Objetivos de prop firm (`ProgramObjective`)~~ — **25 tests**. Ver §2.2.b.
+- [x] ~~Objetivos de prop firm (`ProgramObjective`)~~ — **26 tests**. Ver §2.2.b.
+- [x] ~~`TradeObserver` — invalidación de caché al crear/editar/borrar trade.~~ — **13 tests**. Ver §2.2.c.
 - [ ] `CalculateStrategyMetrics` (backtesting).
-- [ ] `TradeObserver` — invalidación de caché al crear/editar/borrar trade.
 - [ ] Smoke tests Livewire: cada página monta para usuario free y pro.
 - [ ] CI en GitHub Actions con Pint + Pest.
 
@@ -299,21 +298,59 @@ fallo señale exactamente qué cálculo se ha roto.
    Queda un test que **fija la premisa actual a propósito**: si algún día se respeta
    `loss_type`, falla y avisa de que hay que repasar las tres reglas.
    Retomarlo solo si se da de alta una prop firm con drawdown trailing.
-2. **`getHardRulesAttribute()` es código muerto y además revienta**: nadie lo usa, y con una
-   cuenta sin `currentObjective` lanza fatal al leer `$rules->profit_target_percent` sobre
-   null. Borrarlo.
-3. **`Account` castea `max_balance` a `decimal:2` y esa columna no existe** en ninguna
-   migración. Cast huérfano.
-4. **`min_trading_days` agrupa por `entry_time`** mientras el resto del cálculo diario usa
-   `exit_time`: un trade abierto el viernes y cerrado el lunes cuenta como día del viernes.
-5. **El profit target usa un literal traducido como `type`** (`__('labels.profit_target')`)
-   mientras las otras tres usan claves estables (`max_daily_loss`, …). Cualquier `firstWhere`
-   sobre ese campo depende del idioma del usuario.
-6. **`objectives_progress` devuelve `[]` (array) sin objetivo y `Collection` con él.** Hoy
-   sobrevive porque la vista solo hace `@if` y `@foreach`; un `->isEmpty()` reventaría.
+2. [x] ~~**`getHardRulesAttribute()` es código muerto y además revienta**~~ — **BORRADO**.
+   Nadie lo usaba y con una cuenta sin `currentObjective` lanzaba fatal.
+3. [x] ~~**Cast huérfano `max_balance`**~~ — **BORRADO**. La columna no existe en ninguna
+   migración.
+4. [x] ~~**`min_trading_days` agrupaba por `entry_time`**~~ — **ARREGLADO**: ahora agrupa por
+   `exit_time`, igual que el drawdown diario. El PnL se realiza al cerrar, así que un trade
+   abierto el viernes y cerrado el lunes cuenta como lunes. Cubierto por el test
+   `imputa el día operado a la fecha de cierre, no a la de apertura`, que distingue los dos
+   criterios (dos trades de 200 que cierran el mismo día: 1 día válido por cierre, 0 por
+   apertura).
+5. [x] ~~**El profit target usaba un literal traducido como `type`**~~ — **ARREGLADO, y era
+   un bug visible**: `card-objectives.blade.php` compara `$objective['type']` con la clave
+   estable `'profit_target'` en un `match`, así que con `__('labels.profit_target')`
+   ("Objetivo de Beneficio") **la tarjeta caía siempre en el `default` y salía con el icono
+   de la balanza en vez del trofeo**, en los dos idiomas. Ahora `type` es la clave y el
+   literal traducido se ha movido al `label`, que es donde se pinta.
+6. [x] ~~**`objectives_progress` devolvía `[]` sin objetivo y `Collection` con él**~~ —
+   **ARREGLADO**: devuelve siempre `Collection`, con tipo de retorno declarado.
 7. Nota de tests: los helpers de Pest son **funciones globales**, así que colisionan entre
    ficheros (`closedTrade` ya estaba tomado por `GenerateBalanceChartDataTest`). Si crecen,
    moverlos a un `tests/Helpers.php`.
+
+### 2.2.c `TradeObserver` — ✅ CUBIERTO Y ARREGLADO (2026-08-24)
+
+`tests/Feature/Observers/TradeObserverTest.php` — **13 tests**. Al escribirlos salieron dos
+fallos de verdad, ninguno de ellos de estilo:
+
+1. **`TradeObserver` no invalidaba ninguna caché.** Solo encolaba el recálculo de estrategia.
+   Las claves `account_stats_{id}` y `account_chart_{id}_{tf}` (TTL de 5 min) se limpiaban
+   **únicamente a mano** en `AccountPage` al editar la cuenta, así que **un sync del `.exe`
+   metía trades y el dashboard seguía enseñando hasta 5 minutos de cifras viejas**. Ahora el
+   observer las invalida en `created` / `deleted`, y en `updated` solo si cambió una columna
+   de la que dependen (`account_id`, `trade_asset_id`, `pnl`, `entry_time`, `exit_time`,
+   `duration_minutes`) — editar la nota de un trade ya no tira la caché. Si el trade cambia
+   de cuenta, se invalidan **las dos**. Entra dentro de la decisión de "optimizar la caché que
+   ya hay": no se añade caché nueva, se arregla la invalidación de la existente.
+2. **Mover un trade de estrategia recalculaba dos veces la vieja y nunca la nueva.**
+   `updateStrategy()` leía `$trade->strategy`, y esa relación ya venía cargada en memoria
+   (la toca el hook `created`), así que devolvía la estrategia anterior al cambio. Se resuelve
+   por id con `Strategy::find($trade->strategy_id)`. **La estrategia de destino se quedaba con
+   las estadísticas desfasadas.**
+
+Efecto colateral en la suite: dos tests de caché (`CalculateAccountStatistics` y
+`GenerateBalanceChartData`) daban por bueno que insertar un trade **no** invalidaba nada —
+justo el bug. Ahora insertan con `Trade::withoutEvents()` para medir la caché en sí; la
+invalidación la cubre `TradeObserverTest`.
+
+**Además:** `AccountObserver::updated()` filtraba por `wasChanged([... 'login'])`, y la
+columna es **`mt5_login`**. Cambiar el número de cuenta MT5 no invalidaba nada. Corregido.
+También se ha quitado el `Log::info("Actualizando Estrategia")` que escribía en el log en
+cada escritura de trade.
+
+**Factory nueva:** `StrategyFactory` (`Strategy` tenía `HasFactory` pero no factory).
 
 ### 2.3 Rendimiento
 
@@ -463,9 +500,10 @@ provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducc
 ### 🛡️ Sprint 2.5 — Reglas de prop firm (en curso)
 1. ~~Tests de `ProgramObjective`: daily drawdown, max drawdown, profit target, días mínimos.~~ ✅ §2.2.b
 2. ~~Implementar `loss_type`~~ — **aparcado** (24/08). Ver §2.2.b punto 1.
-3. Borrar `getHardRulesAttribute()` y el cast huérfano `max_balance`.
-4. Unificar `entry_time` / `exit_time` en el conteo de días operados.
-5. `TradeObserver`: tests de invalidación de caché.
+3. ~~Borrar `getHardRulesAttribute()` y el cast huérfano `max_balance`.~~ ✅
+4. ~~Unificar `entry_time` / `exit_time` en el conteo de días operados.~~ ✅
+5. ~~`TradeObserver`: tests de invalidación de caché.~~ ✅ §2.2.c — dos bugs reales arreglados.
+6. **Siguiente:** verificación visual del tema oscuro en navegador.
 
 ### 🚀 Sprint 3 — Rendimiento y refactor
 1. Trocear `DashboardPage` y su Blade.

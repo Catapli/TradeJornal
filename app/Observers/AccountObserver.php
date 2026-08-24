@@ -15,8 +15,10 @@ class AccountObserver
 
     public function updated(Account $account): void
     {
-        // Solo invalidar si cambiaron campos relevantes
-        if ($account->wasChanged(['name', 'status', 'broker_name', 'login'])) {
+        // Solo invalidar si cambiaron campos relevantes.
+        // Ojo: la columna es `mt5_login`; con `login` (que no existe) el cambio de
+        // número de cuenta nunca invalidaba nada.
+        if ($account->wasChanged(['name', 'status', 'broker_name', 'mt5_login'])) {
             $this->invalidateUserCache($account);
         }
     }

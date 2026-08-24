@@ -118,8 +118,10 @@ it('cachea el resultado y lo recalcula solo si se fuerza', function () {
 
     expect($this->action->execute($this->account)['totalTrades'])->toBe(1);
 
-    // Un trade nuevo no debe verse mientras la caché siga viva...
-    tradesWithPnl($this->account, [200]);
+    // Un trade nuevo no debe verse mientras la caché siga viva. Se inserta sin
+    // disparar el observer, que en uso normal es quien la invalida: aquí se mide
+    // la caché en sí, no su invalidación (de eso se encarga `TradeObserverTest`).
+    Trade::withoutEvents(fn() => tradesWithPnl($this->account, [200]));
     expect($this->action->execute($this->account)['totalTrades'])->toBe(1);
 
     // ...pero sí al forzar el refresco.
@@ -130,7 +132,7 @@ it('invalida la caché al llamar a clearCache', function () {
     tradesWithPnl($this->account, [100]);
     $this->action->execute($this->account);
 
-    tradesWithPnl($this->account, [200]);
+    Trade::withoutEvents(fn() => tradesWithPnl($this->account, [200]));
     CalculateAccountStatistics::clearCache($this->account->id);
 
     expect($this->action->execute($this->account)['totalTrades'])->toBe(2);

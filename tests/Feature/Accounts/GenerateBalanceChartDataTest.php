@@ -116,7 +116,9 @@ it('cachea por cuenta y timeframe', function () {
     closedTrade($this->account, 100, '2026-03-01 10:00:00');
     $this->action->execute($this->account, 'all');
 
-    closedTrade($this->account, 900, '2026-03-02 10:00:00');
+    // Sin disparar el observer: aquí se mide la caché en sí, no su invalidación
+    // (de eso se encarga `TradeObserverTest`).
+    Trade::withoutEvents(fn() => closedTrade($this->account, 900, '2026-03-02 10:00:00'));
 
     // 'all' sigue cacheado...
     $cacheado = balanceSeries($this->action->execute($this->account, 'all'));
@@ -135,7 +137,9 @@ it('clearCache invalida todos los timeframes de la cuenta', function () {
         $this->action->execute($this->account, $tf);
     }
 
-    closedTrade($this->account, 900, '2026-03-02 10:00:00');
+    // Sin disparar el observer: aquí se mide la caché en sí, no su invalidación
+    // (de eso se encarga `TradeObserverTest`).
+    Trade::withoutEvents(fn() => closedTrade($this->account, 900, '2026-03-02 10:00:00'));
     GenerateBalanceChartData::clearCache($this->account->id);
 
     $tras = balanceSeries($this->action->execute($this->account, 'all'));
