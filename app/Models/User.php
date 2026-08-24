@@ -39,7 +39,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'town_id',
         'role_id',
         'sync_token',
     ];

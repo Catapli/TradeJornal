@@ -27,7 +27,6 @@ class CheckSectionPermission
             abort(403, 'No tienes permiso para realizar esta acción.');
         }
 
-        // if($section == "towns")
 
         return $next($request);
     }

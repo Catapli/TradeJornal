@@ -13,7 +13,7 @@
      @keydown.arrow-right.window="showTradeDetail && !zoomImage && detailNav('next')"
      style="display:none">
 
-    <div class="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+    <div class="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-2xl"
          x-show="showTradeDetail"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
@@ -31,7 +31,7 @@
                      :class="{
                          'bg-emerald-500': detailTrade.pnl_r > 0,
                          'bg-red-500': detailTrade.pnl_r < 0,
-                         'bg-gray-400': !detailTrade.pnl_r || detailTrade.pnl_r === 0
+                         'bg-gray-400 dark:bg-gray-600': !detailTrade.pnl_r || detailTrade.pnl_r === 0
                      }">
                     <div class="flex items-center gap-3">
                         {{-- Badge dirección --}}
@@ -105,24 +105,24 @@
                 <div class="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-7">
 
                     {{-- Columna izquierda: datos --}}
-                    <div class="order-2 col-span-1 space-y-4 overflow-y-auto border-t border-gray-100 p-5 lg:order-1 lg:col-span-2 lg:border-r lg:border-t-0">
+                    <div class="order-2 col-span-1 space-y-4 overflow-y-auto border-t border-gray-100 dark:border-gray-700 p-5 lg:order-1 lg:col-span-2 lg:border-r lg:border-t-0">
 
                         {{-- Precios --}}
-                        <div class="rounded-xl bg-gray-50 p-3">
-                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('labels.prices') }}</p>
+                        <div class="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('labels.prices') }}</p>
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">{{ __('labels.entry') }}</span>
-                                    <span class="text-sm font-semibold tabular-nums text-gray-900"
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.entry') }}</span>
+                                    <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100"
                                           x-text="detailTrade.entry_price"></span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">{{ __('labels.exit_label') }}</span>
-                                    <span class="text-sm font-semibold tabular-nums text-gray-900"
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.exit_label') }}</span>
+                                    <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-gray-100"
                                           x-text="detailTrade.exit_price"></span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">{{ __('labels.stop_loss') }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.stop_loss') }}</span>
                                     <span class="text-sm font-medium tabular-nums text-red-400"
                                           x-text="detailTrade.stop_loss ?? '—'"></span>
                                 </div>
@@ -130,23 +130,23 @@
                         </div>
 
                         {{-- Calidad --}}
-                        <div class="rounded-xl bg-gray-50 p-3">
-                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('labels.setup') }}</p>
+                        <div class="rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('labels.setup') }}</p>
                             <div class="space-y-2">
                                 {{-- Stars --}}
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">{{ __('labels.rating') }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.rating') }}</span>
                                     <div class="flex gap-0.5">
                                         <template x-for="i in 5"
                                                   :key="i">
                                             <span class="text-sm"
-                                                  :class="i <= detailTrade.setup_rating ? 'text-amber-400' : 'text-gray-200'">★</span>
+                                                  :class="i <= detailTrade.setup_rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-600'">★</span>
                                         </template>
                                     </div>
                                 </div>
                                 {{-- Siguió reglas --}}
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">{{ __('labels.followed_rules_label') }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.followed_rules_label') }}</span>
                                     <span class="rounded-full px-2 py-0.5 text-xs font-semibold"
                                           :class="detailTrade.followed_rules ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'"
                                           x-text="detailTrade.followed_rules ? '{{ __('labels.yes') }}' : '{{ __('labels.no') }}'"></span>
@@ -156,7 +156,7 @@
 
                         {{-- Confluencias --}}
                         <div x-show="detailTrade.confluences && detailTrade.confluences.length > 0">
-                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('labels.confluences') }}</p>
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('labels.confluences') }}</p>
                             <div class="flex flex-wrap gap-1.5">
                                 <template x-for="tag in detailTrade.confluences"
                                           :key="tag">
@@ -168,14 +168,14 @@
 
                         {{-- Notas --}}
                         <div x-show="detailTrade.notes">
-                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ __('labels.notes') }}</p>
-                            <p class="whitespace-pre-line rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-sm leading-relaxed text-gray-600"
+                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('labels.notes') }}</p>
+                            <p class="whitespace-pre-line rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300"
                                x-text="detailTrade.notes"></p>
                         </div>
 
                         {{-- Acciones --}}
-                        <div class="flex gap-2 border-t border-gray-100 pt-3">
-                            <button class="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                        <div class="flex gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                            <button class="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
                                     @click="closeTradeDetail(); openTradePanel(detailTrade.id)">
                                 <svg class="h-3.5 w-3.5"
                                      fill="none"
@@ -229,7 +229,7 @@
                         </template>
                         <template x-if="!detailTrade.screenshot">
                             <div class="flex flex-col items-center gap-3">
-                                <svg class="h-12 w-12 text-gray-600"
+                                <svg class="h-12 w-12 text-gray-600 dark:text-gray-300"
                                      fill="none"
                                      viewBox="0 0 24 24"
                                      stroke="currentColor"
@@ -238,8 +238,8 @@
                                           stroke-linejoin="round"
                                           d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 12h.008M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z" />
                                 </svg>
-                                <p class="text-sm font-medium text-gray-400">{{ __('labels.no_screenshot') }}</p>
-                                <p class="text-xs text-gray-500">{{ __('labels.edit_trade_to_add_screenshot') }}</p>
+                                <p class="text-sm font-medium text-gray-400 dark:text-gray-500">{{ __('labels.no_screenshot') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('labels.edit_trade_to_add_screenshot') }}</p>
                             </div>
                         </template>
                     </div>

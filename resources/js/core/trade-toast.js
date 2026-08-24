@@ -14,7 +14,8 @@ document.addEventListener("livewire:initialized", () => {
             showConfirmButton: false,
             timer: 6000,
             timerProgressBar: true,
-            background: "#ffffff",
+            background: window.tjTheme?.colors().surface ?? "#ffffff",
+            color: window.tjTheme?.isDark() ? "#f3f4f6" : undefined,
             // Colores suaves para no estresar
             iconColor: notification.type === "success" ? "#10B981" : "#EF4444",
         });

@@ -32,6 +32,7 @@ class AiService
         ?string $cacheKey = null,
     ): AiResponse {
         $fullCacheKey = $cacheKey !== null ? $this->buildCacheKey($cacheKey, $prompt) : null;
+        $effort = config('services.groq.reasoning_effort');
 
         if ($fullCacheKey !== null && ($cached = Cache::get($fullCacheKey)) !== null) {
             return AiResponse::fromCache($cached);
@@ -56,6 +57,9 @@ class AiService
                     'messages' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
+                    // Los modelos de razonamiento gastan max_tokens pensando antes de responder.
+                    // Solo se envia si esta configurado: los modelos sin razonamiento lo rechazan.
+                    ...($effort ? ['reasoning_effort' => $effort] : []),
                 ]);
         } catch (ConnectionException $e) {
             Log::error('Groq connection error: ' . $e->getMessage());

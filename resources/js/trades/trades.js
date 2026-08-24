@@ -13,20 +13,14 @@ document.addEventListener("alpine:init", () => {
             .as("trades_selection")
             .using(sessionStorage),
 
-        // --- ALERTAS ---
-        showAlert: false,
-        bodyAlert: "",
-        typeAlert: "success",
         tradeIdDelete: null,
 
         init() {
-            Livewire.on("notify", (message) =>
-                this.triggerAlert(message, "success"),
-            );
-            Livewire.on("error", (message) => {
+            // Los toasts de 'notify'/'error' los pinta el sistema global
+            // (core/notify.js). Aquí solo conservamos el efecto colateral.
+            Livewire.on("error", () => {
                 this.showFormModal = false;
-                this.triggerAlert(message, "error");
-            }); // <--- Listener de Errores
+            });
 
             Livewire.on("open-form-modal", () => {
                 this.showFormModal = true;
@@ -119,12 +113,7 @@ document.addEventListener("alpine:init", () => {
 
         triggerAlert(message, type = "success") {
             if (Array.isArray(message)) message = message[0];
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-            setTimeout(() => {
-                this.showAlert = false;
-            }, 4000);
+            window.tjToast(message, type);
         },
     }));
 });

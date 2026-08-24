@@ -4,25 +4,21 @@ namespace App\Livewire;
 
 use App\LogActions;
 use App\MoneyHelper;
-use App\Jobs\SyncAccountTrades;
-use App\Jobs\SyncMt5Account;
 use App\Livewire\Forms\AccountForm;
 use App\Models\Account;
-use App\Models\Program;
 use App\Models\ProgramLevel;
 use App\Models\PropFirm;
 use App\Models\Trade;
-use App\Services\Mt5Gateway;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 use App\Actions\Accounts\CalculateAccountStatistics;
 use App\Actions\Accounts\GenerateBalanceChartData;
-use Illuminate\Support\Facades\DB;
 
 class AccountPage extends Component
 {
@@ -30,10 +26,10 @@ class AccountPage extends Component
     use WithPagination;
     use LogActions;
 
-    public $accounts;
+    // ? Estado de selección: ÚNICA propiedad persistida en el snapshot de Livewire.
+    //   accounts / selectedAccount / propFirmsData son computed (no viajan en el payload).
     public $showCreateModal = false;
     public $showEditModal = false;
-    public $selectedAccount;
     public $selectedAccountId;
 
     // ? Datos para el gráfico de balance
@@ -69,7 +65,6 @@ class AccountPage extends Component
     public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
     public $selectedTimeframe = 'all'; // ← NUEVO
     public AccountForm $form;
-    public $propFirmsData = [];
 
     public $editingAccountId = null;
 
@@ -86,32 +81,58 @@ class AccountPage extends Component
     public $syncCheckEnabled = true; // Por si quieres desactivarlo
 
 
-    public $timeframes = [  // ← ASEGÚRATE de tener esto
-        '1h' => ['minutes' => 60, 'format' => 'H:i'],     // "14:30"
-        '24h' => ['hours' => 24, 'format' => 'd H:i'],    // "08 14:30" 
-        '7d' => ['days' => 7, 'format' => 'd M (D)'],   // "08 Jan (Dom)" ← ÚNICO
-        'all' => ['all' => true, 'format' => 'd MMM yy']  // "08 Jan 26"
-    ];
+    /**
+     * Cuentas activas (no quemadas) del usuario. Computed: se resuelve por
+     * request y NO se serializa en el snapshot de Livewire.
+     */
+    #[Computed]
+    public function accounts()
+    {
+        return Account::where('user_id', Auth::id())
+            ->where('status', '!=', 'burned')
+            ->orderBy('name')
+            ->get();
+    }
 
+    /**
+     * Cuenta seleccionada. Deriva de selectedAccountId con fallback a la primera.
+     */
+    #[Computed]
+    public function selectedAccount()
+    {
+        return $this->accounts->firstWhere('id', $this->selectedAccountId)
+            ?? $this->accounts->first();
+    }
+
+    /**
+     * Jerarquía PropFirm → programas → niveles para los selects en cascada (JS).
+     * Cacheada: cambia rara vez y solo se usa al abrir los modales.
+     */
+    #[Computed]
+    public function propFirmsData()
+    {
+        return Cache::remember(PropFirm::CACHE_KEY, now()->addHours(6), function () {
+            return PropFirm::with(['programs.levels' => function ($query) {
+                $query->select('id', 'program_id', 'size', 'currency');
+            }])
+                ->orderBy('name')
+                ->get()
+                ->toArray();
+        });
+    }
+
+    /**
+     * Invalida la caché de las computed de cuentas tras una mutación.
+     */
+    private function loadAccounts(): void
+    {
+        unset($this->accounts, $this->selectedAccount);
+    }
 
     public function mount()
     {
-        $user = Auth::user();
-        $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-        $this->selectedAccount = $this->accounts->first(); // ← Array[0]
-        $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
-        // $this->propFirms = PropFirm::select('id', 'name')->orderBy('name')->get();
-        // Cargamos toda la jerarquía necesaria y la convertimos a Array
-        // Esto es muy rápido si tienes < 5000 filas en total (que seguro que sí)
-        $this->propFirmsData = PropFirm::with(['programs.levels' => function ($query) {
-            $query->select('id', 'program_id', 'size', 'currency');
-        }])
-            ->orderBy('name')
-            ->get() // Obtenemos colección
-            ->toArray(); // Convertimos a Array para pasarlo al JS
-
+        $this->selectedAccountId = $this->accounts->first()?->id; // ← cuenta por defecto
         $this->changeCurrency();
-
         $this->updateData();
         $this->lastKnownSync = $this->selectedAccount?->last_sync;
     }
@@ -195,7 +216,7 @@ class AccountPage extends Component
             $this->logError($e, 'getHistoryTrades', 'AccountPage', "Error al obtener trades de cuenta {$this->selectedAccountId}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_loading_trades')
@@ -214,7 +235,7 @@ class AccountPage extends Component
             $this->logError($e, 'changeCurrency', 'AccountPage', "Error al cambiar moneda de cuenta {$this->selectedAccountId}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_loading_currency')
@@ -260,8 +281,9 @@ class AccountPage extends Component
                 return;
             }
 
-            // Obtener el timestamp actual de last_sync
-            $currentSync = $this->selectedAccount->last_sync;
+            // Leer last_sync DIRECTAMENTE de la BD (no del modelo serializado,
+            // que entre polls no refleja los cambios escritos por el job de sync).
+            $currentSync = Account::where('id', $this->selectedAccountId)->value('last_sync');
 
             // Si no hay sincronización registrada, salir
             if (!$currentSync) {
@@ -276,11 +298,11 @@ class AccountPage extends Component
 
                     Log::info("🔄 Sincronización detectada para cuenta {$this->selectedAccount->id}");
 
-                    // ✅ REFRESCAR MODELO DESDE BD
-                    $this->selectedAccount->refresh();
+                    // ✅ INVALIDAR COMPUTED → re-consulta la cuenta fresca desde BD
+                    $this->loadAccounts();
 
-                    // ✅ RECALCULAR TODO
-                    $this->updateData();
+                    // ✅ RECALCULAR TODO (forzando recálculo: hay trades nuevos)
+                    $this->updateData(force: true);
 
                     // ✅ GUARDAR TIMESTAMP PARA NO REPETIR
                     $this->lastKnownSync = $currentSync;
@@ -309,7 +331,8 @@ class AccountPage extends Component
     public function changeAccount($accountId)
     {
         try {
-            $this->selectedAccount = $this->accounts->firstWhere('id', $accountId);
+            $this->selectedAccountId = $accountId;
+            unset($this->selectedAccount); // refresca el computed con el nuevo id
             // ✅ RESETEAR TIMESTAMP AL CAMBIAR CUENTA
             $this->lastKnownSync = $this->selectedAccount?->last_sync;
             $this->changeCurrency();
@@ -320,7 +343,7 @@ class AccountPage extends Component
             $this->logError($e, 'changeAccount', 'AccountPage', "Error al cambiar a cuenta {$accountId}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_loading_account')
@@ -332,9 +355,8 @@ class AccountPage extends Component
 
     /**
      * Actualiza todos los datos de la cuenta seleccionada
-     * Con DB Transaction y Caché
      */
-    private function updateData()
+    private function updateData(bool $force = false)
     {
         try {
             if (!$this->selectedAccount) {
@@ -342,32 +364,32 @@ class AccountPage extends Component
             }
 
             // ========================================
-            // 1. ACTUALIZAR BALANCE TEÓRICO (DB Transaction)
+            // 1. CALCULAR ESTADÍSTICAS (Con Caché)
+            //    Deja grossProfit / grossLoss en propiedades.
             // ========================================
-            DB::transaction(function () {
-                $this->totalPnl = $this->selectedAccount->trades()->sum('pnl');
-                $this->initialBalance = $this->selectedAccount->initial_balance;
-                $theoreticalBalance = $this->initialBalance + $this->totalPnl;
-
-                // Solo actualizar si no hay sincronización activa
-                if (is_null($this->selectedAccount->last_sync)) {
-                    if ($this->selectedAccount->current_balance != $theoreticalBalance) {
-                        $this->selectedAccount->update([
-                            'current_balance' => $theoreticalBalance
-                        ]);
-                    }
-                }
-            });
+            $this->calculateStatistics($force);
 
             // ========================================
-            // 2. CALCULAR ESTADÍSTICAS (Con Caché)
+            // 2. BALANCE TEÓRICO
+            //    totalPnl = PnL realizado (cerrados) = grossProfit - grossLoss,
+            //    derivado de las stats para no repetir un SUM(pnl) en BD.
             // ========================================
-            $this->calculateStatistics();
+            $this->initialBalance = $this->selectedAccount->initial_balance;
+            $this->totalPnl = $this->grossProfit - $this->grossLoss;
+            $theoreticalBalance = $this->initialBalance + $this->totalPnl;
+
+            // Solo persistir si no hay sincronización activa (el broker manda el balance real)
+            if (is_null($this->selectedAccount->last_sync)
+                && $this->selectedAccount->current_balance != $theoreticalBalance) {
+                $this->selectedAccount->update([
+                    'current_balance' => $theoreticalBalance
+                ]);
+            }
 
             // ========================================
             // 3. CARGAR GRÁFICO (Con Caché)
             // ========================================
-            $this->loadBalanceChart();
+            $this->loadBalanceChart($force);
 
             // ========================================
             // 4. BALANCE TOTAL Y % BENEFICIO
@@ -398,12 +420,12 @@ class AccountPage extends Component
         }
     }
 
-    private function calculateStatistics()
+    private function calculateStatistics(bool $force = false)
     {
 
         try {
             $action = new CalculateAccountStatistics();
-            $stats = $action->execute($this->selectedAccount);
+            $stats = $action->execute($this->selectedAccount, $force);
 
             // Mapear resultados a propiedades públicas
             $this->totalTrades = $stats['totalTrades'];
@@ -436,11 +458,11 @@ class AccountPage extends Component
     /**
      * Carga datos del gráfico usando Action Class (Optimizado con SQL)
      */
-    private function loadBalanceChart()
+    private function loadBalanceChart(bool $force = false)
     {
         try {
             $action = new GenerateBalanceChartData();
-            $this->balanceChartData = $action->execute($this->selectedAccount, $this->selectedTimeframe);
+            $this->balanceChartData = $action->execute($this->selectedAccount, $this->selectedTimeframe, $force);
         } catch (Exception $e) {
             $this->logError($e, 'loadBalanceChart', 'AccountPage', 'Error generando gráfico de balance');
 
@@ -544,9 +566,8 @@ class AccountPage extends Component
 
             $this->form->reset();
 
-            $user = Auth::user();
-            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-            $this->selectedAccount = $account; // ← Array[0]
+            $this->loadAccounts();
+            $this->selectedAccountId = $account->id;
             $this->changeCurrency();
             $this->updateData();
             $this->dispatch('account-created');
@@ -555,7 +576,7 @@ class AccountPage extends Component
             $this->logError($e, 'insertAccount', 'AccountPage', "Error al insertar cuenta");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_create_account')
@@ -607,7 +628,7 @@ class AccountPage extends Component
             $this->logError($e, 'editAccount', 'AccountPage', "Error al editar cuenta {$id}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_edit_account')
@@ -622,13 +643,13 @@ class AccountPage extends Component
     public function openTradeDetail(int $tradeId): void
     {
         try {
-            // IDs del contexto = página actual de la tabla (ya paginada)
-            // Reutilizamos la misma query sin volver a paginar
+            // IDs del contexto = página actual de la tabla visible.
+            // Solo necesitamos los IDs: seleccionamos 'id' y omitimos el eager loading.
             $contextIds = Trade::query()
                 ->where('account_id', $this->selectedAccountId)
-                ->with('tradeAsset')
                 ->orderBy('exit_time', 'desc')
-                ->paginate(10, ['*'], 'page', $this->getPage())
+                ->paginate(10, ['id'], 'page', $this->getPage())
+                ->getCollection()
                 ->pluck('id')
                 ->toArray();
 
@@ -713,18 +734,21 @@ class AccountPage extends Component
             ]);
             $account->save();
 
-            $user = Auth::user();
-            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-            $this->selectedAccount = $account; // ← Array[0]
+            // El balance inicial pudo cambiar → invalidar cachés de stats y gráfico
+            CalculateAccountStatistics::clearCache($account->id);
+            GenerateBalanceChartData::clearCache($account->id);
 
-            $this->updateData();
+            $this->loadAccounts();
+            $this->selectedAccountId = $account->id;
+
+            $this->updateData(force: true);
             $this->dispatch('account-updated', timeframe: 'all');
             $this->dispatch('timeframe-updated', timeframe: 'all');
         } catch (Exception $e) {
             $this->logError($e, 'updateAccount', 'AccountPage', "Error al actualizar cuenta {$id}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_update_account')
@@ -746,22 +770,9 @@ class AccountPage extends Component
             // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
             $account->delete();
 
-            // 3. Lógica Post-Borrado
-            // Si la cuenta borrada era la seleccionada, cambiamos a la primera disponible
-            if ($this->selectedAccount && $this->selectedAccount->id == $id) {
-                $this->selectedAccount = Account::where('status', '!=', 'burned')
-                    ->where('user_id', Auth::id())
-                    ->orderBy('name')
-                    ->first();
-
-                $this->selectedAccountId = $this->selectedAccount?->id;
-            }
-
-            // 4. Refrescar datos y avisar
-            $user = Auth::user();
-            $this->accounts = Account::where('status', '!=', 'burned')->where('user_id', $user->id)->orderBy('name')->get();
-            $this->selectedAccount = $this->accounts->first(); // ← Array[0]
-            $this->selectedAccountId = $this->selectedAccount?->id; // <--- ESTO ES CLAVE
+            // 3. Refrescar datos: recargamos la lista y seleccionamos la primera disponible
+            $this->loadAccounts();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->changeCurrency();
 
             $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
@@ -771,7 +782,7 @@ class AccountPage extends Component
             $this->logError($e, 'deleteAccount', 'AccountPage', "Error al borrar cuenta {$id}");
 
             // Fallback seguro
-            $this->selectedAccount = $this->accounts->first();
+            $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
                 'message' => __('labels.error_delete_account')

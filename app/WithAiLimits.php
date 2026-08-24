@@ -53,8 +53,9 @@ trait WithAiLimits
 
     /**
      * Límite diario según el plan del usuario (free vs suscripción activa).
+     * Público para mostrar el total real en las vistas (antes hardcodeado a 10).
      */
-    private function aiDailyLimit(): int
+    public function aiDailyLimit(): int
     {
         $user = Auth::user();
         $isPro = $user && $user->subscribed('default');

@@ -23,7 +23,7 @@
     </div>
 
     <!-- Calendar Picker -->
-    <div class="absolute left-0 top-12 z-50 mt-1 w-[300px] rounded-lg border bg-white p-4 shadow-lg"
+    <div class="absolute left-0 top-12 z-50 mt-1 w-[300px] rounded-lg border bg-white dark:bg-gray-800 p-4 shadow-lg"
          x-show="showPicker"
          @click.away="showPicker = false"
          x-transition:enter="transition ease-out duration-200"
@@ -34,7 +34,7 @@
          x-transition:leave-end="opacity-0 scale-95">
         <!-- Calendar Header -->
         <div class="mb-4 flex items-center justify-between">
-            <button class="text-gray-600 hover:text-gray-900"
+            <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                     type="button"
                     @click="previousMonth()">
                 <svg class="h-6 w-6"
@@ -49,7 +49,7 @@
             </button>
             <div class="text-lg font-bold"
                  x-text="monthNames[month] + ' ' + year"></div>
-            <button class="text-gray-600 hover:text-gray-900"
+            <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
                     type="button"
                     @click="nextMonth()">
                 <svg class="h-6 w-6"
@@ -69,7 +69,7 @@
             <!-- Days header -->
             <template x-for="(day, index) in ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa']"
                       :key="index">
-                <div class="py-1 text-center text-sm text-gray-600"
+                <div class="py-1 text-center text-sm text-gray-600 dark:text-gray-300"
                      x-text="day"></div>
             </template>
 
@@ -87,13 +87,13 @@
                      x-text="date"
                      :class="{
                          'bg-blue-500 text-white hover:bg-blue-600': isSelected(date),
-                         'text-gray-300 cursor-not-allowed hover:bg-white': !isSelectable(date)
+                         'text-gray-300 dark:text-gray-600 cursor-not-allowed hover:bg-white dark:hover:bg-gray-800': !isSelectable(date)
                      }"></div>
             </template>
         </div>
 
         <!-- Selected date preview -->
-        <div class="mt-4 text-sm text-gray-600"
+        <div class="mt-4 text-sm text-gray-600 dark:text-gray-300"
              x-show="selectedDate">
             <div class="flex justify-between">
                 <span>{{ __('labels.date') }}:</span>
@@ -103,7 +103,7 @@
 
         <!-- Actions -->
         <div class="mt-4 flex justify-end space-x-2">
-            <button class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+            <button class="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
                     @click="clearDate()">{{ __('labels.clean') }}</button>
             <button class="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                     @click="applyDate()"> {{ __('labels.apply') }}</button>

@@ -8,6 +8,19 @@
         <meta name="csrf-token"
               content="{{ csrf_token() }}">
 
+        {{-- Tema: aplica la clase 'dark' antes del primer render para evitar parpadeo (FOUC).
+             Preferencia guardada en localStorage; la primera vez sigue al sistema operativo. --}}
+        <script>
+            (function () {
+                try {
+                    var t = localStorage.getItem('theme');
+                    if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.documentElement.classList.add('dark');
+                    }
+                } catch (e) {}
+            })();
+        </script>
+
         <title>{{ config('app.name', 'TradeForge') }}</title>
         <link rel="icon"
               href="{{ asset('img/favicon/logo_only.ico') }}"
@@ -31,88 +44,31 @@
         <livewire:language-manager />
         <x-banner />
 
-        <div class="bg-white">
+        <div class="bg-white transition-colors duration-300 dark:bg-gray-900">
             @livewire('navigation-menu')
 
             @include('sidebar-menu')
 
             @livewire('trade-toast') {{-- El espía invisible --}}
 
-            <!-- NOTIFICACIONES FLASH (Éxito/Error) -->
-            <div class="pointer-events-none fixed inset-0 z-50 flex items-end px-4 py-6 sm:items-start sm:p-6"
-                 aria-live="assertive">
-                <div class="flex w-full flex-col items-center space-y-4 sm:items-end">
-
-                    <!-- Mensaje de ÉXITO (status) -->
-                    @if (session('status'))
-                        <div class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5"
-                             x-data="{ show: true }"
-                             x-show="show"
-                             x-transition:enter="transform ease-out duration-300 transition"
-                             x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-                             x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
-                             x-transition:leave="transition ease-in duration-100"
-                             x-transition:leave-start="opacity-100"
-                             x-transition:leave-end="opacity-0"
-                             x-init="setTimeout(() => show = false, 5000)">
-                            <div class="p-4">
-                                <div class="flex items-start">
-                                    <div class="flex-shrink-0">
-                                        <!-- Icono Check Verde -->
-                                        <i class="fa-solid fa-circle-check text-xl text-emerald-400"></i>
-                                    </div>
-                                    <div class="ml-3 w-0 flex-1 pt-0.5">
-                                        <p class="text-sm font-medium text-gray-900">{{ __('labels.done') }}</p>
-                                        <p class="mt-1 text-sm text-gray-500">{{ session('status') }}</p>
-                                    </div>
-                                    <div class="ml-4 flex flex-shrink-0">
-                                        <button class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                                                @click="show = false">
-                                            <span class="sr-only">{{ __('labels.close_s') }}</span>
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Mensaje de ERROR (error) -->
-                    @if (session('error'))
-                        <div class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg border-l-4 border-red-500 bg-white shadow-lg ring-1 ring-black ring-opacity-5"
-                             x-data="{ show: true }"
-                             x-show="show"
-                             x-transition:enter="transform ease-out duration-300 transition"
-                             x-transition:enter-start="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-                             x-transition:enter-end="translate-y-0 opacity-100 sm:translate-x-0"
-                             x-init="setTimeout(() => show = false, 6000)">
-                            <div class="p-4">
-                                <div class="flex items-start">
-                                    <div class="flex-shrink-0">
-                                        <i class="fa-solid fa-circle-exclamation text-xl text-red-400"></i>
-                                    </div>
-                                    <div class="ml-3 w-0 flex-1 pt-0.5">
-                                        <p class="text-sm font-medium text-gray-900">{{ __('labels.attention') }}</p>
-                                        <p class="mt-1 text-sm text-gray-500">{{ session('error') }}</p>
-                                    </div>
-                                    <div class="ml-4 flex flex-shrink-0">
-                                        <button class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500"
-                                                @click="show = false">
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-
-                </div>
-            </div>
+            {{-- NOTIFICACIONES FLASH (Éxito/Error) → toast unificado (core/notify.js) --}}
+            @if (session('status') || session('error'))
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        @if (session('status'))
+                            window.tjToast(@json(session('status')), 'success');
+                        @endif
+                        @if (session('error'))
+                            window.tjToast(@json(session('error')), 'error');
+                        @endif
+                    });
+                </script>
+            @endif
 
 
 
             @if (isset($header))
-                <header class="relative top-0 z-10 ml-12 mt-[55px] w-auto bg-white shadow">
+                <header class="relative top-0 z-10 ml-12 mt-[55px] w-auto bg-white shadow transition-colors dark:bg-gray-800 dark:shadow-black/30">
                     <div class="flex min-h-11 max-w-7xl items-center space-x-1.5 px-4 py-1 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>

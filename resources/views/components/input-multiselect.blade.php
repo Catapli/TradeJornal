@@ -70,10 +70,10 @@
 
         <div class="relative flex w-full min-w-52 items-center rounded-e-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-inner dark:border-neutral-700 dark:bg-neutral-900 dark:text-gray-300">
             <span x-text="label"
-                  :class="selected.length === 0 ? 'text-gray-400 pr-5' : 'text-gray-800 font-semibold pr-5'"></span>
+                  :class="selected.length === 0 ? 'text-gray-400 pr-5' : 'text-gray-800 dark:text-gray-100 font-semibold pr-5'"></span>
             <div class="absolute right-4 top-1/2 -translate-y-1/2 transition-transform duration-200"
                  :class="open ? 'rotate-180' : ''">
-                <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+                <i class="fa-solid fa-chevron-down text-xs text-gray-400 dark:text-gray-500"></i>
             </div>
         </div>
     </div>
@@ -119,14 +119,14 @@
                             {{ $option['name'] }}
                         </span>
                         @if (isset($option['subtext']))
-                            <span class="text-xs text-gray-400">{{ $option['subtext'] }}</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">{{ $option['subtext'] }}</span>
                         @endif
                     </div>
                 </label>
             @endforeach
 
             @if (count($options) === 0)
-                <div class="px-4 py-3 text-center text-sm text-gray-500">
+                <div class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                     {{ __('labels.not_accounts_available') }}
                 </div>
             @endif

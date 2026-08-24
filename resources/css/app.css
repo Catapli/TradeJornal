@@ -1,6 +1,5 @@
 @import "@fortawesome/fontawesome-free/css/all.min.css";
 @import url("https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap");
-/* @import "/public/datatable/dataTables.tailwindcss.css"; */
 
 @font-face {
     font-family: "Poppins";
@@ -106,39 +105,6 @@ label:hover .spanRadio {
     background-color: #dbeafe;
 }
 
-/* Estilos Modificados Tablas */
-
-select.dt-input {
-    @apply min-w-16 !important;
-}
-
-/* Hover TR */
-.dataTable tbody tr:hover {
-    @apply bg-gray-500  !important;
-}
-
-/* Estilo para filas impares */
-.dataTable tbody tr:nth-child(odd) {
-    @apply bg-gray-600;
-}
-
-/* Estilo para filas pares */
-.dataTable tbody tr:nth-child(even) {
-    @apply bg-gray-600;
-}
-
-.datatable thead {
-    @apply bg-primary text-white;
-}
-
-.datatable .dt-empty {
-    @apply text-white;
-}
-
-.datatable tbody {
-    @apply text-white;
-}
-
 .mdtimepicker .mdtp__wrapper {
     position: absolute;
     display: flex;
@@ -235,7 +201,138 @@ select.dt-input {
 .animate-cycle-words {
     animation: cycle-words 5s infinite;
 }
+
+/*=============================================
+=  Modo oscuro: Mapa de Calor (ApexCharts)    =
+=  Solo recolor bajo .dark; no afecta el light =
+=  ni el JS ni la estructura del gráfico.      =
+=============================================*/
+
+/* Celda "Sin Actividad" → gris oscuro.
+   Se filtra por val="0" (no por fill) porque shadeIntensity altera el color
+   real a rgba(...), así que el selector por color no es fiable. */
+.dark .apexcharts-heatmap-rect[val="0"] {
+    fill: #374151 !important;
+}
+
+/* Líneas entre celdas (eran blancas) → color de la tarjeta */
+.dark .apexcharts-heatmap-rect {
+    stroke: #1f2937 !important;
+}
+
+/* Los ejes y la leyenda ya no se parchean aquí: los resuelve core/theme.js
+   vía theme.mode + foreColor al construir el gráfico (window.tjChart). */
+
+/*=============================================
+=  Modo oscuro: <option> de los <select>      =
+=  La regla global "select option" fuerza un  =
+=  verde oscuro ilegible sobre fondo oscuro.   =
+=============================================*/
+.dark select option {
+    background: #374151 !important; /* gray-700 */
+    color: #f3f4f6 !important; /* gray-100 */
+}
 /*.disabled\:opacity-50:disabled {
     opacity: 1; /~ Restaura la opacidad completa ~/
 }
 */
+
+/*=============================================
+=  Modo oscuro: librerías de terceros          =
+=  Trix, flatpickr y mdtimepicker no conocen   =
+=  no conocen la clase .dark de Tailwind, así  =
+=  que se recolorean aquí.                     =
+=============================================*/
+
+/* --- Radios con aspecto de pastilla (.spanRadio) --- */
+.dark .spanRadio {
+    background-color: #374151; /* gray-700 */
+    color: #d1d5db; /* gray-300 */
+    box-shadow: 0 0 0 0.0625em #4b5563; /* gray-600 */
+}
+
+.dark .input_option:checked ~ .spanRadio {
+    background-color: #312e81; /* indigo-900 */
+    color: #a5b4fc; /* indigo-300 */
+}
+
+.dark label:hover .spanRadio {
+    background-color: #4b5563; /* gray-600 */
+}
+
+/* --- Trix (editor del journal) --- */
+.dark trix-editor {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+}
+
+.dark trix-toolbar .trix-button-group {
+    border-color: #4b5563;
+    background-color: #1f2937;
+}
+
+.dark trix-toolbar .trix-button {
+    background-color: transparent;
+    color: #d1d5db;
+}
+
+.dark trix-toolbar .trix-button:not(:disabled):hover {
+    background-color: #4b5563;
+}
+
+/* Los iconos de la barra son SVG negros embebidos: se invierten para que
+   se vean sobre fondo oscuro. */
+.dark trix-toolbar .trix-button::before {
+    filter: invert(1) opacity(0.85);
+}
+
+/* --- flatpickr --- */
+.dark .flatpickr-calendar {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.dark .flatpickr-months,
+.dark .flatpickr-month,
+.dark .flatpickr-current-month,
+.dark .flatpickr-weekdays,
+.dark span.flatpickr-weekday {
+    background: #1f2937;
+    color: #e5e7eb;
+    fill: #e5e7eb;
+}
+
+.dark .flatpickr-day {
+    color: #e5e7eb;
+}
+
+.dark .flatpickr-day:hover {
+    background: #374151;
+    border-color: #374151;
+}
+
+.dark .flatpickr-day.flatpickr-disabled,
+.dark .flatpickr-day.prevMonthDay,
+.dark .flatpickr-day.nextMonthDay {
+    color: #6b7280;
+}
+
+.dark .flatpickr-day.selected,
+.dark .flatpickr-day.selected:hover {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #fff;
+}
+
+.dark .flatpickr-months .flatpickr-prev-month svg,
+.dark .flatpickr-months .flatpickr-next-month svg {
+    fill: #e5e7eb;
+}
+
+/* --- mdtimepicker --- */
+.dark .mdtimepicker .mdtp__wrapper {
+    background-color: #1f2937;
+    color: #e5e7eb;
+}

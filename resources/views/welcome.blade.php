@@ -6,7 +6,7 @@
         <meta name="viewport"
               content="width=device-width, initial-scale=1">
 
-        <title>Cloud Detrafic</title>
+        <title>{{ config('app.name', 'TradeForge') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect"

@@ -16,19 +16,19 @@
                        aria-hidden="true"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black text-gray-900">Panel de Administración</h1>
-                    <p class="text-sm text-gray-500">TradeForge · Vista de sistema</p>
+                    <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">Panel de Administración</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">TradeForge · Vista de sistema</p>
                 </div>
             </div>
         </div>
-        <span class="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm">
+        <span class="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 shadow-sm">
             <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
             Sistema activo
         </span>
     </div>
 
     {{-- ─── TABS NAV ────────────────────────────────────────────────────── --}}
-    <div class="mb-6 border-b border-gray-200">
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex gap-1 overflow-x-auto"
              role="tablist"
              aria-label="Secciones del panel">
@@ -43,7 +43,7 @@
                         type="button"
                         :class="isActive(tab.id) ?
                             'border-indigo-600 text-indigo-600' :
-                            'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'">
+                            'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200'">
                     <i :class="'fa-solid ' + tab.icon"
                        aria-hidden="true"></i>
                     <span x-text="tab.label"></span>
@@ -186,9 +186,9 @@
             <div class="flex flex-1 gap-2">
 
                 <div class="relative max-w-sm flex-1">
-                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 dark:text-gray-500"
                        aria-hidden="true"></i>
-                    <input class="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    <input class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 py-2 pl-9 pr-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                            type="search"
                            placeholder="Buscar por nombre o email…"
                            x-model="localSearch"
@@ -196,7 +196,7 @@
                            aria-label="Buscar usuario" />
                 </div>
 
-                <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                <select class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         x-model="localStatus"
                         @change="$wire.set('filterStatus', localStatus)"
                         aria-label="Filtrar por estado">
@@ -206,7 +206,7 @@
                 </select>
             </div>
 
-            <button class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-500 transition hover:border-indigo-300 hover:text-indigo-600"
+            <button class="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition hover:border-indigo-300 hover:text-indigo-600"
                     x-show="localSearch !== '' || localStatus !== 'all'"
                     x-transition
                     @click="localSearch = ''; localStatus = 'all'; $wire.resetFilters()"
@@ -218,13 +218,13 @@
         </div>
 
         {{-- TABLA --}}
-        <div class="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
 
             {{-- Overlay mientras Livewire recarga --}}
             <div class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
                  wire:loading.delay
                  wire:target="search, filterStatus, resetFilters, banUser, unbanUser">
-                <div class="flex items-center gap-2 text-sm text-gray-500">
+                <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <i class="fa-solid fa-spinner fa-spin"
                        aria-hidden="true"></i>
                     Cargando…
@@ -235,36 +235,36 @@
                 <table class="w-full text-sm"
                        aria-label="Tabla de usuarios">
                     <thead>
-                        <tr class="border-b border-gray-100 bg-gray-50">
-                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Última conexión</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Trades</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Cuentas</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-gray-500">Estado</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Acciones</th>
+                        <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Usuario</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Última conexión</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Trades</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cuentas</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Estado</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50">
+                    <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                         @forelse($this->users as $user)
-                            <tr class="transition-colors duration-100 hover:bg-gray-50">
+                            <tr class="transition-colors duration-100 hover:bg-gray-50 dark:hover:bg-gray-900">
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
                                         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
                                             {{ strtoupper(substr($user->name, 0, 1)) }}
                                         </div>
                                         <div>
-                                            <div class="font-semibold text-gray-900">{{ $user->name }}</div>
-                                            <div class="text-xs text-gray-400">{{ $user->email }}</div>
+                                            <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $user->name }}</div>
+                                            <div class="text-xs text-gray-400 dark:text-gray-500">{{ $user->email }}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-gray-400">
+                                <td class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
                                     {{ $user->last_seen_at?->diffForHumans() ?? '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-medium tabular-nums text-gray-700">
+                                <td class="px-4 py-3 text-right font-medium tabular-nums text-gray-700 dark:text-gray-200">
                                     {{ number_format($user->trades_count) }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-medium tabular-nums text-gray-700">
+                                <td class="px-4 py-3 text-right font-medium tabular-nums text-gray-700 dark:text-gray-200">
                                     {{ number_format($user->accounts_count) }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
@@ -304,7 +304,7 @@
                                             </button>
                                         @endif
                                     @else
-                                        <span class="text-xs text-gray-400">Tú</span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500">Tú</span>
                                     @endif
                                 </td>
                             </tr>
@@ -313,11 +313,11 @@
                                 <td class="px-4 py-16 text-center"
                                     colspan="6">
                                     <div class="flex flex-col items-center gap-3">
-                                        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-                                            <i class="fa-solid fa-users text-xl text-gray-400"
+                                        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                                            <i class="fa-solid fa-users text-xl text-gray-400 dark:text-gray-500"
                                                aria-hidden="true"></i>
                                         </div>
-                                        <p class="text-sm font-medium text-gray-500">No se encontraron usuarios</p>
+                                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No se encontraron usuarios</p>
                                         <button class="text-xs text-indigo-600 hover:underline"
                                                 @click="localSearch = ''; localStatus = 'all'; $wire.resetFilters()"
                                                 type="button">
@@ -332,7 +332,7 @@
             </div>
 
             @if ($this->users->hasPages())
-                <div class="border-t border-gray-100 px-4 py-3">
+                <div class="border-t border-gray-100 dark:border-gray-700 px-4 py-3">
                     {{ $this->users->links() }}
                 </div>
             @endif
@@ -355,8 +355,8 @@
         <div class="space-y-4"
              wire:loading.delay
              wire:target="render">
-            <div class="h-28 w-full animate-pulse rounded-xl bg-gray-100"></div>
-            <div class="h-48 w-full animate-pulse rounded-xl bg-gray-100"></div>
+            <div class="h-28 w-full animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700"></div>
+            <div class="h-48 w-full animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700"></div>
         </div>
 
         <div wire:loading.remove
@@ -372,11 +372,11 @@
             @endif
 
             {{-- Barra de uso del sistema --}}
-            <div class="mb-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="mb-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
                 <div class="mb-4 flex items-start justify-between">
                     <div>
-                        <h2 class="text-base font-bold text-gray-900">Uso del sistema</h2>
-                        <p class="mt-0.5 text-xs text-gray-400">
+                        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Uso del sistema</h2>
+                        <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                             {{ $storageStats['formatted_total'] }} usados de {{ $storageStats['formatted_limit'] }}
                             · Datos vía Cloudflare R2 Analytics
                         </p>
@@ -389,7 +389,7 @@
                           }">{{ $storageStats['used_percent'] }}%</span>
                 </div>
 
-                <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100"
+                <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"
                      role="progressbar"
                      aria-valuenow="{{ $storageStats['used_percent'] }}"
                      aria-valuemin="0"
@@ -404,7 +404,7 @@
                     </div>
                 </div>
 
-                <div class="mt-4 flex items-center gap-6 text-xs text-gray-400">
+                <div class="mt-4 flex items-center gap-6 text-xs text-gray-400 dark:text-gray-500">
                     <span class="flex items-center gap-1.5">
                         <i class="fa-solid fa-file"
                            aria-hidden="true"></i>
@@ -418,13 +418,13 @@
                 </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                 <div class="flex items-start gap-3">
                     <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
                         <i class="fa-solid fa-circle-info text-sm text-blue-500"
                            aria-hidden="true"></i>
                     </div>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
                         Cloudflare R2 Analytics proporciona métricas agregadas por bucket.
                         Para ver el desglose por usuario necesitarías una tabla de metadatos en BD.
                     </p>
@@ -450,7 +450,7 @@
              wire:loading.delay
              wire:target="render">
             @foreach (range(1, 3) as $_)
-                <div class="h-28 animate-pulse rounded-xl bg-gray-100"></div>
+                <div class="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700"></div>
             @endforeach
         </div>
 
@@ -463,18 +463,18 @@
                      :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }}
                          ?
                          'border-red-200 bg-red-50' :
-                         'border-gray-200 bg-white'">
+                         'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'">
                     <div class="mb-3 flex items-center justify-between">
-                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500">Jobs Fallidos</span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Jobs Fallidos</span>
                         <div class="flex h-8 w-8 items-center justify-center rounded-lg"
-                             :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'bg-red-100' : 'bg-gray-100'">
+                             :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'bg-red-100' : 'bg-gray-100 dark:bg-gray-700'">
                             <i class="fa-solid fa-triangle-exclamation text-sm"
-                               :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'text-red-500' : 'text-gray-400'"
+                               :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'"
                                aria-hidden="true"></i>
                         </div>
                     </div>
                     <div class="text-3xl font-black tabular-nums"
-                         :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'text-red-600' : 'text-gray-900'">
+                         :class="{{ $queueStats['failed_count'] > 0 ? 'true' : 'false' }} ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'">
                         {{ number_format($queueStats['failed_count']) }}
                     </div>
                     @if ($queueStats['failed_count'] > 0)
@@ -488,44 +488,44 @@
                             Limpiar jobs fallidos
                         </button>
                     @else
-                        <p class="mt-2 text-xs text-gray-400">Sin errores en cola</p>
+                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Sin errores en cola</p>
                     @endif
                 </div>
 
                 {{-- Card: Jobs pendientes --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                     <div class="mb-3 flex items-center justify-between">
-                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500">Pendientes</span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Pendientes</span>
                         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
                             <i class="fa-solid fa-clock text-sm text-amber-500"
                                aria-hidden="true"></i>
                         </div>
                     </div>
-                    <div class="text-3xl font-black tabular-nums text-gray-900">
+                    <div class="text-3xl font-black tabular-nums text-gray-900 dark:text-gray-100">
                         {{ number_format($queueStats['pending_count']) }}
                     </div>
-                    <p class="mt-2 text-xs text-gray-400">Jobs disponibles para procesar</p>
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Jobs disponibles para procesar</p>
                 </div>
 
                 {{-- Card: Último job --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                     <div class="mb-3 flex items-center justify-between">
-                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500">Último Job</span>
+                        <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Último Job</span>
                         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
                             <i class="fa-solid fa-wave-square text-sm text-indigo-500"
                                aria-hidden="true"></i>
                         </div>
                     </div>
                     @if ($queueStats['last_job'])
-                        <div class="text-sm font-semibold text-gray-900">{{ $queueStats['last_job']['name'] }}</div>
-                        <div class="mt-1 text-xs text-gray-400">Cola: {{ $queueStats['last_job']['queue'] }}</div>
+                        <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $queueStats['last_job']['name'] }}</div>
+                        <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">Cola: {{ $queueStats['last_job']['queue'] }}</div>
                         @if ($queueStats['last_job']['created'])
-                            <div class="mt-1 text-xs text-gray-400">
+                            <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
                                 {{ \Carbon\Carbon::createFromTimestamp($queueStats['last_job']['created'])->diffForHumans() }}
                             </div>
                         @endif
                     @else
-                        <div class="text-sm text-gray-400">Sin jobs registrados</div>
+                        <div class="text-sm text-gray-400 dark:text-gray-500">Sin jobs registrados</div>
                     @endif
 
                     @if ($queueStats['horizon_stats'])
@@ -539,13 +539,13 @@
 
             </div>
 
-            <p class="mt-4 flex items-center gap-1.5 text-xs text-gray-400">
+            <p class="mt-4 flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
                 <i class="fa-solid fa-circle-info"
                    aria-hidden="true"></i>
                 Datos calculados en tiempo real desde las tablas
-                <code class="rounded bg-gray-100 px-1 py-0.5 font-mono">jobs</code>
+                <code class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5 font-mono">jobs</code>
                 y
-                <code class="rounded bg-gray-100 px-1 py-0.5 font-mono">failed_jobs</code>.
+                <code class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5 font-mono">failed_jobs</code>.
             </p>
         </div>
     </div>
@@ -564,16 +564,16 @@
         {{-- KPIs de estado --}}
         <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
                 <div class="mb-3 flex items-center justify-between">
-                    <span class="text-xs font-medium uppercase tracking-wide text-gray-500">Con Sync</span>
+                    <span class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Con Sync</span>
                     <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
                         <i class="fa-solid fa-rotate text-sm text-indigo-500"
                            aria-hidden="true"></i>
                     </div>
                 </div>
-                <div class="text-3xl font-black tabular-nums text-gray-900">{{ $mt5Stats['totals']['sync_enabled'] ?? 0 }}</div>
-                <div class="mt-1 text-xs text-gray-400">de {{ $mt5Stats['totals']['total'] ?? 0 }} cuentas</div>
+                <div class="text-3xl font-black tabular-nums text-gray-900 dark:text-gray-100">{{ $mt5Stats['totals']['sync_enabled'] ?? 0 }}</div>
+                <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">de {{ $mt5Stats['totals']['total'] ?? 0 }} cuentas</div>
             </div>
 
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
@@ -616,7 +616,7 @@
 
         {{-- Cuentas con error --}}
         @if (count($mt5Stats['error_accounts']) > 0)
-            <div class="mb-6 overflow-hidden rounded-xl border border-red-200 bg-white shadow-sm">
+            <div class="mb-6 overflow-hidden rounded-xl border border-red-200 bg-white dark:bg-gray-800 shadow-sm">
                 <div class="flex items-center gap-2 border-b border-red-100 bg-red-50 px-4 py-3">
                     <i class="fa-solid fa-triangle-exclamation text-sm text-red-500"
                        aria-hidden="true"></i>
@@ -625,31 +625,31 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-gray-100 bg-gray-50">
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Cuenta</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Plataforma</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Último sync</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Error</th>
+                            <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cuenta</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Usuario</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Plataforma</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Último sync</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Error</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-50">
+                        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                             @foreach ($mt5Stats['error_accounts'] as $acc)
-                                <tr class="transition-colors duration-100 hover:bg-gray-50">
+                                <tr class="transition-colors duration-100 hover:bg-gray-50 dark:hover:bg-gray-900">
                                     <td class="px-4 py-3">
-                                        <div class="font-semibold text-gray-900">{{ $acc->name }}</div>
-                                        <div class="font-mono text-xs text-gray-400">{{ $acc->mt5_login }}</div>
+                                        <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $acc->name }}</div>
+                                        <div class="font-mono text-xs text-gray-400 dark:text-gray-500">{{ $acc->mt5_login }}</div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <div class="text-gray-700">{{ $acc->user_name }}</div>
-                                        <div class="text-xs text-gray-400">{{ $acc->user_email }}</div>
+                                        <div class="text-gray-700 dark:text-gray-200">{{ $acc->user_name }}</div>
+                                        <div class="text-xs text-gray-400 dark:text-gray-500">{{ $acc->user_email }}</div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium uppercase text-gray-600">
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium uppercase text-gray-600 dark:text-gray-300">
                                             {{ $acc->platform }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-xs text-gray-400">
+                                    <td class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
                                         {{ $acc->last_sync ? \Carbon\Carbon::parse($acc->last_sync)->diffForHumans() : 'Nunca' }}
                                     </td>
                                     <td class="max-w-xs px-4 py-3">
@@ -668,7 +668,7 @@
 
         {{-- Cuentas inactivas --}}
         @if (count($mt5Stats['stale_accounts']) > 0)
-            <div class="mb-6 overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+            <div class="mb-6 overflow-hidden rounded-xl border border-amber-200 bg-white dark:bg-gray-800 shadow-sm">
                 <div class="flex items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-3">
                     <i class="fa-solid fa-clock text-sm text-amber-500"
                        aria-hidden="true"></i>
@@ -677,25 +677,25 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b border-gray-100 bg-gray-50">
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Cuenta</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Broker</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Último sync</th>
+                            <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cuenta</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Usuario</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Broker</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Último sync</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-50">
+                        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                             @foreach ($mt5Stats['stale_accounts'] as $acc)
-                                <tr class="transition-colors duration-100 hover:bg-gray-50">
+                                <tr class="transition-colors duration-100 hover:bg-gray-50 dark:hover:bg-gray-900">
                                     <td class="px-4 py-3">
-                                        <div class="font-semibold text-gray-900">{{ $acc->name }}</div>
-                                        <div class="font-mono text-xs text-gray-400">{{ $acc->mt5_login }}</div>
+                                        <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $acc->name }}</div>
+                                        <div class="font-mono text-xs text-gray-400 dark:text-gray-500">{{ $acc->mt5_login }}</div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <div class="text-gray-700">{{ $acc->user_name }}</div>
-                                        <div class="text-xs text-gray-400">{{ $acc->user_email }}</div>
+                                        <div class="text-gray-700 dark:text-gray-200">{{ $acc->user_name }}</div>
+                                        <div class="text-xs text-gray-400 dark:text-gray-500">{{ $acc->user_email }}</div>
                                     </td>
-                                    <td class="px-4 py-3 text-xs text-gray-400">
+                                    <td class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">
                                         {{ $acc->broker_name ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-xs font-semibold text-amber-600">
@@ -710,31 +710,31 @@
         @endif
 
         {{-- Últimas sincronizaciones exitosas --}}
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
+        <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+            <div class="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3">
                 <i class="fa-solid fa-circle-check text-sm text-emerald-500"
                    aria-hidden="true"></i>
-                <h2 class="text-sm font-semibold text-gray-900">Últimas sincronizaciones exitosas</h2>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Últimas sincronizaciones exitosas</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-100 bg-gray-50">
-                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Cuenta</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Usuario</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Balance</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Hace</th>
+                        <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cuenta</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Usuario</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Balance</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Hace</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-50">
+                    <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                         @forelse($mt5Stats['recent_syncs'] as $acc)
-                            <tr class="transition-colors duration-100 hover:bg-gray-50">
+                            <tr class="transition-colors duration-100 hover:bg-gray-50 dark:hover:bg-gray-900">
                                 <td class="px-4 py-3">
-                                    <div class="font-semibold text-gray-900">{{ $acc->name }}</div>
-                                    <div class="font-mono text-xs text-gray-400">{{ $acc->mt5_login }}</div>
+                                    <div class="font-semibold text-gray-900 dark:text-gray-100">{{ $acc->name }}</div>
+                                    <div class="font-mono text-xs text-gray-400 dark:text-gray-500">{{ $acc->mt5_login }}</div>
                                 </td>
-                                <td class="px-4 py-3 text-gray-700">{{ $acc->user_name }}</td>
-                                <td class="px-4 py-3 text-right font-mono tabular-nums text-gray-900">
+                                <td class="px-4 py-3 text-gray-700 dark:text-gray-200">{{ $acc->user_name }}</td>
+                                <td class="px-4 py-3 text-right font-mono tabular-nums text-gray-900 dark:text-gray-100">
                                     {{ number_format($acc->current_balance, 2) }} {{ $acc->currency }}
                                 </td>
                                 <td class="px-4 py-3 text-xs font-semibold text-emerald-600">
@@ -743,7 +743,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="px-4 py-12 text-center text-sm text-gray-400"
+                                <td class="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500"
                                     colspan="4">
                                     No hay sincronizaciones recientes
                                 </td>
@@ -758,18 +758,4 @@
 
 </div>
 
-@script
-    <script>
-        $wire.on('notify', ({
-            type,
-            message
-        }) => {
-            window.dispatchEvent(new CustomEvent('toast', {
-                detail: {
-                    type,
-                    message
-                }
-            }));
-        });
-    </script>
-@endscript
+{{-- Los toasts de 'notify' los pinta el sistema global (core/notify.js). --}}

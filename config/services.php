@@ -46,14 +46,10 @@ return [
         'monthly' => env('STRIPE_PRICE_MONTHLY'),
         'yearly' => env('STRIPE_PRICE_YEARLY'),
     ],
-    'jblanked' => [
-        'api_key'  => env('JBLANKED_API_KEY'),
-        'base_url' => 'https://www.jblanked.com/news/api',
-    ],
-
     'groq' => [
         'key' => env('GROQ_API_KEY'),
-        'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
+        'reasoning_effort' => env('GROQ_REASONING_EFFORT', 'low'),
         'url' => env('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions'),
         'daily_limit_free' => (int) env('AI_DAILY_LIMIT_FREE', 3),
         'daily_limit_pro' => (int) env('AI_DAILY_LIMIT_PRO', 15),

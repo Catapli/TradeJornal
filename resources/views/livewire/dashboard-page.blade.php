@@ -21,7 +21,7 @@
 
             {{-- CONTENEDOR PRINCIPAL DEL MODAL --}}
             {{-- Aquí inicializamos 'currentView' para alternar entre 'list' y 'detail' --}}
-            <div class="inline-block w-full transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:max-w-6xl sm:align-middle">
+            <div class="inline-block w-full transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all dark:bg-gray-800 sm:my-8 sm:max-w-6xl sm:align-middle">
 
                 {{-- ======================================================================= --}}
                 {{-- VISTA 1: LISTADO DEL DÍA --}}
@@ -32,15 +32,15 @@
                      x-transition:enter-end="opacity-100 translate-x-0"> {{-- Clase h-full añadida para estructura --}}
 
                     {{-- 1. CABECERA (Se mantiene igual, ancho completo) --}}
-                    <div class="flex-shrink-0 border-b border-gray-100 bg-white px-4 pb-4 pt-5 sm:p-6">
+                    <div class="flex-shrink-0 border-b border-gray-100 bg-white px-4 pb-4 pt-5 dark:border-gray-700 dark:bg-gray-800 sm:p-6">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-xl font-bold leading-6 text-gray-900"> {{ __('labels.summary_day') }}</h3>
-                                <p class="mt-1 text-sm text-gray-500">
+                                <h3 class="text-xl font-bold leading-6 text-gray-900 dark:text-gray-100"> {{ __('labels.summary_day') }}</h3>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">
                                     {{ \Carbon\Carbon::parse($selectedDate)->translatedFormat('l, d \d\e F \d\e Y') }}
                                 </p>
                             </div>
-                            <button class="rounded-full bg-gray-50 p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none"
+                            <button class="rounded-full bg-gray-50 dark:bg-gray-900 p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 dark:hover:text-gray-400 dark:text-gray-300 focus:outline-none"
                                     @click="closeDayModal">
                                 <i class="fa-solid fa-times text-lg"></i>
                             </button>
@@ -48,7 +48,7 @@
                     </div>
 
                     {{-- 2. CONTENIDO PRINCIPAL (GRID 2 COLUMNAS) --}}
-                    <div class="flex-grow overflow-y-auto bg-gray-50 p-4 sm:p-6">
+                    <div class="flex-grow overflow-y-auto bg-gray-50 p-4 dark:bg-gray-900 sm:p-6">
                         <div class="grid h-full grid-cols-1 gap-6 lg:grid-cols-3">
 
                             {{-- COLUMNA IZQUIERDA: IA + TABLA (Ocupa 2 espacios) --}}
@@ -56,16 +56,16 @@
 
                                 {{-- A. SECCIÓN COACH IA --}}
                                 @if (Auth::user()->subscribed('default'))
-                                    <div class="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
+                                    <div class="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm dark:border-indigo-900/40 dark:bg-gray-800">
                                         <div class="flex flex-col gap-4">
                                             <div class="flex items-center justify-between">
                                                 <h4 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-indigo-900">
                                                     <i class="fa-solid fa-robot text-indigo-600"></i> {{ __('labels.intelligent_analysis') }}
                                                 </h4>
-                                                <p class="mt-1 text-[10px] font-medium text-gray-500">
+                                                <p class="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-300">
                                                     {{ __('labels.daily_uses') }}
                                                     <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                                                        {{ $this->getAiCreditsLeft() }} / 10
+                                                        {{ $this->getAiCreditsLeft() }} / {{ $this->aiDailyLimit() }}
                                                     </span>
                                                 </p>
                                                 @if (!$aiAnalysis)
@@ -97,9 +97,9 @@
                                             {{-- Resultado IA --}}
                                             @if ($aiAnalysis)
                                                 <div class="relative rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
-                                                    <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                                                    <button class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-300"
                                                             wire:click="$set('aiAnalysis', null)"><i class="fa-solid fa-times"></i></button>
-                                                    <div class="prose prose-sm max-w-none text-gray-800">{!! Str::markdown($aiAnalysis) !!}</div>
+                                                    <div class="prose prose-sm max-w-none text-gray-800 dark:text-gray-100">{!! Str::markdown($aiAnalysis) !!}</div>
                                                 </div>
                                             @endif
                                         </div>
@@ -108,14 +108,14 @@
 
 
                                 {{-- B. TABLA DE OPERACIONES (Tu código original) --}}
-                                <div class="flex flex-grow flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <div class="flex flex-grow flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 shadow-sm">
 
                                     {{-- Spinner --}}
                                     <div class="w-full justify-center py-12 text-center"
                                          wire:loading.flex
                                          wire:target="openDayDetails">
                                         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-                                        <p class="mt-2 text-sm text-gray-500"> {{ __('labels.loading') }}</p>
+                                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-300"> {{ __('labels.loading') }}</p>
                                     </div>
 
                                     {{-- Tabla --}}
@@ -123,28 +123,28 @@
                                          wire:loading.remove
                                          wire:target="openDayDetails">
                                         @if (count($this->dayTrades) > 0)
-                                            <table class="h-full min-w-full divide-y divide-gray-200">
-                                                <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                                            <table class="h-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm dark:bg-gray-900">
                                                     <tr>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.hour') }}</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.symbol') }}</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.type') }}</th>
-                                                        <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.execution') }}</th>
-                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.lots') }}</th>
-                                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500"> {{ __('labels.result') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.hour') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.symbol') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.type') }}</th>
+                                                        <th class="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.execution') }}</th>
+                                                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.lots') }}</th>
+                                                        <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300"> {{ __('labels.result') }}</th>
                                                         <th class="px-4 py-3"></th>
                                                     </tr>
                                                 </thead>
-                                                <tbody class="divide-y divide-gray-200 bg-white">
+                                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                                                     @foreach ($this->dayTrades as $trade)
                                                         {{-- @dd($this->dayTrades) --}}
                                                         {{-- COPIAR AQUÍ TU TR DENTRO DEL FOREACH EXACTAMENTE COMO LO TENÍAS --}}
                                                         <tr class="group cursor-pointer transition hover:bg-indigo-50"
                                                             @click="currentView = 'detail'; $wire.selectTrade({{ $trade->id }})">
-                                                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                                                            <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-300">
                                                                 {{ \Carbon\Carbon::parse($trade->exit_time)->format('H:i') }}
                                                             </td>
-                                                            <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-gray-900">
+                                                            <td class="whitespace-nowrap px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
                                                                 {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
                                                             </td>
                                                             <td class="whitespace-nowrap px-4 py-3 text-sm">
@@ -242,10 +242,10 @@
 
                                                                     </div>
                                                                 @else
-                                                                    <span class="block text-center text-xs text-gray-300">-</span>
+                                                                    <span class="block text-center text-xs text-gray-300 dark:text-gray-600">-</span>
                                                                 @endif
                                                             </td>
-                                                            <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600">{{ $trade->size }}</td>
+                                                            <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-gray-600 dark:text-gray-300">{{ $trade->size }}</td>
                                                             <td class="whitespace-nowrap px-4 py-3 text-right">
                                                                 {{-- Contenedor del PnL --}}
                                                                 <div class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} font-mono font-black"
@@ -261,13 +261,13 @@
                                                             {{-- <td class="{{ $trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} whitespace-nowrap px-4 py-3 text-right text-sm font-bold">
                                                                 {{ $trade->pnl >= 0 ? '+' : '' }}{{ number_format($trade->pnl, 2) }} $
                                                             </td> --}}
-                                                            <td class="px-4 py-3 text-right text-gray-300">
+                                                            <td class="px-4 py-3 text-right text-gray-300 dark:text-gray-600">
                                                                 <i class="fa-solid fa-chevron-right group-hover:text-indigo-600"></i>
                                                             </td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
-                                                <tfoot class="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 shadow-sm">
+                                                <tfoot class="sticky bottom-0 z-10 border-t border-gray-200 bg-gray-50 shadow-sm dark:border-gray-700 dark:bg-gray-900">
                                                     @php
                                                         $count = $this->dayTrades->count();
                                                         // Lógica de colores para el contador: <3 verde, <6 naranja, >=6 rojo
@@ -278,7 +278,7 @@
                                                     @endphp
                                                     <tr>
                                                         {{-- 1. Título de Operaciones (Colspan 3 para ocupar Hour, Symbol, Type) --}}
-                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500"
+                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500 dark:text-gray-300"
                                                             colspan="3">
                                                             {{ __('labels.total_trades') }}
                                                         </td>
@@ -291,7 +291,7 @@
                                                         </td>
 
                                                         {{-- 3. Título Total PnL (Ocupa la columna de Lots) --}}
-                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500">
+                                                        <td class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500 dark:text-gray-300">
                                                             {{ __('labels.total') }}
                                                         </td>
 
@@ -312,8 +312,8 @@
                                             </table>
                                         @else
                                             <div class="py-12 text-center">
-                                                <i class="fa-solid fa-box-open mb-3 text-4xl text-gray-300"></i>
-                                                <h3 class="text-gray-500">{{ __('labels.without_operations') }}</h3>
+                                                <i class="fa-solid fa-box-open mb-3 text-4xl text-gray-300 dark:text-gray-600"></i>
+                                                <h3 class="text-gray-500 dark:text-gray-300">{{ __('labels.without_operations') }}</h3>
                                             </div>
                                         @endif
                                     </div>
@@ -335,7 +335,7 @@
                 {{-- ======================================================================= --}}
                 {{-- VISTA 2: DETALLE DEL TRADE (Se muestra al hacer click en fila) --}}
                 {{-- ======================================================================= --}}
-                <div class="min-h-[500px] bg-white"
+                <div class="min-h-[500px] bg-white dark:bg-gray-800"
                      x-show="currentView === 'detail'"
                      x-cloak
                      x-transition:enter="transition ease-out duration-200"
@@ -343,15 +343,15 @@
                      x-transition:enter-end="opacity-100 translate-x-0">
 
                     {{-- HEADER DETALLE CON BOTÓN VOLVER --}}
-                    <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                        <button class="group flex items-center font-medium text-gray-500 transition hover:text-indigo-600"
+                    <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+                        <button class="group flex items-center font-medium text-gray-500 dark:text-gray-300 transition hover:text-indigo-600"
                                 @click="currentView = 'list'">
-                            <div class="mr-3 rounded-full bg-gray-100 p-2 transition group-hover:bg-indigo-100">
+                            <div class="mr-3 rounded-full bg-gray-100 p-2 transition group-hover:bg-indigo-100 dark:bg-gray-700">
                                 <i class="fa-solid fa-arrow-left text-sm"></i>
                             </div>
                             {{ __('labels.back_to_list') }}
                         </button>
-                        <button class="text-gray-400 hover:text-gray-500"
+                        <button class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-400 dark:text-gray-300"
                                 @click="closeDayModal"><i class="fa-solid fa-times"></i></button>
                     </div>
 
@@ -361,15 +361,15 @@
                              wire:loading
                              wire:target="selectTrade">
                             <div class="flex justify-between">
-                                <div class="h-8 w-1/3 rounded bg-gray-200"></div>
-                                <div class="h-8 w-1/4 rounded bg-gray-200"></div>
+                                <div class="h-8 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+                                <div class="h-8 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
                             </div>
                             <div class="grid grid-cols-3 gap-6">
                                 <div class="col-span-1 space-y-4">
-                                    <div class="h-40 rounded-xl bg-gray-200"></div>
-                                    <div class="h-24 rounded-xl bg-gray-200"></div>
+                                    <div class="h-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+                                    <div class="h-24 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                                 </div>
-                                <div class="col-span-2 h-80 rounded-xl bg-gray-200"></div>
+                                <div class="col-span-2 h-80 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                             </div>
                         </div>
 
@@ -380,8 +380,8 @@
                                 {{-- Info Cabecera --}}
                                 <div class="mb-4 flex items-end justify-between">
                                     <div>
-                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400"> {{ __('labels.ticket_') }} . {{ $selectedTrade->ticket }}</span>
-                                        <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"> {{ __('labels.ticket_') }} . {{ $selectedTrade->ticket }}</span>
+                                        <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900 dark:text-gray-100">
                                             {{ $selectedTrade->tradeAsset->name ?? 'N/A' }}
                                             <span class="{{ $selectedTrade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
                                                 {{ $selectedTrade->direction }}
@@ -390,7 +390,7 @@
                                         <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $selectedTrade->account->name }}</span>
                                     </div>
                                     <div class="text-right">
-                                        <span class="block text-sm font-medium text-gray-500"> {{ __('labels.net_result') }}</span>
+                                        <span class="block text-sm font-medium text-gray-500 dark:text-gray-300"> {{ __('labels.net_result') }}</span>
                                         <span class="{{ $selectedTrade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-4xl font-black">
                                             {{ $selectedTrade->pnl >= 0 ? '+' : '' }}{{ number_format($selectedTrade->pnl, 2) }} $
                                         </span>
@@ -407,34 +407,34 @@
 
                                     {{-- COLUMNA DATOS (Tu código original intacto) --}}
                                     <div class="space-y-6 lg:col-span-1">
-                                        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-                                            <h4 class="mb-4 text-xs font-bold uppercase text-gray-400">{{ __('labels.execution_data') }}</h4>
+                                        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900">
+                                            <h4 class="mb-4 text-xs font-bold uppercase text-gray-400 dark:text-gray-500">{{ __('labels.execution_data') }}</h4>
                                             <dl class="space-y-4 text-sm">
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">{{ __('labels.entry_exit') }}</dt>
-                                                    <dd class="font-mono font-bold text-gray-900">{{ $selectedTrade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400"></i> {{ $selectedTrade->exit_price }}</dd>
+                                                <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                    <dt class="text-gray-500 dark:text-gray-300">{{ __('labels.entry_exit') }}</dt>
+                                                    <dd class="font-mono font-bold text-gray-900 dark:text-gray-100">{{ $selectedTrade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400 dark:text-gray-500"></i> {{ $selectedTrade->exit_price }}</dd>
                                                 </div>
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">{{ __('labels.timetable') }}</dt>
-                                                    <dd class="text-right font-mono font-bold text-gray-900">
+                                                <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                    <dt class="text-gray-500 dark:text-gray-300">{{ __('labels.timetable') }}</dt>
+                                                    <dd class="text-right font-mono font-bold text-gray-900 dark:text-gray-100">
                                                         {{ \Carbon\Carbon::parse($selectedTrade->entry_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('H:i') }}
-                                                        <span class="block text-[10px] font-normal text-gray-400">{{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('d M Y') }}</span>
+                                                        <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">{{ \Carbon\Carbon::parse($selectedTrade->exit_time)->format('d M Y') }}</span>
                                                     </dd>
                                                 </div>
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">{{ __('labels.volume') }}</dt>
-                                                    <dd class="font-bold text-gray-900">{{ $selectedTrade->size }} {{ __('labels.lots') }}</dd>
+                                                <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                    <dt class="text-gray-500 dark:text-gray-300">{{ __('labels.volume') }}</dt>
+                                                    <dd class="font-bold text-gray-900 dark:text-gray-100">{{ $selectedTrade->size }} {{ __('labels.lots') }}</dd>
                                                 </div>
 
-                                                <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                    <dt class="text-gray-500">{{ __('labels.pips_moved') }}</dt>
-                                                    <dd class="font-bold text-gray-900">{{ $selectedTrade->pips_traveled }} {{ __('labels.pips') }}</dd>
+                                                <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                    <dt class="text-gray-500 dark:text-gray-300">{{ __('labels.pips_moved') }}</dt>
+                                                    <dd class="font-bold text-gray-900 dark:text-gray-100">{{ $selectedTrade->pips_traveled }} {{ __('labels.pips') }}</dd>
                                                 </div>
 
                                                 {{-- BARRA MAE/MFE --}}
                                                 <div class="flex justify-between">
-                                                    <dt class="text-gray-500">{{ __('labels.execution') }}</dt>
-                                                    <dd class="w-32 font-medium text-gray-900">
+                                                    <dt class="text-gray-500 dark:text-gray-300">{{ __('labels.execution') }}</dt>
+                                                    <dd class="w-32 font-medium text-gray-900 dark:text-gray-100">
                                                         @if ($selectedTrade->mae_price && $selectedTrade->mfe_price)
                                                             @php
                                                                 // 1. Distancias Absolutas
@@ -508,7 +508,7 @@
                                                                      style="left: {{ $markerPos }}%; transform: translateX(-50%);"></div>
                                                             </div>
                                                         @else
-                                                            <span class="text-xs text-gray-300">-</span>
+                                                            <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
                                                         @endif
                                                     </dd>
                                                 </div>
@@ -536,7 +536,7 @@
                                             </div>
 
                                             {{-- Textarea con Auto-Guardado al perder el foco (blur) --}}
-                                            <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 placeholder-yellow-800/50 focus:ring-0"
+                                            <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 dark:text-gray-100 placeholder-yellow-800/50 focus:ring-0"
                                                       wire:model="notes"
                                                       wire:blur="saveNotes"
                                                       rows="4"
@@ -580,7 +580,7 @@
                                                      wire:ignore>
                                                     @if ($selectedTrade?->chart_data_path)
                                                         <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
-                                                            <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 transition-all hover:text-white"
+                                                            <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 transition-all hover:text-white"
                                                                     @click="changeTimeframe(tf)"
                                                                     :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
                                                                     x-text="tf.toUpperCase()"></button>
@@ -589,7 +589,7 @@
                                                         {{-- BOTÓN VOLUMEN --}}
                                                         <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
                                                                 @click="toggleVol()"
-                                                                :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                                :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 dark:text-gray-300 hover:text-gray-300 dark:hover:text-gray-600'"
                                                                 title="{{ __('labels.show_hide_volume') }}">
 
                                                             {{-- Icono de barras (FontAwesome o SVG manual) --}}
@@ -599,7 +599,7 @@
                                                         {{-- BOTÓN EMA --}}
                                                         <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
                                                                 @click="toggleEma()"
-                                                                :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                                :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 dark:text-gray-300 hover:text-gray-300 dark:hover:text-gray-600'"
                                                                 title="{{ __('labels.show_hide_ema') }}">
 
                                                             {{-- Icono de línea --}}
@@ -617,7 +617,7 @@
                                                         @if ($selectedTrade?->chart_data_path)
                                                             <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
                                                                     @click="activeTab = 'chart'"
-                                                                    :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                                    :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
                                                                 <i class="fa-solid fa-chart-line"></i>
                                                                 <span class="hidden sm:inline">{{ __('labels.chart') }}</span>
                                                             </button>
@@ -626,14 +626,14 @@
                                                         {{-- Botón Ver Captura --}}
                                                         <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
                                                                 @click="activeTab = 'image'"
-                                                                :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                                :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
                                                             <i class="fa-solid fa-image"></i>
                                                             <span class="hidden sm:inline">{{ __('labels.screenshot') }}</span>
                                                         </button>
 
                                                         <div class="mx-1 h-3 w-px bg-gray-600"></div>
 
-                                                        <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
+                                                        <button class="ml-2 px-2 text-gray-400 dark:text-gray-500 transition-colors hover:text-white"
                                                                 @click="toggleFullscreen()"
                                                                 :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
 
@@ -718,7 +718,7 @@
                                                                             <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
                                                                         </div>
                                                                         <h3 class="mb-1 text-lg font-bold text-white">{{ __('labels.upload_screenshot') }}</h3>
-                                                                        <p class="text-xs text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
+                                                                        <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.drag_drop_or_click') }}</p>
                                                                     </div>
 
                                                                     <div class="text-center"
@@ -750,10 +750,10 @@
                                                             <i class="fa-solid fa-brain text-indigo-600"></i> {{ __('labels.mentor_analyze') }}
                                                         </h4>
                                                         {{-- CONTADOR VISUAL --}}
-                                                        <p class="mt-1 text-[10px] font-medium text-gray-500">
+                                                        <p class="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-300">
                                                             {{ __('labels.daily_uses') }}
                                                             <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                                                                {{ $this->getAiCreditsLeft() }} / 10
+                                                                {{ $this->getAiCreditsLeft() }} / {{ $this->aiDailyLimit() }}
                                                             </span>
                                                         </p>
                                                         @if (!$selectedTrade->ai_analysis)
@@ -806,7 +806,7 @@
 
 
                                                 @if ($selectedTrade->ai_analysis)
-                                                    <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800">
+                                                    <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800 dark:text-gray-100">
                                                         {!! Str::markdown($selectedTrade->ai_analysis) !!}
                                                     </div>
                                                     <div class="mt-2 text-right">
@@ -847,7 +847,7 @@
 
         {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
         {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-gray-900"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
@@ -856,7 +856,7 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading_dashboard') }}</span>
             </div>
         </div>
     </div>
@@ -874,13 +874,13 @@
         <x-loader></x-loader>
     </div>
 
-    <header class="relative top-0 z-10 col-span-12 mt-[55px] flex w-auto justify-between bg-white px-6 py-2 shadow">
+    <header class="relative top-0 z-10 col-span-12 mt-[55px] flex w-auto justify-between bg-white px-6 py-2 shadow transition-colors dark:bg-gray-800 dark:shadow-black/30">
         <div>
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-chart-pie text-2xl text-indigo-600"></i>
-                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.dashboard') }}</h1>
+                <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100">{{ __('menu.dashboard') }}</h1>
             </div>
-            <p class="text-sm text-gray-500">{{ __('menu.resume_dashboard') }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-300">{{ __('menu.resume_dashboard') }}</p>
         </div>
         @if (Auth::user()->subscribed('default'))
             <livewire:ai-daily-tip :selected-accounts="$selectedAccounts" />
@@ -955,32 +955,32 @@
                    tabindex="-1" />
 
             {{-- Presets de rango rápido --}}
-            <div class="flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 text-xs font-medium text-gray-600 shadow-sm">
+            <div class="flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300 shadow-sm">
                 <button class="h-full px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
                         type="button"
                         @click="preset('today')">{{ __('labels.preset_today') }}</button>
-                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-700 dark:hover:bg-indigo-500/10"
                         type="button"
                         @click="preset(7)">7D</button>
-                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-700 dark:hover:bg-indigo-500/10"
                         type="button"
                         @click="preset(30)">30D</button>
-                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-700 dark:hover:bg-indigo-500/10"
                         type="button"
                         @click="preset(90)">90D</button>
-                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600"
+                <button class="h-full border-l border-gray-200 px-2.5 transition hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-700 dark:hover:bg-indigo-500/10"
                         type="button"
                         @click="preset('ytd')">{{ __('labels.preset_ytd') }}</button>
             </div>
 
             {{-- Botón trigger --}}
-            <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-600 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+            <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 px-3 text-sm text-gray-600 dark:text-gray-300 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
                     @click="open()"
                     x-ref="triggerBtn"
                     type="button">
                 <i class="fa-regular fa-calendar-range text-indigo-500"></i>
                 <span x-text="hasFilter ? label : '{{ __('labels.date_range') }}'"></span>
-                <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+                <i class="fa-solid fa-chevron-down text-xs text-gray-400 dark:text-gray-500"></i>
             </button>
 
             {{-- Botón limpiar --}}
@@ -1012,21 +1012,21 @@
                     <div class="rounded-lg bg-yellow-100 p-1.5 text-yellow-600">
                         <i class="fa-solid fa-lightbulb"></i>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-800">{{ __('labels.last_notes') }}</h3>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ __('labels.last_notes') }}</h3>
                 </div>
                 {{-- Cuerpo: Scroll Horizontal --}}
                 <div class="flex flex-row gap-4 overflow-x-auto"> {{-- pb-6 da espacio para la barra de scroll si aparece --}}
                     @forelse($this->recentNotes as $noteTrade)
                         {{-- Tarjeta: Ancho fijo y flex-shrink-0 para que no se aplasten --}}
-                        <div class="bg--gray-50 group relative flex min-w-[250px] max-w-[250px] flex-shrink-0 cursor-pointer flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:border-yellow-200 hover:bg-yellow-50 hover:shadow-sm"
+                        <div class="bg--gray-50 group relative flex min-w-[250px] max-w-[250px] flex-shrink-0 cursor-pointer flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:border-yellow-200 hover:bg-yellow-50 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-yellow-900/20"
                              wire:click="openTradeFromNotes({{ $noteTrade->id }})">
 
                             <div>
                                 <div class="mb-2 flex items-start justify-between">
-                                    <span class="flex items-center gap-1 text-xs font-bold text-gray-900">
+                                    <span class="flex items-center gap-1 text-xs font-bold text-gray-900 dark:text-gray-100">
                                         {{ $noteTrade->tradeAsset->name ?? $noteTrade->symbol }}
                                     </span>
-                                    <span class="text-[10px] text-gray-400">{{ $noteTrade->exit_time->diffForHumans(null, true, true) }}</span>
+                                    <span class="text-[10px] text-gray-400 dark:text-gray-500">{{ $noteTrade->exit_time->diffForHumans(null, true, true) }}</span>
                                 </div>
 
                                 {{-- Badge Resultado --}}
@@ -1036,7 +1036,7 @@
                                     </span>
                                 </div>
 
-                                <p class="line-clamp-3 text-xs italic leading-relaxed text-gray-600">
+                                <p class="line-clamp-3 text-xs italic leading-relaxed text-gray-600 dark:text-gray-300">
                                     "{{ $noteTrade->notes }}"
                                 </p>
                             </div>
@@ -1047,7 +1047,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="flex w-full flex-col items-center justify-center py-8 text-center text-gray-400">
+                        <div class="flex w-full flex-col items-center justify-center py-8 text-center text-gray-400 dark:text-gray-500">
                             <i class="fa-regular fa-clipboard mb-2 text-2xl opacity-50"></i>
                             <p class="text-xs">{{ __('labels.not_notes') }}</p>
                         </div>
@@ -1057,11 +1057,11 @@
         @endif
 
         {{-- 3. PLAN DIARIO (Cuarto de pantalla - NUEVO) --}}
-        <div class="col-span-3 flex flex-col justify-center rounded-3xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-3">
+        <div class="col-span-3 flex flex-col justify-center rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-5 shadow-sm lg:col-span-3">
 
             <div class="mb-4 flex items-center gap-2">
                 <div class="rounded-lg bg-indigo-100 p-1.5 text-indigo-600"><i class="fa-solid fa-crosshairs"></i></div>
-                <h3 class="text-sm font-bold text-gray-800">{{ __('labels.daily_objective') }}</h3>
+                <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">{{ __('labels.daily_objective') }}</h3>
             </div>
 
             @if ($planStatus)
@@ -1070,17 +1070,17 @@
                     @if ($planStatus['pnl']['target'])
                         <div class="space-y-2">
                             <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
-                                <span class="italic text-gray-500">{{ __('labels.profit_target') }}</span>
+                                <span class="italic text-gray-500 dark:text-gray-300">{{ __('labels.profit_target') }}</span>
                                 <span class="font-mono text-xs text-emerald-600">{{ number_format($planStatus['pnl']['target'], 0) }} $</span>
                             </div>
 
-                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-gray-700">
                                 <div class="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all duration-700 ease-out"
                                      style="width: {{ $planStatus['pnl']['progress'] }}%"></div>
                             </div>
 
                             <div class="mt-1 flex items-center justify-between">
-                                <span class="text-[9px] font-bold uppercase text-gray-400">{{ number_format($planStatus['pnl']['progress'], 0) }}%</span>
+                                <span class="text-[9px] font-bold uppercase text-gray-400 dark:text-gray-500">{{ number_format($planStatus['pnl']['progress'], 0) }}%</span>
                                 <div class="{{ $planStatus['pnl']['current'] >= 0 ? 'text-emerald-600' : 'text-rose-500' }} font-mono text-xs font-black">
                                     {{ $planStatus['pnl']['current'] >= 0 ? '+' : '' }}{{ number_format($planStatus['pnl']['current'], 2) }} $
                                 </div>
@@ -1098,11 +1098,11 @@
                         @endphp
                         <div class="space-y-2">
                             <div class="flex items-end justify-between text-[10px] font-bold uppercase tracking-wider">
-                                <span class="italic text-gray-500">{{ __('labels.max_loss_limit') }}</span>
+                                <span class="italic text-gray-500 dark:text-gray-300">{{ __('labels.max_loss_limit') }}</span>
                                 <span class="font-mono text-xs text-rose-500">{{ number_format($planStatus['pnl']['limit'], 0) }} $</span>
                             </div>
 
-                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-gray-700">
                                 <div class="{{ $isOverLoss ? 'bg-rose-600 animate-pulse' : 'bg-rose-400' }} h-full transition-all duration-500"
                                      style="width: {{ $pctLoss }}%"></div>
                             </div>
@@ -1128,21 +1128,21 @@
 
                         <div class="space-y-2">
                             <div class="flex items-end justify-between">
-                                <div class="text-[10px] font-bold uppercase italic tracking-wider text-gray-500">{{ __('labels.daily_plan') }}</div>
+                                <div class="text-[10px] font-bold uppercase italic tracking-wider text-gray-500 dark:text-gray-300">{{ __('labels.daily_plan') }}</div>
                                 <div class="{{ $isFull ? 'text-rose-600' : ($isWarning ? 'text-orange-500' : 'text-emerald-500') }} font-mono text-[10px] font-bold">
                                     {{ number_format($pctTrades, 0) }}%
                                 </div>
                             </div>
 
-                            <div class="relative h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner">
+                            <div class="relative h-2 w-full overflow-hidden rounded-full bg-gray-100 shadow-inner dark:bg-gray-700">
                                 <div class="{{ $isFull ? 'bg-rose-600 animate-pulse' : ($isWarning ? 'bg-orange-400' : 'bg-emerald-400') }} h-full transition-all duration-500"
                                      style="width: {{ $pctTrades }}%">
                                 </div>
                             </div>
 
                             <div class="flex items-center justify-between">
-                                <p class="font-mono text-[11px] font-black text-gray-700">
-                                    {{ $currentTrades }} <span class="font-normal italic text-gray-400">/ {{ $limitTrades }} {{ __('labels.ops') }}</span>
+                                <p class="font-mono text-[11px] font-black text-gray-700 dark:text-gray-200">
+                                    {{ $currentTrades }} <span class="font-normal italic text-gray-400 dark:text-gray-500">/ {{ $limitTrades }} {{ __('labels.ops') }}</span>
                                 </p>
 
                                 @if ($isFull)
@@ -1159,7 +1159,7 @@
                 </div>
             @else
                 <div class="py-4 text-center">
-                    <p class="mb-2 text-xs text-gray-400">{{ __('labels.not_rules_configured') }}</p>
+                    <p class="mb-2 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.not_rules_configured') }}</p>
                     <a class="text-xs font-bold text-indigo-600 hover:underline"
                        href="{{ route('cuentas') }}">{{ __('labels.configure_in_accounts') }}</a>
                 </div>
@@ -1172,16 +1172,16 @@
 
 
             {{-- CARD: PNL  --}}
-            <div class="content-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="content-center rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm">
                 <div class="flex items-center justify-between">
 
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.win_pnl') }}</h3>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.win_pnl') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
-                        <div class="text-3xl font-black text-gray-900">
+                        <div class="text-3xl font-black text-gray-900 dark:text-gray-100">
                             <span class="{{ $pnlTotal >= 0 ? 'text-emerald-600' : 'text-rose-600' }}"
                                   x-text="$store.viewMode.format({{ $pnlTotal }}, {{ $pnlTotal_perc ?? 0 }})"></span>
 
@@ -1193,7 +1193,7 @@
                                   title="{{ __('labels.prev_period') }}: {{ $comparison['prev_label'] }} ({{ number_format($comparison['pnl_prev'], 2) }} $)">
                                 <i class="fa-solid {{ $comparison['pnl_diff'] >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i>
                                 {{ ($comparison['pnl_diff'] >= 0 ? '+' : '') . number_format($comparison['pnl_diff'], 2) }} $
-                                <span class="font-normal text-gray-400">{{ __('labels.vs_prev_period') }}</span>
+                                <span class="font-normal text-gray-400 dark:text-gray-500">{{ __('labels.vs_prev_period') }}</span>
                             </span>
                         @endif
                     </div>
@@ -1203,7 +1203,7 @@
             </div>
 
             {{-- CARD: WIN RATE --}}
-            <div class="content-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+            <div class="content-center rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm"
                  wire:ignore>
 
                 <div class="flex items-center justify-between">
@@ -1211,10 +1211,10 @@
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.trade_winrate') }}</h3>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.trade_winrate') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
-                        <div class="text-3xl font-black text-gray-900"
+                        <div class="text-3xl font-black text-gray-900 dark:text-gray-100"
                              x-text="$wire.winRateChartData?.rate + '%'">
                             0%
                         </div>
@@ -1227,7 +1227,7 @@
                             <i class="fa-solid"
                                :class="($wire.comparison?.wr_diff ?? 0) >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'"></i>
                             <span x-text="(($wire.comparison?.wr_diff ?? 0) >= 0 ? '+' : '') + ($wire.comparison?.wr_diff ?? 0) + ' pts'"></span>
-                            <span class="font-normal text-gray-400">{{ __('labels.vs_prev_period') }}</span>
+                            <span class="font-normal text-gray-400 dark:text-gray-500">{{ __('labels.vs_prev_period') }}</span>
                         </span>
                     </div>
 
@@ -1247,7 +1247,7 @@
                                 0
                             </div>
                             {{-- (Opcional) Break Even / Ceros --}}
-                            <div class="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-bold text-gray-400">
+                            <div class="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-bold text-gray-400 dark:text-gray-500 dark:bg-gray-700">
                                 0
                             </div>
                             {{-- Losses --}}
@@ -1262,7 +1262,7 @@
             </div>
 
             {{-- CARD: AVG WIN / LOSS TRADE (Estilo Barra de Progreso) --}}
-            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm"
                  {{-- Inicializamos datos locales para calcular anchos --}}
                  x-data="{
                      get win() { return $wire.avgPnLChartData?.avg_win || 0; },
@@ -1282,11 +1282,11 @@
                     {{-- IZQUIERDA: Título y Ratio Grande --}}
                     <div class="flex min-w-[100px] flex-col justify-center">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.avg_rr') }}</h3>
-                            <i class="fa-regular fa-circle-question text-xs text-gray-400"
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.avg_rr') }}</h3>
+                            <i class="fa-regular fa-circle-question text-xs text-gray-400 dark:text-gray-500"
                                title="{{ __('labels.title_r_r') }}"></i>
                         </div>
-                        <div class="text-3xl font-black text-gray-900"
+                        <div class="text-3xl font-black text-gray-900 dark:text-gray-100"
                              x-text="ratio">
                             0
                         </div>
@@ -1296,7 +1296,7 @@
                     <div class="ml-4 flex flex-1 flex-col justify-center">
 
                         {{-- 1. La Barra (Visual) --}}
-                        <div class="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div class="flex h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                             {{-- Parte Verde (Ganancia) --}}
                             <div class="h-full bg-emerald-500 transition-all duration-1000 ease-out"
                                  :style="'width: ' + winPct + '%'">
@@ -1326,7 +1326,7 @@
 
             {{-- CARD: DÍAS GANADORES VS PERDEDORES --}}
 
-            <div class="content-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+            <div class="content-center rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm"
                  wire:ignore>
 
                 <div class="flex items-center justify-between">
@@ -1334,10 +1334,10 @@
                     {{-- IZQUIERDA: Textos y Porcentaje --}}
                     <div class="flex flex-col">
                         <div class="mb-1 flex items-center gap-1">
-                            <h3 class="text-sm font-medium text-gray-500">{{ __('labels.daily_winrate') }}</h3>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.daily_winrate') }}</h3>
                         </div>
                         {{-- Usamos Alpine para mostrar el % dinámicamente --}}
-                        <div class="text-3xl font-black text-gray-900"
+                        <div class="text-3xl font-black text-gray-900 dark:text-gray-100"
                              x-text="$wire.dailyWinLossData?.rate + '%'">
                             0%
                         </div>
@@ -1359,7 +1359,7 @@
                                 0
                             </div>
                             {{-- (Opcional) Break Even / Ceros --}}
-                            <div class="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-bold text-gray-400">
+                            <div class="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-bold text-gray-400 dark:text-gray-500 dark:bg-gray-700">
                                 0
                             </div>
                             {{-- Losses --}}
@@ -1375,12 +1375,12 @@
 
 
             {{-- CARD: RENDIMIENTO (Profit Factor + Expectancy + Racha) --}}
-            <div class="content-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 class="mb-3 text-sm font-medium text-gray-500">{{ __('labels.performance') }}</h3>
-                <div class="grid grid-cols-3 gap-2">
+            <div class="content-center rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm">
+                <h3 class="mb-3 text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.performance') }}</h3>
+                <div class="grid grid-cols-2 gap-x-2 gap-y-3">
                     {{-- Profit Factor --}}
                     <div class="flex flex-col">
-                        <span class="text-xs text-gray-400"
+                        <span class="text-xs text-gray-400 dark:text-gray-500"
                               title="{{ __('labels.profit_factor_help') }}">{{ __('labels.profit_factor') }}</span>
                         @php $pf = $extraKpis['profit_factor'] ?? 0; @endphp
                         <span class="{{ $pf === null || $pf >= 1 ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
@@ -1389,7 +1389,7 @@
                     </div>
                     {{-- Expectancy --}}
                     <div class="flex flex-col">
-                        <span class="text-xs text-gray-400"
+                        <span class="text-xs text-gray-400 dark:text-gray-500"
                               title="{{ __('labels.expectancy_help') }}">{{ __('labels.expectancy') }}</span>
                         @php $exp = $extraKpis['expectancy'] ?? 0; @endphp
                         <span class="{{ $exp >= 0 ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
@@ -1398,7 +1398,7 @@
                     </div>
                     {{-- Racha actual --}}
                     <div class="flex flex-col">
-                        <span class="text-xs text-gray-400">{{ __('labels.current_streak') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.current_streak') }}</span>
                         @php $streak = $extraKpis['streak'] ?? ['type' => null, 'count' => 0]; @endphp
                         @if ($streak['type'])
                             <span class="{{ $streak['type'] === 'win' ? 'text-emerald-600' : 'text-rose-500' }} text-xl font-black tabular-nums">
@@ -1406,26 +1406,35 @@
                                 <i class="fa-solid {{ $streak['type'] === 'win' ? 'fa-fire' : 'fa-snowflake' }} text-sm"></i>
                             </span>
                         @else
-                            <span class="text-xl font-black text-gray-300">—</span>
+                            <span class="text-xl font-black text-gray-300 dark:text-gray-600">—</span>
                         @endif
+                    </div>
+                    {{-- Max Drawdown --}}
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-400 dark:text-gray-500"
+                              title="{{ __('labels.max_drawdown_help') }}">{{ __('labels.max_drawdown') }}</span>
+                        @php $dd = $extraKpis['max_drawdown'] ?? 0; @endphp
+                        <span class="{{ $dd > 0 ? 'text-rose-500' : 'text-gray-300 dark:text-gray-600' }} text-xl font-black tabular-nums">
+                            {{ $dd > 0 ? '-' . number_format($dd, 2) . ' $' : '0 $' }}
+                        </span>
                     </div>
                 </div>
             </div>
 
             {{-- CARD: TOP / PEORES ACTIVOS --}}
             @if (!empty($assetBreakdown['top']))
-                <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:col-span-2 lg:col-span-2">
+                <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm md:col-span-2 lg:col-span-2">
                     <div class="grid grid-cols-2 gap-4">
                         {{-- Top --}}
                         <div>
-                            <h3 class="mb-2 text-sm font-medium text-gray-500">
+                            <h3 class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-300">
                                 <i class="fa-solid fa-trophy mr-1 text-amber-400"></i>{{ __('labels.top_assets') }}
                             </h3>
                             <div class="space-y-1.5">
                                 @foreach ($assetBreakdown['top'] as $row)
                                     <div class="flex items-center justify-between text-sm">
-                                        <span class="truncate font-medium text-gray-700">{{ $row['asset'] }}
-                                            <span class="text-xs text-gray-400">({{ $row['trades'] }})</span>
+                                        <span class="truncate font-medium text-gray-700 dark:text-gray-200">{{ $row['asset'] }}
+                                            <span class="text-xs text-gray-400 dark:text-gray-500">({{ $row['trades'] }})</span>
                                         </span>
                                         <span class="{{ $row['pnl'] >= 0 ? 'text-emerald-600' : 'text-rose-500' }} font-bold tabular-nums">
                                             {{ ($row['pnl'] >= 0 ? '+' : '') . number_format($row['pnl'], 2) }} $
@@ -1435,16 +1444,16 @@
                             </div>
                         </div>
                         {{-- Peores --}}
-                        <div class="border-l border-gray-100 pl-4">
-                            <h3 class="mb-2 text-sm font-medium text-gray-500">
+                        <div class="border-l border-gray-100 pl-4 dark:border-gray-700">
+                            <h3 class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-300">
                                 <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-400"></i>{{ __('labels.worst_assets') }}
                             </h3>
                             @if (!empty($assetBreakdown['worst']))
                                 <div class="space-y-1.5">
                                     @foreach ($assetBreakdown['worst'] as $row)
                                         <div class="flex items-center justify-between text-sm">
-                                            <span class="truncate font-medium text-gray-700">{{ $row['asset'] }}
-                                                <span class="text-xs text-gray-400">({{ $row['trades'] }})</span>
+                                            <span class="truncate font-medium text-gray-700 dark:text-gray-200">{{ $row['asset'] }}
+                                                <span class="text-xs text-gray-400 dark:text-gray-500">({{ $row['trades'] }})</span>
                                             </span>
                                             <span class="font-bold tabular-nums text-rose-500">
                                                 {{ number_format($row['pnl'], 2) }} $
@@ -1453,20 +1462,53 @@
                                     @endforeach
                                 </div>
                             @else
-                                <p class="text-xs text-gray-400">{{ __('labels.no_losing_assets') }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.no_losing_assets') }}</p>
                             @endif
                         </div>
                     </div>
                 </div>
             @endif
 
+            {{-- CARD: MEJOR / PEOR OPERACIÓN (rellena el hueco; usa best_trade/worst_trade ya calculados) --}}
+            <div class="content-center rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm">
+                <h3 class="mb-3 text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.best_worst_trade') }}</h3>
+                @php
+                    $best = $extraKpis['best_trade'] ?? null;
+                    $worst = $extraKpis['worst_trade'] ?? null;
+                @endphp
+                @if ($best !== null || $worst !== null)
+                    <div class="space-y-3">
+                        {{-- Mejor --}}
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i>{{ __('labels.best_trade') }}
+                            </span>
+                            <span class="font-black tabular-nums text-emerald-600">
+                                {{ $best !== null ? ($best >= 0 ? '+' : '') . number_format($best, 2) : '—' }} $
+                            </span>
+                        </div>
+                        {{-- Peor --}}
+                        <div class="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
+                            <span class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                <i class="fa-solid fa-arrow-trend-down text-rose-500"></i>{{ __('labels.worst_trade') }}
+                            </span>
+                            <span class="font-black tabular-nums text-rose-500">
+                                {{ $worst !== null ? number_format($worst, 2) : '—' }} $
+                            </span>
+                        </div>
+                    </div>
+                @else
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.no_trades_period') }}</p>
+                @endif
+            </div>
+
         </div>
 
         {{-- CARD: GRÁFICO DE EVOLUCIÓN PNL --}}
-        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-4 shadow-sm"
              wire:ignore>
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">{{ __('labels.cumulative_yield_curve') }}</h3>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ __('labels.cumulative_yield_curve') }}</h3>
 
             </div>
 
@@ -1476,12 +1518,12 @@
         </div>
 
         {{-- CARD: PNL DIARIO (BARRAS) --}}
-        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+        <div class="col-span-6 rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-4 shadow-sm"
              wire:ignore>
             <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">{{ __('labels.pnl_day_clean') }}</h3>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ __('labels.pnl_day_clean') }}</h3>
                 {{-- Leyenda Simple --}}
-                <div class="flex gap-3 text-xs font-medium">
+                <div class="flex gap-3 text-xs font-medium text-gray-600 dark:text-gray-300">
                     <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> {{ __('labels.profit') }}</div>
                     <div class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span>{{ __('labels.loss') }}</div>
                 </div>
@@ -1493,17 +1535,17 @@
         </div>
 
         {{-- CARD: HEATMAP TEMPORAL --}}
-        <div class="col-span-12 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+        <div class="col-span-12 rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm"
              wire:ignore>
             <div class="mb-4 flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">{{ __('labels.heatmap') }}</h3>
-                    <p class="text-xs text-gray-500">{{ __('labels.cumulative_yield_hour') }}</p>
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ __('labels.heatmap') }}</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-300">{{ __('labels.cumulative_yield_hour') }}</p>
                 </div>
-                {{ __('labels.legend_simple') }}
+                <span class="text-sm font-medium text-gray-500 dark:text-gray-300">{{ __('labels.legend_simple') }}</span>
                 <div class="flex items-center gap-2 text-xs">
                     <span class="rounded bg-rose-500 px-2 py-1 text-white">{{ __('labels.loss') }}</span>
-                    <span class="rounded bg-gray-100 px-2 py-1 text-gray-500">{{ __('labels.neutral') }}</span>
+                    <span class="rounded bg-gray-100 px-2 py-1 text-gray-500 dark:bg-gray-700 dark:text-gray-300">{{ __('labels.neutral') }}</span>
                     <span class="rounded bg-emerald-500 px-2 py-1 text-white">{{ __('labels.profit') }}</span>
                 </div>
             </div>
@@ -1513,11 +1555,11 @@
                  x-ref="heatmapChart"></div>
         </div>
 
-        <div class="col-span-5 flex h-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <div class="col-span-5 flex h-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 shadow-sm">
 
             {{-- Cabecera de la Tarjeta --}}
-            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                <h3 class="text-lg font-bold text-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">
                     {{ __('labels.recent_operations') }}
                 </h3>
 
@@ -1530,31 +1572,31 @@
 
             {{-- Cuerpo de la Tabla --}}
             <div class="flex-grow overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-100">
-                    <thead class="bg-gray-50/50">
+                <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+                    <thead class="bg-gray-50/50 dark:bg-gray-900/40">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                                 scope="col">
                                 {{ __('labels.date') }}
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400"
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                                 scope="col">
                                 {{ __('labels.active') }}
                             </th>
-                            <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-400"
+                            <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                                 scope="col">
                                 {{ __('labels.type') }}
                             </th>
-                            <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-400"
+                            <th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                                 scope="col">
                                 {{ __('labels.PnL') }}
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 bg-white">
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
                         @forelse ($this->recentTrades as $trade)
                             <tr class="group cursor-pointer transition duration-150 hover:bg-indigo-50/60"
-                                class="whitespace-nowrap px-4 py-3 text-sm text-gray-500"
+                                class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-300"
                                 {{-- 
                             LÓGICA DEL CLICK:
                             1. showModalDetails = true: Abre el contenedor del modal
@@ -1566,7 +1608,7 @@
 
                                 {{-- 1. Fecha Cierre --}}
                                 <td class="flex whitespace-nowrap px-6 py-4">
-                                    <span class="text-sm font-bold text-gray-900">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">
                                         {{ \Carbon\Carbon::parse($trade->exit_time)->format('d-m-Y H:i') }}
                                     </span>
                                     {{-- NUEVO: ICONO DE NOTA CON TOOLTIP --}}
@@ -1587,7 +1629,7 @@
 
                                 {{-- 2. Símbolo (Ej: EURUSD) --}}
                                 <td class="whitespace-nowrap px-6 py-4">
-                                    <span class="text-sm font-bold text-gray-900">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-gray-100">
                                         {{ $trade->tradeAsset->name ?? $trade->tradeAsset->symbol }}
                                     </span>
 
@@ -1622,12 +1664,12 @@
                             <tr>
                                 <td class="py-12 text-center"
                                     colspan="4">
-                                    <div class="flex flex-col items-center justify-center text-gray-400">
-                                        <div class="mb-3 rounded-full bg-gray-100 p-4">
-                                            <i class="fa-solid fa-chart-simple text-2xl text-gray-300"></i>
+                                    <div class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                        <div class="mb-3 rounded-full bg-gray-100 p-4 dark:bg-gray-700">
+                                            <i class="fa-solid fa-chart-simple text-2xl text-gray-300 dark:text-gray-600"></i>
                                         </div>
                                         <p class="text-sm font-medium">{{ __('labels.not_recent_operations') }}</p>
-                                        <p class="mt-1 text-xs text-gray-400">{{ __('labels.new_operations_appear_here') }}</p>
+                                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.new_operations_appear_here') }}</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1637,7 +1679,7 @@
             </div>
 
             {{-- Footer opcional --}}
-            <div class="border-t border-gray-100 bg-gray-50 px-6 py-3 text-right">
+            <div class="border-t border-gray-100 bg-gray-50 px-6 py-3 text-right dark:border-gray-700 dark:bg-gray-900">
                 <a class="text-xs font-bold text-indigo-600 transition hover:text-indigo-800"
                    href="{{ route('trades') }}">
                     {{ __('labels.view_register_complete') }} <i class="fa-solid fa-arrow-right ml-1"></i>
@@ -1646,27 +1688,27 @@
         </div>
 
         {{-- CARD: CALENDARIO DE PNL --}}
-        <div class="col-span-7 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="col-span-7 rounded-3xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 p-6 shadow-sm">
 
             {{-- HEADER: Título y Navegación --}}
             <div class="mb-6 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">
                     {{ __('labels.performance_schedule') }}
                 </h3>
 
                 <div class="flex items-center gap-4">
-                    <button class="rounded-full p-2 transition hover:bg-gray-100"
+                    <button class="rounded-full p-2 transition hover:bg-gray-100 dark:hover:bg-gray-700"
                             wire:click="prevMonth">
-                        <i class="fa-solid fa-chevron-left text-gray-500"></i>
+                        <i class="fa-solid fa-chevron-left text-gray-500 dark:text-gray-300"></i>
                     </button>
 
-                    <span class="w-32 text-center text-base font-bold capitalize text-gray-900">
+                    <span class="w-32 text-center text-base font-bold capitalize text-gray-900 dark:text-gray-100">
                         {{ \Carbon\Carbon::parse($calendarDate)->translatedFormat('F Y') }}
                     </span>
 
-                    <button class="rounded-full p-2 transition hover:bg-gray-100"
+                    <button class="rounded-full p-2 transition hover:bg-gray-100 dark:hover:bg-gray-700"
                             wire:click="nextMonth">
-                        <i class="fa-solid fa-chevron-right text-gray-500"></i>
+                        <i class="fa-solid fa-chevron-right text-gray-500 dark:text-gray-300"></i>
                     </button>
                 </div>
             </div>
@@ -1677,7 +1719,7 @@
                 {{-- Cabecera Días Semana --}}
                 <div class="mb-2 grid grid-cols-7 text-center">
                     @foreach ([__('labels.mon'), __('labels.tue'), __('labels.wed'), __('labels.thu'), __('labels.fri'), __('labels.sat'), __('labels.sun')] as $day)
-                        <div class="py-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        <div class="py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                             {{ $day }}
                         </div>
                     @endforeach
@@ -1688,22 +1730,22 @@
                     @foreach ($calendarGrid as $day)
                         @php
                             // TU LÓGICA EXACTA (Sin cambios)
-                            $bgColor = 'bg-gray-50';
+                            $bgColor = 'bg-gray-50 dark:bg-gray-800/60';
                             $textColor = 'text-gray-400';
                             $borderColor = 'border-transparent';
 
                             if (!is_null($day['pnl'])) {
                                 if ($day['pnl'] > 0) {
-                                    $bgColor = 'bg-emerald-50';
-                                    $textColor = 'text-emerald-700';
-                                    $borderColor = 'border-emerald-200';
+                                    $bgColor = 'bg-emerald-50 dark:bg-emerald-500/10';
+                                    $textColor = 'text-emerald-700 dark:text-emerald-400';
+                                    $borderColor = 'border-emerald-200 dark:border-emerald-500/30';
                                 } elseif ($day['pnl'] < 0) {
-                                    $bgColor = 'bg-rose-50';
-                                    $textColor = 'text-rose-700';
-                                    $borderColor = 'border-rose-200';
+                                    $bgColor = 'bg-rose-50 dark:bg-rose-500/10';
+                                    $textColor = 'text-rose-700 dark:text-rose-400';
+                                    $borderColor = 'border-rose-200 dark:border-rose-500/30';
                                 } else {
-                                    $bgColor = 'bg-blue-50';
-                                    $textColor = 'text-blue-600';
+                                    $bgColor = 'bg-blue-50 dark:bg-blue-500/10';
+                                    $textColor = 'text-blue-600 dark:text-blue-400';
                                 }
                             }
 
@@ -1724,7 +1766,7 @@
                             <div class="flex w-full items-start justify-between">
 
                                 {{-- Tu número de día original --}}
-                                <span class="{{ $day['is_current_month'] ? 'text-gray-500' : 'text-gray-300' }} text-xs font-semibold">
+                                <span class="{{ $day['is_current_month'] ? 'text-gray-500 dark:text-gray-300' : 'text-gray-300' }} text-xs font-semibold">
                                     {{ $day['day'] }}
                                 </span>
 

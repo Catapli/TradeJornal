@@ -1,93 +1,124 @@
-## Estructura de directorios
+# TradeForge
 
-├── app/
-│   ├── Actions/
-│   │   ├── Jetstream/      # Acciones y Métodos del Jetstream
-│   │   └── Fortify/        # Acciones y Métodos del Fortify
-│   ├── Http/
-│   │   ├── Controllers/    # Controladores de los Modelos
-│   │   ├── Middleware/     # Clases refentes al Middleware
-│   │   └── Resources/      # Recursos para pasar Modelos a Array
-│   ├── Livewire/           # Clases Relacionadas al Livewire
-│   │   ├── Forms/          # Auxiliares de Formulario para el livewire
-│   │   └── Profile/        # Vistas de jetstream Perfil
-│   ├── Models/             # Modelos
-│   ├── Providers/          # Proveedores de servicios
-│   ├── View/               # Vistas, pero al usar Livewire no se usan
-│   │    └── Components/
-│   └── LogActions          # Método para Insertar Log desde cualquier lugar
-├── bootstrap/              # Configuración de Bootstrap (no se tocó)
-├── config/                 # Configuración de Paquetes
-├── database/               # Gestión de Base de datos
-│   ├── factories/          # Plantillas de Modelos
-│   ├── migrations/         # Migraciones para crear las tablas en la BD
-│   └── seeders/            # Metodos para poblar la base de datos con datos
-│
-├── lang/                   # Directorio encargado de los lenguajes
-│   ├── ca/                 # Directorio encargado de las clases de lenguaje Catalan para PHP
-│   ├── es/                 # Directorio encargado de las clases de lenguaje Español para PHP
-│   ├── es.json/            # Fichero encargado de las clases de lenguaje Español para JS
-│   └── ca.json/            # Fichero encargado de las clases de lenguaje Catalán para JS
-│
-├── node_modules/           # Modulos de Node, mejor no tocar
-│
-├── public/                 # Directorio donde se encuentra todo lo publico
-│   ├── build/              # nunca lo he usado
-│   ├── datatable/          # Ficheros configuración del datatable en tailwind
-│   ├── fonts/              # Fuentes de tipografia
-│   ├── img/                # Imagenes y favicon
-│   └── detrafic..json/     # Fichero Configuración Notificaciones Firebase
-│
-├── resources/              # Directorio donde se encuentran todos los recursos
-│   ├── css/                # Compilación de tailwind css (NO TOCAR, Se actualiza solo)
-│   ├── js/                 # Directorio donde está todo el js
-│   │    ├── alerts/        # JS de Alertas
-│   │    ├── cameras/       # JS de Camaras
-│   │    ├── lists/         # JS de Listas
-│   │    ├── logs/          # JS de LOGS
-│   │    ├── plugins/       # Métodos Mágicos para las traducciones en JS
-│   │    ├── towns/         # JS de Municipios
-│   │    ├── traffic/       # JS de Tráfico
-│   │    ├── users/         # JS de Usuarios
-│   │    ├── utils/         # Inicializar mapa de google maps
-│   │    ├── zones/         # JS de Zonas
-│   │    ├── app.js         # Compilación de tailwind JS (NO TOCAR, Se actualiza solo)
-│   │    └── bootstrap.js   # Configuración de Bootstrap JS
-│   ├── markdown/
-│   └── views/              # *Directorio de las vistas*
-│       ├── alerts/         # Vistas referentes a Alertas
-│       ├── api/            # Vistas referentes a API
-│       ├── auth/           # Vistas de Gestion de Usuario
-│       ├── cameras/        # Vistas de camaras
-│       ├── components/     # Componentes de vista reutilizables
-│       │        ├── buttons/            # Botones
-│       │        └── modals/             # Modales
-│       ├── emails/        # Vistas de Teams
-│       ├── layouts/       # Vistas de Layouts / Esquemas principales
-│       ├── lists/         # *Vistas de Listas*
-│       ├── livewire/      # *Vistas de Los Livewires*
-│       ├── logs/          # *Vistas de Logs*
-│       ├── profile/       # *Vistas de la Gestión de Usuario*
-│       ├── towns/         # *Vistas de municipios*
-│       ├── traffic/       # *Vistas de Tráfico*
-│       ├── users/         # *Vistas de Usuarios*
-│       └── zones/         # *Vistas de Zonas*
-|
-├── routes/
-│   ├── api.php             # *Rutas de la API EXTERNA*
-│   ├── console.php
-│   └── web.php             # *Rutas de navegación y api INTERNA*
-├── storage/
-│   ├── app/
-│   ├── clockwork/          # *Extension para comprobar rendimiento laravel*
-│   ├── debugbar/           # *Extension para comprobar rendimiento laravel*
-│   └── logs/               # *Logs*
-├── tests/
-├── vendor/
-├── .env
-├── .env.example
-├── composer.json
-├── package.json
-├── vite.config.js          # *Configuracion de VITE (no tocar)*
-├── tailwind.config.js      # *Configuracion de Tailwind*
-└── README.md
+Diario de trading para traders de prop firms: registra operaciones, mide la consistencia
+y vigila los objetivos y límites de drawdown de cada programa.
+
+- **Stack:** Laravel 11 · Livewire 3 · Jetstream (Fortify) · Tailwind 3 · Vite 6 · PostgreSQL
+- **PHP:** ^8.2
+- **Gráficos:** ApexCharts (métricas) y lightweight-charts (velas)
+- **Pagos:** Laravel Cashier (Stripe) — planes Free y PRO
+- **IA:** Groq (`api.groq.com`), con límite diario por usuario según plan
+
+---
+
+## Puesta en marcha
+
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run dev          # o `npm run build` para producción
+```
+
+Claves de `.env` que hay que rellenar para tener todo operativo: `DB_*`, `GROQ_API_KEY`,
+`STRIPE_*`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (login social) y `AWS_*` +
+`CLOUDFLARE_*` (R2, para las capturas del journal).
+
+---
+
+## Cómo entran los datos
+
+Los trades llegan por **API**: cada terminal MT5 corre un `.exe` que empuja sus operaciones
+contra `routes/api.php`. La autenticación es por `sync_token` (columna única de `users`,
+rotable con `User::regenerateSyncToken()`), que se valida en `Mt5SyncController`.
+
+| Endpoint | Qué hace |
+|---|---|
+| `POST /api/mt5-sync` | Alta/actualización de trades de una cuenta |
+| `POST /api/mt5-reset` | Reinicia la sincronización de una cuenta |
+| `POST /api/mt5-refresh-charts` | Pide refresco de datos de gráfico |
+| `POST /api/mt5-update-chart` | Sube los datos de vela de un trade |
+
+---
+
+## Estructura
+
+```
+app/
+├── Actions/             # Lógica de negocio extraída de los componentes Livewire
+│   ├── Accounts/        #   CalculateAccountStatistics, GenerateBalanceChartData
+│   ├── Admin/           #   KPIs del panel de administración
+│   ├── Backtesting/     #   CalculateStrategyMetrics
+│   ├── Strategy/        #   RecalculateStrategyStats
+│   └── Fortify|Jetstream/  # Acciones del scaffolding de auth
+├── Enums/               # Enums de dominio
+├── Events|Listeners/    # Eventos de dominio
+├── Http/
+│   ├── Controllers/     # API de sincronización MT5, trades, gráficos, imágenes
+│   └── Middleware/      # SetLocale, CheckSectionPermission, superadmin
+├── Jobs/                # Trabajos en cola
+├── Livewire/            # Una clase por página (Dashboard, Account, Session, ...)
+│   ├── Admin/           #   Panel de administración (logs, prop firms)
+│   ├── Forms/           #   Form Objects de Livewire
+│   └── Settings/        #   Suscripción
+├── Models/              # Account, Trade, Strategy, PropFirm, Program*, Journal*, ...
+├── Observers/           # Invalidación de caché al mutar trades y cuentas
+├── Policies/ Providers/ Services/ Notifications/
+├── LogActions.php       # Trait para insertar en `logs` desde cualquier sitio
+├── MoneyHelper.php
+└── WithAiLimits.php     # Cuota diaria de IA por plan
+
+resources/
+├── css/app.css          # Tailwind + parches de librerías de terceros
+├── js/
+│   ├── core/            # theme.js (tema claro/oscuro), notify.js, trade-toast.js,
+│   │                    # session-guard.js
+│   ├── plugins/         # Helper de traducciones para Alpine
+│   └── <pagina>/        # Un módulo Alpine por página
+└── views/
+    ├── components/      # Componentes Blade reutilizables (+ buttons/, modals/)
+    ├── layouts/         # app (autenticado) y guest (público)
+    ├── livewire/        # Vistas de los componentes Livewire
+    └── <seccion>/       # Vistas contenedoras de cada sección
+
+database/               # migrations, factories, seeders
+lang/                   # es, en (+ JSON para el JS)
+routes/                 # web.php (navegación) · api.php (sync MT5) · console.php
+```
+
+---
+
+## Tema claro / oscuro
+
+El tema vive en la clase `dark` del `<html>`:
+
+- Un script inline en **ambos** layouts la aplica antes del primer render (evita el FOUC).
+  La preferencia se guarda en `localStorage.theme`; sin preferencia, se sigue al sistema.
+- El botón del `navigation-menu` la alterna y emite `theme:changed`.
+- [`resources/js/core/theme.js`](resources/js/core/theme.js) es la fuente de verdad para el
+  JS: expone `window.tjTheme` (`isDark()`, `mode()`, `colors()`, `onChange()`) y la fábrica
+  **`window.tjChart(el, options)`**, que sustituye a `new ApexCharts(...)`.
+
+> Al crear un gráfico nuevo usa **siempre** `window.tjChart()`. Aplica el tema actual y deja
+> el gráfico suscrito, de modo que se repinta solo al cambiar de tema, sin recargar.
+
+---
+
+## Comandos útiles
+
+```bash
+php artisan test           # Suite de tests (ver aviso abajo)
+./vendor/bin/pint          # Formateo PHP
+npm run build              # Build de producción
+php artisan view:clear     # Limpiar vistas compiladas
+```
+
+Los tests corren contra una base de datos Postgres **dedicada** (`tradejornal_test`),
+configurada en `phpunit.xml`. Se eligió Postgres en vez de sqlite en memoria porque es el
+motor real del proyecto: las migraciones usan `enum()` y columnas `json`. Créala una vez con
+`CREATE DATABASE tradejornal_test;` — las migraciones las aplica `RefreshDatabase` sola.
+
+El estado del proyecto, la deuda técnica pendiente y el plan de trabajo están en
+[plan.MD](plan.MD).

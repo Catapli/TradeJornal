@@ -34,7 +34,7 @@
                             <label class="flex items-center">
                                 <x-checkbox wire:model="createApiTokenForm.permissions"
                                             :value="$permission" />
-                                <span class="ms-2 text-sm text-gray-600">{{ $permission }}</span>
+                                <span class="ms-2 text-sm text-gray-600 dark:text-gray-300">{{ $permission }}</span>
                             </label>
                         @endforeach
                     </div>
@@ -79,13 +79,13 @@
 
                                 <div class="flex items-center ms-2">
                                     @if ($token->last_used_at)
-                                        <div class="text-sm text-gray-400">
+                                        <div class="text-sm text-gray-400 dark:text-gray-500">
                                             {{ __('Last used') }} {{ $token->last_used_at->diffForHumans() }}
                                         </div>
                                     @endif
 
                                     @if (Laravel\Jetstream\Jetstream::hasPermissions())
-                                        <button class="cursor-pointer ms-6 text-sm text-gray-400 underline" wire:click="manageApiTokenPermissions({{ $token->id }})">
+                                        <button class="cursor-pointer ms-6 text-sm text-gray-400 dark:text-gray-500 underline" wire:click="manageApiTokenPermissions({{ $token->id }})">
                                             {{ __('Permissions') }}
                                         </button>
                                     @endif
@@ -113,7 +113,7 @@
                 {{ __('Please copy your new API token. For your security, it won\'t be shown again.') }}
             </div>
 
-            <x-input class="mt-4 w-full break-all rounded bg-gray-100 px-4 py-2 font-mono text-sm text-gray-500"
+            <x-input class="mt-4 w-full break-all rounded bg-gray-100 dark:bg-gray-700 px-4 py-2 font-mono text-sm text-gray-500 dark:text-gray-400"
                      x-ref="plaintextToken"
                      type="text"
                      readonly
@@ -146,7 +146,7 @@
                     <label class="flex items-center">
                         <x-checkbox wire:model="updateApiTokenForm.permissions"
                                     :value="$permission" />
-                        <span class="ms-2 text-sm text-gray-600">{{ $permission }}</span>
+                        <span class="ms-2 text-sm text-gray-600 dark:text-gray-300">{{ $permission }}</span>
                     </label>
                 @endforeach
             </div>

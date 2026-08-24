@@ -516,7 +516,7 @@ class JournalPage extends Component
 
         // 4. Llamada a Groq (sin caché: el borrador es creativo y se puede regenerar)
         try {
-            $result = app(AiService::class)->complete($prompt, temperature: 0.7, maxTokens: 1024);
+            $result = app(AiService::class)->complete($prompt, temperature: 0.7, maxTokens: 2048);
 
             if ($result->ok) {
                 $text = $result->content;

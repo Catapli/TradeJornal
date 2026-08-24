@@ -1,6 +1,6 @@
 {{-- FILTROS --}}
 <div class="mb-4 flex items-center gap-3">
-    <div class="flex overflow-hidden rounded-lg border border-gray-200">
+    <div class="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
         @foreach (['' => 'Todos', 'win' => 'Win', 'loss' => 'Loss', 'be' => 'BE'] as $val => $label)
             <button class="px-3 py-1.5 text-xs font-medium transition-colors"
                     type="button"
@@ -8,12 +8,12 @@
                     :class="filterOutcome === '{{ $val }}'
                         ?
                         'bg-blue-600 text-white' :
-                        'bg-white text-gray-600 hover:bg-gray-50'">
+                        'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900'">
                 {{ $label }}
             </button>
         @endforeach
     </div>
-    <div class="flex overflow-hidden rounded-lg border border-gray-200">
+    <div class="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
         @foreach (['' => 'Todas', 'london' => 'LON', 'new_york' => 'NY', 'asia' => 'ASIA', 'other' => 'Otra'] as $val => $label)
             <button class="px-3 py-1.5 text-xs font-medium transition-colors"
                     type="button"
@@ -21,7 +21,7 @@
                     :class="filterSession === '{{ $val }}'
                         ?
                         'bg-blue-600 text-white' :
-                        'bg-white text-gray-600 hover:bg-gray-50'">
+                        'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900'">
                 {{ $label }}
             </button>
         @endforeach
@@ -30,8 +30,8 @@
 
 {{-- EMPTY STATE --}}
 @if ($trades->isEmpty())
-    <div class="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-20 text-center">
-        <svg class="mb-3 h-10 w-10 text-gray-300"
+    <div class="flex flex-col items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-20 text-center">
+        <svg class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600"
              xmlns="http://www.w3.org/2000/svg"
              fill="none"
              viewBox="0 0 24 24"
@@ -41,18 +41,18 @@
                   stroke-linejoin="round"
                   d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
         </svg>
-        <p class="text-sm font-medium text-gray-600">{{ __('labels.no_trades_yet') }}</p>
-        <p class="mt-1 text-xs text-gray-400">{{ __('labels.bt_no_trades_text') }}</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ __('labels.no_trades_yet') }}</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.bt_no_trades_text') }}</p>
     </div>
 
     {{-- TABLA --}}
 @else
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <table class="w-full text-sm">
             <thead>
-                <tr class="border-b border-gray-100 bg-gray-50">
+                <tr class="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                     <th class="px-4 py-3 text-left">
-                        <button class="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900"
+                        <button class="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                                 wire:click="sortColumn('trade_date')">
                             {{ __('labels.date') }}
                             @if ($sortBy === 'trade_date')
@@ -60,12 +60,12 @@
                             @endif
                         </button>
                     </th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">{{ __('labels.direction') }}</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.entry') }}</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.exit_label') }}</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">{{ __('labels.stop_loss') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.direction') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.entry') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.exit_label') }}</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.stop_loss') }}</th>
                     <th class="px-4 py-3 text-right">
-                        <button class="ml-auto flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900"
+                        <button class="ml-auto flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                                 wire:click="sortColumn('pnl_r')">
                             R
                             @if ($sortBy === 'pnl_r')
@@ -73,16 +73,16 @@
                             @endif
                         </button>
                     </th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">{{ __('labels.session') }}</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">{{ __('labels.rating') }}</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">{{ __('labels.setup_rules_section') }}</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.session') }}</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.rating') }}</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('labels.setup_rules_section') }}</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                 @foreach ($trades as $trade)
                     {{-- data-trade alimenta el modal de detalle y su navegación ←/→ (lee filas hermanas del DOM) --}}
-                    <tr class="transition-colors hover:cursor-pointer hover:bg-gray-50"
+                    <tr class="transition-colors hover:cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
                         data-trade="{{ json_encode([
                             'id' => $trade->id,
                             'date' => $trade->trade_date->format('d/m/Y'),
@@ -100,7 +100,7 @@
                             'screenshot' => $trade->screenshot_url,
                         ]) }}"
                         @click.stop="openTradeDetailFromRow($event.currentTarget)">
-                        <td class="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
+                        <td class="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700 dark:text-gray-200">
                             {{ $trade->trade_date->format('d/m/Y') }}
                         </td>
                         <td class="px-4 py-3">
@@ -108,13 +108,13 @@
                                 {{ strtoupper($trade->direction) }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right tabular-nums text-gray-600">{{ $trade->entry_price }}</td>
-                        <td class="px-4 py-3 text-right tabular-nums text-gray-600">{{ $trade->exit_price }}</td>
-                        <td class="px-4 py-3 text-right tabular-nums text-gray-400">{{ $trade->stop_loss ?? '—' }}</td>
-                        <td class="{{ $trade->pnl_r > 0 ? 'text-emerald-600' : ($trade->pnl_r < 0 ? 'text-red-500' : 'text-gray-400') }} px-4 py-3 text-right font-semibold tabular-nums">
+                        <td class="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300">{{ $trade->entry_price }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300">{{ $trade->exit_price }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums text-gray-400 dark:text-gray-500">{{ $trade->stop_loss ?? '—' }}</td>
+                        <td class="{{ $trade->pnl_r > 0 ? 'text-emerald-600' : ($trade->pnl_r < 0 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500') }} px-4 py-3 text-right font-semibold tabular-nums">
                             {{ $trade->pnl_r ? ($trade->pnl_r > 0 ? '+' : '') . number_format($trade->pnl_r, 2) . 'R' : '—' }}
                         </td>
-                        <td class="px-4 py-3 text-xs capitalize text-gray-500">
+                        <td class="px-4 py-3 text-xs capitalize text-gray-500 dark:text-gray-400">
                             {{ $trade->session ? str_replace('_', ' ', $trade->session) : '—' }}
                         </td>
                         <td class="px-4 py-3 text-center text-xs text-amber-400">
@@ -126,7 +126,7 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center justify-end gap-1">
-                                <button class="rounded p-1 text-gray-400 transition-colors hover:text-gray-700"
+                                <button class="rounded p-1 text-gray-400 dark:text-gray-500 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
                                         @click.stop="openTradePanel({{ $trade->id }})">
                                     <svg class="h-3.5 w-3.5"
                                          xmlns="http://www.w3.org/2000/svg"
@@ -139,7 +139,7 @@
                                               d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
                                     </svg>
                                 </button>
-                                <button class="rounded p-1 text-gray-400 transition-colors hover:text-red-500"
+                                <button class="rounded p-1 text-gray-400 dark:text-gray-500 transition-colors hover:text-red-500"
                                         @click.stop="confirmDeleteTrade({{ $trade->id }})">
                                     <svg class="h-3.5 w-3.5"
                                          xmlns="http://www.w3.org/2000/svg"

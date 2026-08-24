@@ -3,9 +3,6 @@ document.addEventListener("alpine:init", () => {
     Alpine.data("dashboardLogic", () => ({
         showLoadingGrafic: false,
         timeframe: "all",
-        showAlert: false,
-        bodyAlert: "",
-        typeAlert: "error",
 
         // ✅ MODALES (100% Alpine)
         showModalAccount: false, // ← Modal Crear/Editar Cuenta
@@ -46,10 +43,7 @@ document.addEventListener("alpine:init", () => {
                 }
             });
 
-            window.addEventListener("show-alert", (e) => {
-                const data = e.detail[0] || e.detail; // Ajuste por si viene en array o no
-                this.triggerAlert(data.message, data.type);
-            });
+            // El toast de 'show-alert' lo pinta el sistema global (core/notify.js).
 
             // LISTENER PARA RECARGAR LA TABLA CUANDO CAMBIA LA CUENTA
             window.addEventListener("account-change", (e) => {
@@ -92,11 +86,7 @@ document.addEventListener("alpine:init", () => {
         },
 
         triggerAlert(message, type = "error") {
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-            // Opcional: auto-ocultar a los 3 seg
-            setTimeout(() => (this.showAlert = false), 4000);
+            window.tjToast(message, type);
         },
 
         // 1. ABRIR MODAL
@@ -255,7 +245,7 @@ document.addEventListener("alpine:init", () => {
                     },
                 };
 
-                window.balanceChart = new ApexCharts(chartEl, options);
+                window.balanceChart = window.tjChart(chartEl, options);
                 window.balanceChart.render();
                 this.showLoadingGrafic = false;
             });
@@ -462,15 +452,10 @@ document.addEventListener("alpine:init", () => {
         },
 
         triggerAlert(message, type = "error") {
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-            // Opcional: auto-ocultar a los 3 seg
-            setTimeout(() => (this.showAlert = false), 4000);
+            window.tjToast(message, type);
         },
 
         checkForm() {
-            console.log(this.$wire.form.selectedPropFirmID);
 
             if (this.nameAccount === null || this.nameAccount.trim() === "") {
                 this.triggerAlert(this.$e("enter_account_name"), "error");

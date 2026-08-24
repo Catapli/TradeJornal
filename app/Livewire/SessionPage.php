@@ -7,7 +7,6 @@ use App\Enums\SessionMood;
 use App\Enums\TradeMood;
 use App\LogActions; // ✅ TRAIT AÑADIDO
 use App\Models\Account;
-use App\Models\EconomicEvent;
 use App\Models\SessionNote;
 use App\Models\Strategy;
 use App\Models\Trade;
@@ -101,7 +100,6 @@ class SessionPage extends Component
                 'trades' => $data['trades'],
                 'metrics' => $data['metrics'],
                 'notes' => $data['notes'],
-                'events' => $data['events'] ?? []
             ];
 
             $this->insertLog('restore_session', 'SessionPage', "Sesión #{$activeSession->id} restaurada");
@@ -318,13 +316,9 @@ class SessionPage extends Component
             // ✅ OPTIMIZACIÓN 2: Lazy load de notas (solo si hay sesión)
             $notes = $this->loadSessionNotes();
 
-            // ✅ OPTIMIZACIÓN 3: Eventos con scope
-            $upcomingEvents = $this->getUpcomingHighImpactEvents();
-
             return [
                 'trades' => $formattedTrades,
                 'notes' => $notes,
-                'events' => $upcomingEvents,
                 'metrics' => $metrics
             ];
         } catch (\Exception $e) {
@@ -388,24 +382,6 @@ class SessionPage extends Component
                 ->toArray();
         } catch (\Exception $e) {
             $this->logError($e, 'loadSessionNotes', 'SessionPage', 'Error al cargar notas');
-            return [];
-        }
-    }
-
-    /**
-     * ✅ OPTIMIZADO: Usa scope del modelo EconomicEvent
-     */
-    private function getUpcomingHighImpactEvents(): array
-    {
-        try {
-            return EconomicEvent::upcoming(10, 60) // Scope personalizado
-                ->get()
-                ->map(function ($event) {
-                    return $event->toSimpleArray(); // Método del modelo
-                })
-                ->toArray();
-        } catch (\Exception $e) {
-            $this->logError($e, 'getUpcomingHighImpactEvents', 'SessionPage', 'Error al cargar eventos económicos');
             return [];
         }
     }
@@ -501,7 +477,6 @@ class SessionPage extends Component
         return [
             'trades' => [],
             'notes' => [],
-            'events' => [],
             'metrics' => [
                 'count' => 0,
                 'pnl' => 0,

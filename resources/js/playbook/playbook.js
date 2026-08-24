@@ -1,10 +1,5 @@
 document.addEventListener("alpine:init", () => {
     Alpine.data("playbook", () => ({
-        // ── Alerta ────────────────────────────────────────────────────────
-        typeAlert: "error",
-        showAlert: false,
-        bodyAlert: "",
-
         // ── UI State ──────────────────────────────────────────────────────
         showModal: false,
         isEditing: false,
@@ -47,25 +42,15 @@ document.addEventListener("alpine:init", () => {
         // INIT
         // ─────────────────────────────────────────────────────────────────
         init() {
-            // Escucha 'show-alert' pero YA NO cierra el modal.
-            // El modal solo se cierra con el evento 'strategy-saved' de Livewire.
-            window.addEventListener("show-alert", (e) => {
-                const data = e.detail[0] ?? e.detail;
-                this.triggerAlert(data.message, data.type);
-            });
+            // El toast de 'show-alert' lo pinta el sistema global (core/notify.js).
         },
 
         // ─────────────────────────────────────────────────────────────────
-        // ALERTAS
+        // ALERTAS (delegadas al sistema global)
         // ─────────────────────────────────────────────────────────────────
 
         triggerAlert(message, type = "error") {
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-            setTimeout(() => {
-                this.showAlert = false;
-            }, 3000);
+            window.tjToast(message, type);
         },
 
         // ─────────────────────────────────────────────────────────────────
@@ -348,7 +333,7 @@ document.addEventListener("alpine:init", () => {
                 };
 
                 if (this.charts.days) this.charts.days.destroy();
-                this.charts.days = new ApexCharts(
+                this.charts.days = window.tjChart(
                     this.$refs.daysChart,
                     options,
                 );
@@ -405,7 +390,7 @@ document.addEventListener("alpine:init", () => {
                 };
 
                 if (this.charts.hours) this.charts.hours.destroy();
-                this.charts.hours = new ApexCharts(
+                this.charts.hours = window.tjChart(
                     this.$refs.hoursChart,
                     optionsHours,
                 );
@@ -504,7 +489,7 @@ document.addEventListener("alpine:init", () => {
             };
 
             if (this.charts.heatmap) this.charts.heatmap.destroy();
-            this.charts.heatmap = new ApexCharts(
+            this.charts.heatmap = window.tjChart(
                 this.$refs.heatmapChart,
                 options,
             );

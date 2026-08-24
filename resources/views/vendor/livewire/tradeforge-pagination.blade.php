@@ -8,11 +8,11 @@
             {{-- Vista Móvil (Flechas simples) --}}
             <div class="flex flex-1 justify-between sm:hidden">
                 @if ($paginator->onFirstPage())
-                    <span class="relative inline-flex cursor-default items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-400">
+                    <span class="relative inline-flex cursor-default items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-600">
                         {!! __('pagination.previous') !!}
                     </span>
                 @else
-                    <button class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 ring-gray-300 transition duration-150 ease-in-out hover:text-gray-500 focus:outline-none focus:ring active:bg-gray-100"
+                    <button class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 ring-gray-300 transition duration-150 ease-in-out hover:text-gray-500 focus:outline-none focus:ring active:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:text-white dark:active:bg-gray-700"
                             wire:click="previousPage"
                             wire:loading.attr="disabled"
                             @if ($scrollTo) x-on:click="$el.closest('body') && $el.closest('body').scrollIntoView({behavior:'smooth'})" @endif
@@ -22,7 +22,7 @@
                 @endif
 
                 @if ($paginator->hasMorePages())
-                    <button class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 ring-gray-300 transition duration-150 ease-in-out hover:text-gray-500 focus:outline-none focus:ring active:bg-gray-100"
+                    <button class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 ring-gray-300 transition duration-150 ease-in-out hover:text-gray-500 focus:outline-none focus:ring active:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:text-white dark:active:bg-gray-700"
                             wire:click="nextPage"
                             wire:loading.attr="disabled"
                             @if ($scrollTo) x-on:click="$el.closest('body') && $el.closest('body').scrollIntoView({behavior:'smooth'})" @endif
@@ -30,7 +30,7 @@
                         {!! __('pagination.next') !!}
                     </button>
                 @else
-                    <span class="relative ml-3 inline-flex cursor-default items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-400">
+                    <span class="relative ml-3 inline-flex cursor-default items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-600">
                         {!! __('pagination.next') !!}
                     </span>
                 @endif
@@ -41,11 +41,11 @@
 
                 {{-- Info de resultados (Mostrando 1 a 10 de 50) --}}
                 <div>
-                    <p class="text-sm leading-5 text-gray-500">
+                    <p class="text-sm leading-5 text-gray-500 dark:text-gray-400">
                         Mostrando
-                        <span class="font-bold text-gray-800">{{ $paginator->firstItem() }}</span>
+                        <span class="font-bold text-gray-800 dark:text-gray-100">{{ $paginator->firstItem() }}</span>
                         a
-                        <span class="font-bold text-gray-800">{{ $paginator->lastItem() }}</span>
+                        <span class="font-bold text-gray-800 dark:text-gray-100">{{ $paginator->lastItem() }}</span>
                         de
                         <span class="font-bold text-indigo-600">{{ $paginator->total() }}</span>
                         resultados
@@ -60,7 +60,7 @@
                         @if ($paginator->onFirstPage())
                             <span aria-disabled="true"
                                   aria-label="{{ __('pagination.previous') }}">
-                                <span class="relative inline-flex cursor-default items-center rounded-l-md border border-gray-200 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-300"
+                                <span class="relative inline-flex cursor-default items-center rounded-l-md border border-gray-200 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600"
                                       aria-hidden="true">
                                     <svg class="h-5 w-5"
                                          fill="currentColor"
@@ -72,7 +72,7 @@
                                 </span>
                             </span>
                         @else
-                            <button class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-50 hover:text-indigo-600"
+                            <button class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-50 hover:text-indigo-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-indigo-400"
                                     wire:click="previousPage"
                                     wire:loading.attr="disabled"
                                     rel="prev"
@@ -92,7 +92,7 @@
                             {{-- "..." Separador --}}
                             @if (is_string($element))
                                 <span aria-disabled="true">
-                                    <span class="relative inline-flex cursor-default items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700">{{ $element }}</span>
+                                    <span class="relative inline-flex cursor-default items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $element }}</span>
                                 </span>
                             @endif
 
@@ -108,7 +108,7 @@
                                         </span>
                                     @else
                                         {{-- Estado Inactivo --}}
-                                        <button class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600"
+                                        <button class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-gray-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/40 dark:hover:text-indigo-300"
                                                 wire:click="gotoPage({{ $page }})"
                                                 wire:loading.attr="disabled"
                                                 aria-label="{{ __('Go to page :page', ['page' => $page]) }}">
@@ -121,7 +121,7 @@
 
                         {{-- Botón Siguiente --}}
                         @if ($paginator->hasMorePages())
-                            <button class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-50 hover:text-indigo-600"
+                            <button class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-500 transition hover:bg-gray-50 hover:text-indigo-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-indigo-400"
                                     wire:click="nextPage"
                                     wire:loading.attr="disabled"
                                     rel="next"
@@ -137,7 +137,7 @@
                         @else
                             <span aria-disabled="true"
                                   aria-label="{{ __('pagination.next') }}">
-                                <span class="relative inline-flex cursor-default items-center rounded-r-md border border-gray-200 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-300"
+                                <span class="relative inline-flex cursor-default items-center rounded-r-md border border-gray-200 bg-white px-2 py-2 text-sm font-medium leading-5 text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600"
                                       aria-hidden="true">
                                     <svg class="h-5 w-5"
                                          fill="currentColor"

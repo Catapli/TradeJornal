@@ -3,7 +3,7 @@
     {{-- HEADER --}}
     <div class="mb-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <button class="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
+            <button class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-900 dark:hover:text-gray-100"
                     wire:click="backToList()">
                 <svg class="h-4 w-4"
                      xmlns="http://www.w3.org/2000/svg"
@@ -17,10 +17,10 @@
                 </svg>
                 Volver
             </button>
-            <div class="h-4 w-px bg-gray-200"></div>
+            <div class="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
             <div>
-                <h1 class="text-xl font-semibold text-gray-900">{{ $selectedStrategy->name }}</h1>
-                <p class="text-xs text-gray-400">{{ $selectedStrategy->symbol }} · {{ $selectedStrategy->timeframe }} · {{ $selectedStrategy->currency }}</p>
+                <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $selectedStrategy->name }}</h1>
+                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $selectedStrategy->symbol }} · {{ $selectedStrategy->timeframe }} · {{ $selectedStrategy->currency }}</p>
             </div>
         </div>
 
@@ -43,13 +43,13 @@
     </div>
 
     {{-- TABS --}}
-    <div class="mb-6 flex items-center gap-1 border-b border-gray-200">
+    <div class="mb-6 flex items-center gap-1 border-b border-gray-200 dark:border-gray-700">
         <button class="-mb-px flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors"
                 @click="activeTab = 'log'"
                 :class="activeTab === 'log'
                     ?
                     'border-b-2 border-blue-600 text-blue-600' :
-                    'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'">
+                    'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent'">
             <svg class="h-4 w-4"
                  xmlns="http://www.w3.org/2000/svg"
                  fill="none"
@@ -62,7 +62,7 @@
             </svg>
             Trade Log
             @if ($trades->total() > 0)
-                <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs tabular-nums text-gray-500">
+                <span class="rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-xs tabular-nums text-gray-500 dark:text-gray-400">
                     {{ $trades->total() }}
                 </span>
             @endif
@@ -72,7 +72,7 @@
                 :class="activeTab === 'analytics'
                     ?
                     'border-b-2 border-blue-600 text-blue-600' :
-                    'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'">
+                    'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent'">
             <svg class="h-4 w-4"
                  xmlns="http://www.w3.org/2000/svg"
                  fill="none"
@@ -90,7 +90,7 @@
                 :class="activeTab === 'rules'
                     ?
                     'border-b-2 border-blue-600 text-blue-600' :
-                    'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'">
+                    'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent'">
             <svg class="h-4 w-4"
                  xmlns="http://www.w3.org/2000/svg"
                  fill="none"

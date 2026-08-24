@@ -6,7 +6,6 @@ import {
     LineSeries,
 } from "lightweight-charts";
 
-console.log("🚀 [DEBUG] Multi-TF Chart Controller Loaded");
 
 class TradeChartController {
     constructor(container) {
@@ -166,7 +165,6 @@ class TradeChartController {
             return;
         }
 
-        console.log(`🔄 Switching to ${tf} (${candles.length} candles)`);
 
         // 1. Actualizar Velas
         this.series.setData(candles);
@@ -360,7 +358,7 @@ document.addEventListener("alpine:init", () => {
 
             // 2. Escuchar cambios desde Livewire (cuando cambias el select)
             Livewire.on("dashboard-updated", () => {
-                // 👇 RECARGAR DATATABLE
+                // Repinta todos los gráficos con los datos nuevos
                 this.showLoading = true;
                 this.renderWinRateChart();
                 this.renderAvgPnLChart();
@@ -437,7 +435,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.heatmapChart;
                 if (el) {
-                    this.heatmapChart = new ApexCharts(el, options);
+                    this.heatmapChart = window.tjChart(el, options);
                     this.heatmapChart.render();
                 }
             }
@@ -450,7 +448,6 @@ document.addEventListener("alpine:init", () => {
 
             const chartSeries = isEmpty ? [1] : series;
             const colors = isEmpty ? ["#F3F4F6"] : ["#10B981", "#F43F5E"];
-            console.log();
             let labelDays = this.$l("days");
             const chartLabels = isEmpty
                 ? [this.$l("not_operations")]
@@ -508,7 +505,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.winRateChart;
                 if (el) {
-                    this.winRateChart = new ApexCharts(el, options);
+                    this.winRateChart = window.tjChart(el, options);
                     this.winRateChart.render();
                 }
             }
@@ -600,7 +597,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.dailyPnLBarChart;
                 if (el) {
-                    this.dailyPnLBarChart = new ApexCharts(el, options);
+                    this.dailyPnLBarChart = window.tjChart(el, options);
                     this.dailyPnLBarChart.render();
                 }
             }
@@ -707,7 +704,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.avgPnLChart;
                 if (el) {
-                    this.avgPnLChart = new ApexCharts(el, options);
+                    this.avgPnLChart = window.tjChart(el, options);
                     this.avgPnLChart.render();
                 }
             }
@@ -775,7 +772,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.dailyWinLossChart;
                 if (el) {
-                    this.dailyWinLossChart = new ApexCharts(el, options);
+                    this.dailyWinLossChart = window.tjChart(el, options);
                     this.dailyWinLossChart.render();
                 }
             }
@@ -872,7 +869,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 const el = this.$refs.evolutionChart;
                 if (el) {
-                    this.evolutionChart = new ApexCharts(el, options);
+                    this.evolutionChart = window.tjChart(el, options);
                     this.evolutionChart.render();
                 }
             }
@@ -916,7 +913,6 @@ document.addEventListener("alpine:init", () => {
                 });
 
                 window.addEventListener("trade-selected", (e) => {
-                    console.log(e.detail);
                     this.currentTimeframe = "5m"; // Resetear al cargar nuevo trade
 
                     // 2. LÓGICA AUTOMÁTICA AL CAMBIAR DE TRADE
@@ -937,7 +933,6 @@ document.addEventListener("alpine:init", () => {
             },
 
             load(path, entry, exit, direction) {
-                console.log(path);
                 // Si no hay controller, reintentamos un poco
                 if (!controller) {
                     if (this.$refs.chartContainer) {

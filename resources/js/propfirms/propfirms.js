@@ -17,11 +17,6 @@ document.addEventListener("alpine:init", () => {
                 level: false,
             },
 
-            // --- ESTADO ALERTAS (NUEVO) ---
-            showAlert: false,
-            typeAlert: "success",
-            bodyAlert: "",
-
             // --- FORMULARIOS (Entangled) ---
             firmForm: this.$wire.entangle("firmForm"),
             programForm: this.$wire.entangle("programForm"),
@@ -51,7 +46,6 @@ document.addEventListener("alpine:init", () => {
                 if (this._listenersRegistered) return;
                 this._listenersRegistered = true;
 
-                console.log("🚀 PropManager Ready");
 
                 // 1. Refrescar datos (Blindado)
                 this.$wire.on("refresh-tree", (data) => {
@@ -60,32 +54,19 @@ document.addEventListener("alpine:init", () => {
                     if (payload && payload.tree) {
                         // Usar structuredClone es más moderno y eficiente que JSON parse/stringify
                         this.firms = structuredClone(payload.tree);
-                        console.log("✅ Tree actualizado");
                     }
                 });
 
-                // 2. Notificaciones
+                // 2. Notificaciones: el toast lo pinta el sistema global
+                // (core/notify.js). Aquí solo los efectos colaterales (UI).
                 this.$wire.on("notify", (data) => {
                     const payload = Array.isArray(data) ? data[0] : data;
-                    this.triggerAlert(payload.message, payload.type);
                     this.closeAllModals();
 
                     if (payload.newProgramId) {
                         this.autoNavigateToNewProgram(payload.newProgramId);
                     }
                 });
-            },
-
-            // --- ALERTAS (NUEVO) ---
-            triggerAlert(message, type = "success") {
-                this.bodyAlert = message;
-                this.typeAlert = type;
-                this.showAlert = true;
-
-                // Auto-ocultar
-                setTimeout(() => {
-                    this.showAlert = false;
-                }, 4000);
             },
 
             // --- NAVEGACIÓN AUTOMÁTICA TRAS CREAR PROGRAMA (NUEVO) ---

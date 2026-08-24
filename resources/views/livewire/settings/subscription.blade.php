@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-4xl py-10">
     <div class="mb-10 text-center">
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Mejora tu Trading</h2>
-        <p class="mt-2 text-gray-500">Desbloquea cuentas ilimitadas y estadísticas avanzadas.</p>
+        <p class="mt-2 text-gray-500 dark:text-gray-400">Desbloquea cuentas ilimitadas y estadísticas avanzadas.</p>
     </div>
 
     <div class="grid gap-8 md:grid-cols-2">
@@ -10,7 +10,7 @@
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Mensual</h3>
             <div class="my-4">
                 <span class="text-4xl font-bold text-gray-900 dark:text-white">9,99€</span>
-                <span class="text-gray-500">/mes</span>
+                <span class="text-gray-500 dark:text-gray-400">/mes</span>
             </div>
             <ul class="mb-6 space-y-3 text-gray-600 dark:text-gray-300">
                 <li class="flex items-center">✅ Cuentas Ilimitadas</li>
@@ -35,7 +35,7 @@
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Anual</h3>
             <div class="my-4">
                 <span class="text-4xl font-bold text-gray-900 dark:text-white">100€</span>
-                <span class="text-gray-500">/año</span>
+                <span class="text-gray-500 dark:text-gray-400">/año</span>
             </div>
             <ul class="mb-6 space-y-3 text-gray-600 dark:text-gray-300">
                 <li class="flex items-center">✅ Todo lo del mensual</li>

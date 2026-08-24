@@ -60,7 +60,7 @@
         <div class="mb-4 grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Hora</label>
-                <select class="w-full rounded border border-gray-300 px-3 py-2 dark:bg-neutral-700 dark:text-white"
+                <select class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-neutral-700 dark:text-white"
                         x-model="hours">
                     <template x-for="h in Array.from({length: 24}, (_, i) => i)"
                               :key="h">
@@ -71,7 +71,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Minutos</label>
-                <select class="w-full rounded border border-gray-300 px-3 py-2 dark:bg-neutral-700 dark:text-white"
+                <select class="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-neutral-700 dark:text-white"
                         x-model="minutes">
                     <template x-for="m in Array.from({length: 60}, (_, i) => i)"
                               :key="m">

@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Trade;
 use App\Jobs\RecalculateStrategyStatsJob;
-use App\Services\PropFirmService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -13,7 +12,6 @@ class TradeObserver
     public function created(Trade $trade): void
     {
         $this->updateStrategy($trade);
-        (new PropFirmService())->validate($trade);
     }
 
     public function updated(Trade $trade): void
@@ -27,10 +25,6 @@ class TradeObserver
                     RecalculateStrategyStatsJob::dispatch($oldStrategy);
                 }
             }
-        }
-
-        if ($trade->wasChanged(['exit_time', 'entry_time', 'pnl'])) {
-            (new PropFirmService())->validate($trade);
         }
     }
 

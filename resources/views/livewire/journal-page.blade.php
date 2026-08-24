@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50 pb-5"
+<div class="min-h-screen bg-gray-50 pb-5 dark:bg-gray-900"
      x-data="journal()">
 
     {{-- CONTENEDOR PRINCIPAL CON ESTADO ALPINE --}}
@@ -17,7 +17,7 @@
 
         {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
         {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-gray-900"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
@@ -36,10 +36,6 @@
         <x-loader></x-loader>
     </div>
 
-    {{-- ? Show Alerta --}}
-    <x-modal-template show="showAlert">
-    </x-modal-template>
-
     {{-- MODAL GESTIÓN DE REGLAS MAESTRAS --}}
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
          x-data="{
@@ -49,20 +45,20 @@
          x-show="show"
          style="display: none;">
 
-        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800"
              @click.away="show = false">
-            <h3 class="mb-4 text-lg font-bold text-gray-900">{{ __('labels.set_recurring_goals') }}</h3>
-            <p class="mb-4 text-sm text-gray-500">{{ __('labels.explain_recurring_goals') }}</p>
+            <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-gray-100">{{ __('labels.set_recurring_goals') }}</h3>
+            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{ __('labels.explain_recurring_goals') }}</p>
 
             {{-- Lista de Reglas --}}
             <div class="mb-4 max-h-60 space-y-2 overflow-y-auto">
                 @foreach ($userRules as $rule)
-                    <div class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2">
-                        <span class="{{ $rule->is_active ? 'text-gray-700' : 'text-gray-400 line-through' }} text-sm">
+                    <div class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-700/50">
+                        <span class="{{ $rule->is_active ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 line-through dark:text-gray-500' }} text-sm">
                             {{ $rule->text }}
                         </span>
                         <div class="flex gap-2">
-                            <button class="{{ $rule->is_active ? 'text-emerald-500' : 'text-gray-400' }} text-xs"
+                            <button class="{{ $rule->is_active ? 'text-emerald-500' : 'text-gray-400 dark:text-gray-500' }} text-xs"
                                     wire:click="toggleMasterRule({{ $rule->id }})">
                                 <i class="fa-solid fa-power-off"></i>
                             </button>
@@ -77,7 +73,7 @@
 
             {{-- Añadir Nueva — 0 round-trips al escribir --}}
             <div class="flex gap-2">
-                <input class="flex-grow rounded-lg border-gray-300 text-sm focus:ring-indigo-500"
+                <input class="flex-grow rounded-lg border-gray-300 text-sm focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                        type="text"
                        x-model="newRule"
                        placeholder="{{ __('labels.placeholder_new_rule') }}"
@@ -100,7 +96,7 @@
             </div>
 
             <div class="mt-6 flex justify-end">
-                <button class="text-sm font-bold text-gray-500 hover:text-gray-700"
+                <button class="text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         @click="show = false">
                     {{ __('labels.close_s') }}
                 </button>
@@ -110,25 +106,25 @@
 
 
     {{-- HEADER FIJO --}}
-    <div class="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div class="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="mx-auto flex max-w-7xl items-center justify-between">
 
             {{-- BLOQUE NAVEGACIÓN + TÍTULO --}}
             <div class="flex items-center gap-4">
 
                 {{-- Botón Día Anterior --}}
-                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
+                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 dark:text-gray-500 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 dark:border-gray-600 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                         wire:click="selectDate('{{ \Carbon\Carbon::parse($date)->subDay()->format('Y-m-d') }}')">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
 
                 {{-- Título --}}
-                <h1 class="flex select-none items-center gap-2 text-xl font-bold capitalize text-gray-900">
-                    <i class="fa-solid fa-book-journal-whills text-indigo-600"></i>
+                <h1 class="flex select-none items-center gap-2 text-xl font-bold capitalize text-gray-900 dark:text-gray-100">
+                    <i class="fa-solid fa-book-journal-whills text-indigo-600 dark:text-indigo-400"></i>
                     {{ \Carbon\Carbon::parse($date)->translatedFormat('l, d F Y') }}
                 </h1>
 
-                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95"
+                <button class="group flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-400 dark:text-gray-500 transition-all hover:border-indigo-600 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 dark:border-gray-600 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                         wire:click="selectDate('{{ \Carbon\Carbon::parse($date)->addDay()->format('Y-m-d') }}')">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
@@ -156,21 +152,21 @@
         <div class="space-y-6 lg:col-span-4">
 
             {{-- 2. PRE-MARKET --}}
-            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2">
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
                     <i class="fa-solid fa-sun text-orange-400"></i>
-                    <h3 class="text-xs font-bold uppercase text-gray-700">{{ __('labels.premarket_mood') }}</h3>
+                    <h3 class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">{{ __('labels.premarket_mood') }}</h3>
                 </div>
                 <div class="space-y-4 p-4">
                     <div class="grid grid-cols-4 gap-2">
                         @foreach (['calm' => '😌', 'anxious' => '😰', 'confident' => '😎', 'tired' => '😴'] as $key => $emoji)
-                            <button class="{{ $pre_market_mood === $key ? 'bg-indigo-50 border-indigo-400 scale-110' : 'border-gray-100 hover:bg-gray-50' }} flex h-10 items-center justify-center rounded border text-xl transition-all"
+                            <button class="{{ $pre_market_mood === $key ? 'bg-indigo-50 border-indigo-400 scale-110 dark:bg-indigo-500/20 dark:border-indigo-500' : 'border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700' }} flex h-10 items-center justify-center rounded border text-xl transition-all"
                                     wire:click="$set('pre_market_mood', '{{ $key }}')">
                                 {{ $emoji }}
                             </button>
                         @endforeach
                     </div>
-                    <textarea class="w-full rounded border-gray-200 bg-gray-50 p-2 text-xs"
+                    <textarea class="w-full rounded border-gray-200 bg-gray-50 p-2 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                               wire:model.defer="pre_market_notes"
                               rows="2"
                               placeholder="{{ __('labels.previous_notes') }}"></textarea>
@@ -178,14 +174,14 @@
             </div>
 
             {{-- 3. OBJETIVOS --}}
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2">
-                    <h3 class="text-xs font-bold uppercase text-gray-700">
+            <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+                    <h3 class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">
                         <i class="fa-solid fa-check-double mr-1 text-emerald-500"></i> {{ __('labels.objectives') }}
                     </h3>
                     <div class="flex gap-2">
                         {{-- Botón Configurar Plantilla --}}
-                        <button class="text-gray-400 hover:text-indigo-600"
+                        <button class="text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                 wire:click="openRulesManager"
                                 title="{{ __('labels.edit_global_template') }}">
                             <i class="fa-solid fa-cog text-xs"></i>
@@ -195,34 +191,31 @@
                 <div class="space-y-2 p-4">
                     @foreach ($daily_objectives as $index => $obj)
                         <div class="flex items-center gap-2">
-                            <input class="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-0"
+                            <input class="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-0 dark:border-gray-600 dark:bg-gray-700"
                                    type="checkbox"
                                    wire:model.defer="daily_objectives.{{ $index }}.done">
-                            <input class="flex-grow border-b border-gray-100 bg-transparent p-1 text-xs focus:border-indigo-300 focus:ring-0"
+                            <input class="flex-grow border-b border-gray-100 bg-transparent p-1 text-xs focus:border-indigo-300 focus:ring-0 dark:border-gray-700 dark:text-gray-100"
                                    type="text"
                                    wire:model.defer="daily_objectives.{{ $index }}.text"
                                    placeholder="{{ __('labels.objective...') }}">
-                            <button class="text-gray-300 hover:text-red-500"
+                            <button class="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
                                     wire:click="removeObjective({{ $index }})"><i class="fa-solid fa-times text-xs"></i></button>
                         </div>
                     @endforeach
                 </div>
             </div>
-            {{-- 3. CALENDARIO ECONÓMICO (NUEVO) --}}
-            {{-- <livewire:economic-calendar :date="$date"
-                                        :wire:key="'eco-'.$date" /> --}}
             {{-- 1. MINI CALENDARIO (Navegación SPA) --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="mb-3 flex items-center justify-between">
-                    <button class="p-1 text-gray-400 hover:text-indigo-600"
+                    <button class="p-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                             wire:click="prevMonth"><i class="fa-solid fa-chevron-left"></i></button>
-                    <span class="text-sm font-bold capitalize text-gray-800">{{ $calendarRef->translatedFormat('F Y') }}</span>
-                    <button class="p-1 text-gray-400 hover:text-indigo-600"
+                    <span class="text-sm font-bold capitalize text-gray-800 dark:text-gray-100">{{ $calendarRef->translatedFormat('F Y') }}</span>
+                    <button class="p-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                             wire:click="nextMonth"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
 
                 {{-- Días Semana --}}
-                <div class="mb-2 grid grid-cols-7 text-center text-[10px] font-bold text-gray-400">
+                <div class="mb-2 grid grid-cols-7 text-center text-[10px] font-bold text-gray-400 dark:text-gray-500">
                     <span>{{ __('labels.m') }}</span><span>{{ __('labels.t') }}</span><span>{{ __('labels.w') }}</span><span>{{ __('labels.tu') }}</span><span>{{ __('labels.f') }}</span><span>{{ __('labels.s') }}</span><span>{{ __('labels.su') }}</span>
                 </div>
 
@@ -230,7 +223,7 @@
                 <div class="grid grid-cols-7 gap-1">
                     {{-- ✅ CORRECTO — igual que los botones de navegación --}}
                     @foreach ($this->miniCalendar as $day)
-                        <button class="{{ $day['is_selected'] ? 'bg-indigo-600 text-white font-bold shadow-md' : ($day['is_today'] ? 'border border-indigo-500 text-indigo-600 bg-indigo-50' : ($day['is_current_month'] ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-300')) }} relative h-8 w-full rounded-lg text-xs font-medium transition-all"
+                        <button class="{{ $day['is_selected'] ? 'bg-indigo-600 text-white font-bold shadow-md' : ($day['is_today'] ? 'border border-indigo-500 text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-400' : ($day['is_current_month'] ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' : 'text-gray-300 dark:text-gray-600')) }} relative h-8 w-full rounded-lg text-xs font-medium transition-all"
                                 wire:click="selectDate('{{ $day['date'] }}')">
                             {{ $day['day'] }}
                             @if ($day['has_entry'] && !$day['is_selected'])
@@ -250,33 +243,33 @@
             {{-- 1. KPIs SUPERIORES (Ahora con 4 columnas) --}}
             <div class="grid grid-cols-4 gap-4">
                 {{-- PnL --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.pnl_day') }}</p>
+                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.pnl_day') }}</p>
                     <p class="{{ $dayPnL >= 0 ? 'text-emerald-500' : 'text-rose-500' }} text-xl font-black">
                         {{ $dayPnL >= 0 ? '+' : '' }}{{ number_format($dayPnL, 2) }}$
                     </p>
                 </div>
 
                 {{-- Trades --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.trades') }}</p>
-                    <p class="text-xl font-black text-gray-800">{{ count($dayTrades) }}</p>
+                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.trades') }}</p>
+                    <p class="text-xl font-black text-gray-800 dark:text-gray-100">{{ count($dayTrades) }}</p>
                 </div>
 
                 {{-- Errores (NUEVO) --}}
                 @php
                     $totalErrors = collect($mistakesSummary)->sum();
                 @endphp
-                <div class="rounded-xl border border-rose-100 bg-white p-3 text-center shadow-sm">
+                <div class="rounded-xl border border-rose-100 bg-white p-3 text-center shadow-sm dark:border-rose-500/30 dark:bg-gray-800">
                     <p class="text-[10px] font-bold uppercase text-rose-400">{{ __('labels.errors') }}</p>
-                    <p class="{{ $totalErrors > 0 ? 'text-rose-600' : 'text-gray-400' }} text-xl font-black">
+                    <p class="{{ $totalErrors > 0 ? 'text-rose-600' : 'text-gray-400 dark:text-gray-500' }} text-xl font-black">
                         {{ $totalErrors }}
                     </p>
                 </div>
 
                 {{-- Disciplina --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-                    <p class="text-[10px] font-bold uppercase text-gray-500">{{ __('labels.discipline') }}</p>
+                <div class="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.discipline') }}</p>
                     @php $score = number_format($entry->discipline_score, 1) ?? 0; @endphp
                     <span class="{{ $score >= 8 ? 'text-emerald-500' : ($score >= 5 ? 'text-amber-500' : 'text-rose-500') }} text-xl font-black">
                         {{ $score }}
@@ -285,24 +278,24 @@
             </div>
 
             {{-- 2. LISTA DE OPERACIONES (Con Toggle y Scroll) --}}
-            <div class="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+            <div class="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
                  x-data="{ showList: false }"> {{-- ESTADO ALPINE --}}
 
                 {{-- Cabecera con Toggle --}}
-                <div class="flex cursor-pointer items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100"
+                <div class="flex cursor-pointer items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
                      @click="showList = !showList">
 
                     <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-list-ul text-gray-400"></i>
-                        <span class="text-xs font-bold uppercase text-gray-700">{{ __('labels.breakdown_operations') }}</span>
+                        <i class="fa-solid fa-list-ul text-gray-400 dark:text-gray-500"></i>
+                        <span class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">{{ __('labels.breakdown_operations') }}</span>
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-medium text-gray-400">
+                        <span class="text-[10px] font-medium text-gray-400 dark:text-gray-500">
                             {{ count($dayTrades) }} {{ __('labels.registers') }}
                         </span>
                         {{-- Flecha que rota --}}
-                        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-400 dark:text-gray-500 transition-transform duration-200"
                            :class="showList ? 'rotate-180' : ''"></i>
                     </div>
                 </div>
@@ -315,10 +308,10 @@
                      {{-- Animación suave si tienes el plugin Alpine Collapse, si no, funciona igual --}}>
 
                     @if (count($dayTrades) > 0)
-                        <div class="divide-y divide-gray-100">
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach ($dayTrades as $trade)
                                 {{-- FILA DEL TRADE --}}
-                                <div class="group relative flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-gray-50"
+                                <div class="group relative flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                      @click="
         $el.classList.add('opacity-50');
         $wire.openTradeDetail({{ $trade->id }}).then(() => {
@@ -329,17 +322,17 @@
                                     {{-- IZQUIERDA: Info Trade + Errores --}}
                                     <div class="flex items-center gap-4">
                                         {{-- Hora --}}
-                                        <span class="w-10 font-mono text-xs text-gray-400">
+                                        <span class="w-10 font-mono text-xs text-gray-400 dark:text-gray-500">
                                             {{ \Carbon\Carbon::parse($trade->exit_time)->format('H:i') }}
                                         </span>
 
                                         <div class="flex flex-col gap-1">
                                             {{-- Simbolo y Dirección --}}
                                             <div class="flex items-center gap-2">
-                                                <span class="text-sm font-bold text-gray-800">
+                                                <span class="text-sm font-bold text-gray-800 dark:text-gray-100">
                                                     {{ $trade->tradeAsset->name ?? __('labels.unknown') }}
                                                 </span>
-                                                <span class="{{ $trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded px-1.5 text-[9px] font-black uppercase">
+                                                <span class="{{ $trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400' }} rounded px-1.5 text-[9px] font-black uppercase">
                                                     {{ $trade->direction }}
                                                 </span>
                                             </div>
@@ -348,7 +341,7 @@
                                             @if ($trade->mistakes->count() > 0)
                                                 <div class="flex flex-wrap gap-1">
                                                     @foreach ($trade->mistakes as $mistake)
-                                                        <span class="inline-flex items-center rounded border border-rose-100 bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600">
+                                                        <span class="inline-flex items-center rounded border border-rose-100 bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
                                                             <i class="fa-solid fa-bug mr-1 opacity-50"></i> {{ $mistake->name }}
                                                         </span>
                                                     @endforeach
@@ -370,7 +363,7 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="flex h-32 flex-col items-center justify-center text-center text-gray-400">
+                        <div class="flex h-32 flex-col items-center justify-center text-center text-gray-400 dark:text-gray-500">
                             <i class="fa-solid fa-box-open mb-2 text-2xl opacity-20"></i>
                             <p class="text-xs italic">{{ __('labels.no_activity_for_today') }}</p>
                         </div>
@@ -381,24 +374,24 @@
 
 
             {{-- 3. EDITOR PRINCIPAL (Trix) --}}
-            <div class="flex min-h-[500px] flex-col rounded-xl border border-gray-200 bg-white shadow-sm"
+            <div class="flex min-h-[500px] flex-col rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
                  wire:ignore> {{-- wire:ignore para que Livewire no toque el editor --}}
 
                 {{-- Cabecera Editor --}}
-                <div class="flex items-center justify-between gap-2 rounded-t-xl border-b border-gray-100 bg-gray-50 px-4 py-2">
+                <div class="flex items-center justify-between gap-2 rounded-t-xl border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-pen-nib text-indigo-500"></i>
-                        <span class="text-xs font-bold uppercase text-gray-700">{{ __('labels.session_log') }}</span>
+                        <span class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">{{ __('labels.session_log') }}</span>
                     </div>
 
-                    <p class="mt-1 text-[10px] font-medium text-gray-500">
+                    <p class="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                         {{ __('labels.daily_uses') }}
                         <span class="{{ $this->getAiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                            {{ $this->getAiCreditsLeft() }} / 10
+                            {{ $this->getAiCreditsLeft() }} / {{ $this->aiDailyLimit() }}
                         </span>
                     </p>
 
-                    <button class="group flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1 text-[10px] font-bold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
+                    <button class="group flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1 text-[10px] font-bold text-indigo-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50 dark:border-indigo-500/40 dark:bg-gray-700 dark:text-indigo-400 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                             wire:click="generateAiDraft"
                             wire:loading.attr="disabled">
                         <span class="flex items-center gap-1"
@@ -534,6 +527,49 @@
 
                     trix-toolbar .trix-button-group--file-tools {
                         display: none !important;
+                    }
+
+                    /* ===== MODO OSCURO ===== */
+                    .dark trix-toolbar {
+                        background: #1f2937;
+                        /* gray-800 */
+                        border-bottom: 1px solid #374151;
+                        /* gray-700 */
+                    }
+
+                    .dark trix-toolbar .trix-button {
+                        background: #374151;
+                        /* gray-700 */
+                        border: 1px solid #4b5563;
+                        /* gray-600 */
+                        color: #e5e7eb;
+                    }
+
+                    .dark trix-toolbar .trix-button::before {
+                        filter: invert(1) brightness(1.5);
+                        /* iconos SVG oscuros -> claros */
+                    }
+
+                    .dark trix-toolbar .trix-button--active {
+                        background: #3730a3;
+                        /* indigo-800 */
+                        color: #c7d2fe;
+                        /* indigo-200 */
+                    }
+
+                    .dark trix-editor {
+                        color: #d1d5db;
+                        /* gray-300 */
+                    }
+
+                    .dark .trix-content strong {
+                        color: #f9fafb;
+                        /* gray-50 */
+                    }
+
+                    .dark .trix-content blockquote {
+                        border-left-color: #475569;
+                        color: #94a3b8;
                     }
                 </style>
             </div>

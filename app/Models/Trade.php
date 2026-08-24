@@ -73,9 +73,4 @@ class Trade extends Model
         // Asumiendo que ya creaste el modelo Mistake y la tabla pivote trade_mistake
         return $this->belongsToMany(\App\Models\Mistake::class, 'trade_mistake');
     }
-
-    public function violations()
-    {
-        return $this->hasMany(TradeViolation::class);
-    }
 }

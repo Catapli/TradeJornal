@@ -9,21 +9,21 @@
      @keydown.escape.window="closeModal()"
      style="display:none">
 
-    <div class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-xl"
+    <div class="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
 
         {{-- Header --}}
-        <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-6 py-4">
             <div>
-                <h2 class="text-sm font-bold text-gray-900">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
                     <span x-show="!isEditing">{{ __('labels.new_strategy_title') }}</span>
                     <span x-show="isEditing">{{ __('labels.edit_strategy_title') }}</span>
                 </h2>
-                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.define_system_params') }}</p>
+                <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.define_system_params') }}</p>
             </div>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
                     type="button"
                     @click="closeModal()">
                 <svg class="h-4 w-4"
@@ -46,8 +46,8 @@
 
                 {{-- ── Nombre ────────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.name_field') }}</label>
-                    <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.name_field') }}</label>
+                    <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                            wire:model="name"
                            type="text"
                            placeholder="Ej: Ruptura London Open" />
@@ -59,8 +59,8 @@
                 {{-- ── Símbolo + Timeframe ───────────────── --}}
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.symbol') }}</label>
-                        <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm uppercase text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.symbol') }}</label>
+                        <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm uppercase text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="symbol"
                                type="text"
                                placeholder="XAUUSD" />
@@ -69,8 +69,8 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.timeframe') }}</label>
-                        <select class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.timeframe') }}</label>
+                        <select class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 wire:model="timeframe">
                             @foreach (['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'] as $tf)
                                 <option value="{{ $tf }}">{{ $tf }}</option>
@@ -81,10 +81,10 @@
 
                 {{-- ── Dirección ─────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.direction') }}</label>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.direction') }}</label>
                     <div class="grid grid-cols-3 gap-2">
                         @foreach (['both' => __('labels.dir_both'), 'long' => __('labels.dir_long_only'), 'short' => __('labels.dir_short_only')] as $val => $label)
-                            <button class="{{ $direction === $val ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300' }} h-9 rounded-lg border text-xs font-semibold transition-colors"
+                            <button class="{{ $direction === $val ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600' }} h-9 rounded-lg border text-xs font-semibold transition-colors"
                                     type="button"
                                     wire:click="$set('direction', '{{ $val }}')">
                                 {{ $label }}
@@ -95,17 +95,17 @@
 
                 {{-- ── Separador Setup ───────────────────── --}}
                 <div class="flex items-center gap-3 pt-1">
-                    <div class="h-px flex-1 bg-gray-100"></div>
-                    <span class="text-xs font-semibold uppercase tracking-widest text-gray-400">{{ __('labels.setup') }}</span>
-                    <div class="h-px flex-1 bg-gray-100"></div>
+                    <div class="h-px flex-1 bg-gray-100 dark:bg-gray-700"></div>
+                    <span class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">{{ __('labels.setup') }}</span>
+                    <div class="h-px flex-1 bg-gray-100 dark:bg-gray-700"></div>
                 </div>
 
                 {{-- ── Descripción ───────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        {{ __('labels.description') }} <span class="font-normal normal-case text-gray-400">({{ __('labels.optional') }})</span>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ __('labels.description') }} <span class="font-normal normal-case text-gray-400 dark:text-gray-500">({{ __('labels.optional') }})</span>
                     </label>
-                    <textarea class="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <textarea class="w-full resize-none rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                               wire:model="description"
                               rows="2"
                               placeholder="Lógica de la estrategia..."></textarea>
@@ -113,14 +113,14 @@
 
                 {{-- ── Reglas ────────────────────────────── --}}
                 <div>
-                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.setup_rules_section') }}</label>
+                    <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.setup_rules_section') }}</label>
                     @if (count($rules))
                         <ul class="mb-2 space-y-1">
                             @foreach ($rules as $i => $rule)
-                                <li class="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5">
-                                    <span class="text-xs font-medium text-gray-400">{{ $i + 1 }}.</span>
-                                    <span class="flex-1 text-xs text-gray-700">{{ $rule }}</span>
-                                    <button class="text-gray-300 transition-colors hover:text-red-400"
+                                <li class="flex items-center gap-2 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-1.5">
+                                    <span class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ $i + 1 }}.</span>
+                                    <span class="flex-1 text-xs text-gray-700 dark:text-gray-200">{{ $rule }}</span>
+                                    <button class="text-gray-300 dark:text-gray-600 transition-colors hover:text-red-400"
                                             type="button"
                                             wire:click="removeRule({{ $i }})">
                                         <svg class="h-3.5 w-3.5"
@@ -139,12 +139,12 @@
                         </ul>
                     @endif
                     <div class="flex gap-2">
-                        <input class="h-9 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <input class="h-9 flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="newRule"
                                wire:keydown.enter.prevent="addRule"
                                type="text"
                                placeholder="Ej: El precio llega a un POI en H1" />
-                        <button class="h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-100"
+                        <button class="h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 text-sm font-bold text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                                 type="button"
                                 wire:click="addRule">+</button>
                     </div>
@@ -153,8 +153,8 @@
             </div>
 
             {{-- Footer --}}
-            <div class="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+            <div class="flex items-center justify-between rounded-b-2xl border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/60 px-6 py-4">
+                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
                         type="button"
                         @click="closeModal()">
                     {{ __('labels.cancel') }}

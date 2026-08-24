@@ -6,7 +6,6 @@ return [
     'dashboard' => 'Dashboard',
     'accounts' => 'Accounts',
     'journal' => 'Journal',
-    'calendar' => 'Calendar',
     'trades' => 'Trades',
     'laboratory' => 'Laboratory',
     'playbook' => 'Strategies',
@@ -14,6 +13,7 @@ return [
     'session' => "Session",
     "history_session" => "Session History",
     "logs" => "Audit Log",
+    'backtesting' => 'Backtesting',
 
     // Section summaries
     'resume_accounts' => "Account Management and objectives status",

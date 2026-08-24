@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50/50 p-6"
+<div class="min-h-screen bg-gray-50/50 p-6 dark:bg-gray-900"
      x-data="trades()">
 
     {{-- LOADER INICIAL --}}
@@ -9,14 +9,14 @@
             setTimeout(() => { this.initialLoad = false }, 500);
         }
     }">
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-gray-900"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0">
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading') }}</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading') }}</span>
             </div>
         </div>
     </div>
@@ -35,26 +35,10 @@
                           confirmText="{{ __('labels.confirm_delete') }}"
                           @confirm-action="executeBulkDelete()" />
 
-    {{-- ALERTA --}}
-    <x-modal-template show="showAlert">
-        <div class="p-4 text-center">
-            <div class="mb-2 flex justify-center text-3xl">
-                <template x-if="typeAlert === 'success'">
-                    <i class="fa-solid fa-check-circle text-emerald-500"></i>
-                </template>
-                <template x-if="typeAlert === 'error'">
-                    <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
-                </template>
-            </div>
-            <span class="font-bold text-gray-800"
-                  x-text="bodyAlert"></span>
-        </div>
-    </x-modal-template>
-
     {{-- LOADER PARA ACCIONES PESADAS --}}
     <div wire:loading
          wire:target='delete, save, executeBulkUpdate, executeBulkDelete'>
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white/30 backdrop-blur-[1px] dark:bg-gray-900/30">
             <x-loader></x-loader>
         </div>
     </div>
@@ -63,10 +47,10 @@
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-chart-simple text-2xl text-indigo-600"></i>
-                <h1 class="text-3xl font-black text-gray-900">{{ __('menu.trades') }}</h1>
+                <i class="fa-solid fa-chart-simple text-2xl text-indigo-600 dark:text-indigo-400"></i>
+                <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100">{{ __('menu.trades') }}</h1>
             </div>
-            <p class="text-sm text-gray-500">{{ __('menu.resume_trades') }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('menu.resume_trades') }}</p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -77,15 +61,15 @@
             </button>
 
             <div class="relative">
-                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input class="rounded-lg border-gray-300 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+                <input class="rounded-lg border-gray-300 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                        wire:model.live.debounce.400ms="search"
                        type="text"
                        placeholder="{{ __('labels.placeholder_search_ticket') }}">
             </div>
 
-            <button class="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
-                    :class="{ 'ring-2 ring-indigo-500 border-indigo-500 text-indigo-700 bg-indigo-50': showFilters, 'bg-white': !showFilters }"
+            <button class="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    :class="{ 'ring-2 ring-indigo-500 border-indigo-500 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-400': showFilters, 'bg-white dark:bg-gray-800': !showFilters }"
                     @click="toggleFilters">
                 <i class="fa-solid fa-filter"></i> {{ __('labels.filters') }}
             </button>
@@ -93,14 +77,14 @@
     </div>
 
     {{-- FILTROS --}}
-    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"
          x-show="showFilters"
          x-transition
          style="display: none;">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
             <div>
-                <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.account') }}</label>
-                <select class="w-full rounded-md border-gray-300 text-sm"
+                <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.account') }}</label>
+                <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                         wire:model.live="filters.account_id">
                     <option value="">{{ __('labels.all') }}</option>
                     @foreach ($accounts as $acc)
@@ -110,8 +94,8 @@
             </div>
             @if (Auth::user()->subscribed('default'))
                 <div>
-                    <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.strategy') }}</label>
-                    <select class="w-full rounded-md border-gray-300 text-sm"
+                    <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.strategy') }}</label>
+                    <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                             wire:model.live="filters.strategy_id">
                         <option value="">{{ __('labels.all') }}</option>
                         @foreach ($strategiesList as $st)
@@ -122,8 +106,8 @@
             @endif
 
             <div>
-                <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.detect_errors') }}</label>
-                <select class="w-full rounded-md border-rose-200 text-sm font-medium text-rose-700 focus:border-rose-500 focus:ring-rose-500"
+                <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.detect_errors') }}</label>
+                <select class="w-full rounded-md border-rose-200 text-sm font-medium text-rose-700 focus:border-rose-500 focus:ring-rose-500 dark:border-rose-500/40 dark:bg-gray-700 dark:text-rose-400"
                         wire:model.live="filters.mistake_id">
                     <option value="">{{ __('labels.anyone') }}</option>
                     @foreach ($mistakesList as $m)
@@ -132,8 +116,8 @@
                 </select>
             </div>
             <div>
-                <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.result') }}</label>
-                <select class="w-full rounded-md border-gray-300 text-sm"
+                <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.result') }}</label>
+                <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                         wire:model.live="filters.result">
                     <option value="">{{ __('labels.everyone') }}</option>
                     <option value="win">{{ __('labels.winners') }}</option>
@@ -141,7 +125,7 @@
                 </select>
             </div>
             <div class="flex items-end">
-                <button class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100"
+                <button class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                         wire:click="resetFilters">
                     {{ __('labels.clean_filters') }}
                 </button>
@@ -150,13 +134,13 @@
     </div>
 
     {{-- TABLA --}}
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-100">
-                <thead class="bg-gray-50 text-xs font-bold uppercase tracking-wider text-gray-500">
+            <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+                <thead class="bg-gray-50 text-xs font-bold uppercase tracking-wider text-gray-500 dark:bg-gray-900/50 dark:text-gray-400">
                     <tr>
                         <th class="w-10 px-4 py-3 text-center">
-                            <input class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            <input class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
                                    wire:model.live="selectAll"
                                    type="checkbox">
                         </th>
@@ -169,13 +153,13 @@
                         <th class="px-4 py-3 text-center"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 bg-white text-sm">
+                <tbody class="divide-y divide-gray-100 bg-white text-sm dark:divide-gray-700 dark:bg-gray-800">
                     @forelse ($this->trades as $trade)
-                        <tr class="{{ in_array($trade->id, $selectedTrades) ? 'bg-indigo-50' : '' }} group transition hover:bg-indigo-50/30"
+                        <tr class="{{ in_array($trade->id, $selectedTrades) ? 'bg-indigo-50 dark:bg-indigo-500/10' : '' }} group transition hover:bg-indigo-50/30 dark:hover:bg-indigo-500/5"
                             wire:key="row-{{ $trade->id }}">
 
                             <td class="px-4 py-3 text-center">
-                                <input class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                <input class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
                                        wire:model.live="selectedTrades"
                                        value="{{ $trade->id }}"
                                        type="checkbox">
@@ -184,24 +168,24 @@
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-gray-900">{{ $trade->tradeAsset->name ?? $trade->symbol }}</span>
-                                        <span class="text-[10px] uppercase text-gray-400">#{{ $trade->ticket ?? 'N/A' }}</span>
+                                        <span class="font-bold text-gray-900 dark:text-gray-100">{{ $trade->tradeAsset->name ?? $trade->symbol }}</span>
+                                        <span class="text-[10px] uppercase text-gray-400 dark:text-gray-500">#{{ $trade->ticket ?? 'N/A' }}</span>
                                     </div>
                                 </div>
                             </td>
 
                             <td class="px-4 py-3 text-center">
                                 @if (in_array(strtoupper($trade->direction), ['BUY', 'LONG']))
-                                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">{{ __('labels.long') }}</span>
+                                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">{{ __('labels.long') }}</span>
                                 @else
-                                    <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">{{ __('labels.short') }}</span>
+                                    <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">{{ __('labels.short') }}</span>
                                 @endif
-                                <div class="mt-1 text-[10px] text-gray-400">{{ $trade->size }} {{ __('labels.lots') }}</div>
+                                <div class="mt-1 text-[10px] text-gray-400 dark:text-gray-500">{{ $trade->size }} {{ __('labels.lots') }}</div>
                             </td>
 
-                            <td class="px-4 py-3 text-center text-xs">
-                                <div><span class="text-gray-400">{{ __('labels.in') }}</span> {{ number_format($trade->entry_price, 5) }}</div>
-                                <div><span class="text-gray-400">{{ __('labels.out') }}</span> {{ number_format($trade->exit_price, 5) }}</div>
+                            <td class="px-4 py-3 text-center text-xs text-gray-700 dark:text-gray-200">
+                                <div><span class="text-gray-400 dark:text-gray-500">{{ __('labels.in') }}</span> {{ number_format($trade->entry_price, 5) }}</div>
+                                <div><span class="text-gray-400 dark:text-gray-500">{{ __('labels.out') }}</span> {{ number_format($trade->exit_price, 5) }}</div>
                             </td>
 
                             <td class="px-4 py-3 align-middle">
@@ -274,27 +258,27 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm"
+                                        <div class="pointer-events-none absolute z-20 h-full w-1 rounded-full bg-gray-900 shadow-sm dark:bg-gray-100"
                                              style="left: {{ $markerPos }}%; transform: translateX(-50%);"></div>
                                     </div>
                                 @else
-                                    <span class="block text-center text-xs text-gray-300">-</span>
+                                    <span class="block text-center text-xs text-gray-300 dark:text-gray-600">-</span>
                                 @endif
                             </td>
 
                             <td class="px-4 py-3">
                                 <div class="flex flex-col items-center gap-1.5">
                                     @if ($trade->strategy)
-                                        <span class="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                                        <span class="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400">
                                             {{ $trade->strategy->name }}
                                         </span>
                                     @else
-                                        <span class="text-[10px] italic text-gray-300">{{ __('labels.without_plan') }}</span>
+                                        <span class="text-[10px] italic text-gray-300 dark:text-gray-600">{{ __('labels.without_plan') }}</span>
                                     @endif
                                     @if ($trade->mistakes->count() > 0)
                                         <div class="flex flex-wrap justify-center gap-1">
                                             @foreach ($trade->mistakes as $mistake)
-                                                <span class="rounded border border-rose-200 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700"
+                                                <span class="rounded border border-rose-200 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400"
                                                       title="{{ $mistake->name }}">
                                                     ⚠️ {{ Str::limit($mistake->name, 12) }}
                                                 </span>
@@ -321,14 +305,14 @@
                                 </div>
 
                                 {{-- Fecha (Se queda igual) --}}
-                                <div class="text-[10px] text-gray-400">
+                                <div class="text-[10px] text-gray-400 dark:text-gray-500">
                                     {{ \Carbon\Carbon::parse($trade->exit_time)->format('d M H:i') }}
                                 </div>
                             </td>
 
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2 opacity-0 transition group-hover:opacity-100">
-                                    <button class="text-gray-400 transition hover:text-indigo-600 disabled:opacity-40"
+                                    <button class="text-gray-400 dark:text-gray-500 transition hover:text-indigo-600 disabled:opacity-40 dark:hover:text-indigo-400"
                                             wire:click="openTradeDetail({{ $trade->id }})"
                                             wire:loading.attr="disabled"
                                             wire:target="openTradeDetail({{ $trade->id }})">
@@ -340,7 +324,7 @@
                                            wire:target="openTradeDetail({{ $trade->id }})"></i>
                                     </button>
                                     {{-- Botón Editar --}}
-                                    <button class="relative rounded p-1 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"
+                                    <button class="relative rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                                             wire:click="edit({{ $trade->id }})"
                                             wire:loading.attr="disabled">
                                         <i class="fa-solid fa-pen"
@@ -350,7 +334,7 @@
                                            wire:loading
                                            wire:target="edit({{ $trade->id }})"></i>
                                     </button>
-                                    <button class="rounded p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600"
+                                    <button class="rounded p-1 text-gray-400 dark:text-gray-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                                             @click="showModalDelete({{ $trade->id }})">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
@@ -359,7 +343,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td class="py-12 text-center text-gray-500"
+                            <td class="py-12 text-center text-gray-500 dark:text-gray-400"
                                 colspan="8">{{ __('labels.not_operations_with_filters') }}</td>
                         </tr>
                     @endforelse
@@ -367,7 +351,7 @@
             </table>
         </div>
 
-        <div class="border-t border-gray-100 bg-gray-50 px-6 py-4">
+        <div class="border-t border-gray-100 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
             {{-- Paginación segura --}}
             @if (method_exists($this->trades, 'links'))
                 {{ $this->trades->links('vendor.livewire.tradeforge-pagination', data: ['scrollTo' => false]) }}
@@ -408,14 +392,14 @@
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
          x-show="showBulkModal"
          style="display: none;">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800"
              @click.away="closeBulkModal">
-            <h3 class="mb-4 text-lg font-bold text-gray-900">{{ __('labels.bulk_edit') }}</h3>
+            <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-gray-100">{{ __('labels.bulk_edit') }}</h3>
 
             @if (Auth::user()->subscribed('default'))
                 <div class="mb-4">
-                    <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.strategy') }}</label>
-                    <select class="w-full rounded-md border-gray-300 text-sm"
+                    <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.strategy') }}</label>
+                    <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                             wire:model.blur="bulkStrategyId">
                         <option value="">{{ __('labels.not_change') }}</option>
                         @foreach ($strategiesList as $st)
@@ -427,22 +411,22 @@
 
 
             <div class="mb-6">
-                <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.register_errors') }}</label>
-                <div class="h-32 overflow-y-auto rounded-md border border-gray-300 p-2">
+                <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.register_errors') }}</label>
+                <div class="h-32 overflow-y-auto rounded-md border border-gray-300 p-2 dark:border-gray-600">
                     @foreach ($mistakesList as $mistake)
-                        <label class="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-50">
-                            <input class="rounded text-rose-600 focus:ring-rose-500"
+                        <label class="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <input class="rounded text-rose-600 focus:ring-rose-500 dark:border-gray-500 dark:bg-gray-700"
                                    type="checkbox"
                                    wire:model.blur="bulkMistakes"
                                    value="{{ $mistake->id }}">
-                            <span class="text-sm text-gray-700">{{ $mistake->name }}</span>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ $mistake->name }}</span>
                         </label>
                     @endforeach
                 </div>
             </div>
 
             <div class="flex justify-end gap-3">
-                <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700"
+                <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         @click="closeBulkModal">{{ __('labels.cancel') }}</button>
                 <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700"
                         wire:click="executeBulkUpdate">
@@ -461,14 +445,14 @@
          x-transition
          style="display: none;">
 
-        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl"
+        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl dark:bg-gray-800"
              @click.away="closeFormModal">
 
-            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-                <h3 class="text-lg font-bold text-gray-900">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
                     <span x-text="$wire.isEditMode ? '{{ __('labels.edit_operation') }}' : '{{ __('labels.new_operation') }}'"></span>
                 </h3>
-                <button class="text-gray-400 hover:text-gray-600"
+                <button class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-200"
                         @click="closeFormModal">
                     <i class="fa-solid fa-times"></i>
                 </button>
@@ -478,8 +462,8 @@
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.account') }}</label>
-                        <select class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.account') }}</label>
+                        <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 wire:model.blur="form.account_id">
                             <option value="">{{ __('labels.select') }}</option>
                             @foreach ($accounts as $acc)
@@ -492,16 +476,16 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.ticket_id') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.ticket_id') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="text"
                                placeholder="{{ __('labels.optional') }}"
                                wire:model.blur="form.ticket">
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.active_symbol') }}</label>
-                        <select class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.active_symbol') }}</label>
+                        <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                 wire:model.blur="form.trade_asset_id">
                             <option value="">{{ __('labels.select_active') }}</option>
                             @foreach ($assetsList as $asset)
@@ -514,28 +498,28 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.direction') }}</label>
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.direction') }}</label>
                         <div class="flex gap-2">
                             <label class="flex-1 cursor-pointer">
                                 <input class="peer sr-only"
                                        type="radio"
                                        value="long"
                                        wire:model.blur="form.direction">
-                                <div class="rounded-md border border-gray-200 py-2 text-center text-sm font-bold text-gray-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700">LONG</div>
+                                <div class="rounded-md border border-gray-200 py-2 text-center text-sm font-bold text-gray-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 peer-checked:text-emerald-700 dark:border-gray-600 dark:text-gray-400 dark:peer-checked:bg-emerald-500/10 dark:peer-checked:text-emerald-400">LONG</div>
                             </label>
                             <label class="flex-1 cursor-pointer">
                                 <input class="peer sr-only"
                                        type="radio"
                                        value="short"
                                        wire:model.blur="form.direction">
-                                <div class="rounded-md border border-gray-200 py-2 text-center text-sm font-bold text-gray-500 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-700">SHORT</div>
+                                <div class="rounded-md border border-gray-200 py-2 text-center text-sm font-bold text-gray-500 peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-700 dark:border-gray-600 dark:text-gray-400 dark:peer-checked:bg-rose-500/10 dark:peer-checked:text-rose-400">SHORT</div>
                             </label>
                         </div>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.entry_price') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.entry_price') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.00001"
                                wire:model.blur="form.entry_price">
@@ -544,8 +528,8 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.exit_price') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.exit_price') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.00001"
                                wire:model.blur="form.exit_price">
@@ -555,8 +539,8 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.size_lots') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.size_lots') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.01"
                                wire:model.blur="form.size">
@@ -565,8 +549,8 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.p&l') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.p&l') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.01"
                                wire:model.blur="form.pnl">
@@ -576,8 +560,8 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.entry_date') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.entry_date') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="datetime-local"
                                wire:model.blur="form.entry_time">
                         @error('form.entry_time')
@@ -585,8 +569,8 @@
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.exit_date') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.exit_date') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="datetime-local"
                                wire:model.blur="form.exit_time">
                         @error('form.exit_time')
@@ -595,16 +579,16 @@
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.mae_price_worse') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.mae_price_worse') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.00001"
                                wire:model.blur="form.mae_price"
                                placeholder="{{ __('labels.optional') }}">
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.mfe_price_best') }}</label>
-                        <input class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.mfe_price_best') }}</label>
+                        <input class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                type="number"
                                step="0.00001"
                                wire:model.blur="form.mfe_price"
@@ -613,8 +597,8 @@
 
                     @if (Auth::user()->subscribed('default'))
                         <div class="md:col-span-2">
-                            <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.used_strategy') }}</label>
-                            <select class="w-full rounded-md border-gray-300 text-sm"
+                            <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.used_strategy') }}</label>
+                            <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                     wire:model.blur="form.strategy_id">
                                 <option value="">{{ __('labels.without_strategy') }}</option>
                                 @foreach ($strategiesList as $st)
@@ -626,8 +610,8 @@
 
 
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500">{{ __('labels.notes_journal') }}</label>
-                        <textarea class="w-full rounded-md border-gray-300 text-sm"
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.notes_journal') }}</label>
+                        <textarea class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                   rows="3"
                                   wire:model.blur="form.notes"></textarea>
                     </div>
@@ -635,8 +619,8 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
-                <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700"
+            <div class="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
+                <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         @click="closeFormModal">{{ __('labels.cancel') }}</button>
                 <button class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700"
                         wire:click="save"

@@ -8,6 +8,19 @@
         <meta name="csrf-token"
               content="{{ csrf_token() }}">
 
+        {{-- Tema: misma lógica que layouts/app.blade.php. Sin esto el tema se
+             perdía al salir a login/registro (el usuario veía un flash blanco). --}}
+        <script>
+            (function () {
+                try {
+                    var t = localStorage.getItem('theme');
+                    if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.documentElement.classList.add('dark');
+                    }
+                } catch (e) {}
+            })();
+        </script>
+
         <title>{{ config('app.name', 'TradeForge') }}</title>
 
         <link rel="icon"
@@ -27,8 +40,8 @@
         @livewireStyles
     </head>
 
-    <body>
-        <div class="font-sans text-gray-900 antialiased">
+    <body class="bg-white transition-colors duration-300 dark:bg-gray-900">
+        <div class="font-sans text-gray-900 antialiased dark:text-gray-100">
             <livewire:language-manager />
             {{ $slot }}
         </div>

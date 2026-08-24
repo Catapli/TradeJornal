@@ -489,7 +489,7 @@ class BacktestingPage extends Component
         $result = $ai->complete(
             $prompt,
             temperature: 0.4,
-            maxTokens: 1024,
+            maxTokens: 2048,
             cacheKey: 'backtest:' . $strategy->id,
         );
 

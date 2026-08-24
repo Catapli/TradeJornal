@@ -48,7 +48,6 @@ document.addEventListener("alpine:init", () => {
             // Additional State
             manualTradeCount: 0,
             ghostMode: false,
-            events: [],
             postSessionNotes: "",
 
             // ✅ NUEVO: Estado del polling inteligente
@@ -61,7 +60,6 @@ document.addEventListener("alpine:init", () => {
             // 🎬 LIFECYCLE
             // ==========================================
             init() {
-                console.log(moodConfig);
                 if (restoredData) {
                     this.selectedAccountId = restoredData.accountId;
                     this.selectedStrategyId = restoredData.strategyId;
@@ -73,7 +71,6 @@ document.addEventListener("alpine:init", () => {
                     this.startTimer();
                     this.startPolling();
                     this.step = 2;
-                    this.events = restoredData.events || [];
                 }
 
                 // ✅ NUEVO: Listener de visibilidad de página
@@ -315,7 +312,6 @@ document.addEventListener("alpine:init", () => {
                     if (data) {
                         this.trades = data.trades;
                         this.metrics = data.metrics;
-                        this.events = data.events || [];
 
                         // ✅ IMPORTANTE: Si sync trae más trades, resetear manual
                         if (this.metrics.count >= this.manualTradeCount) {

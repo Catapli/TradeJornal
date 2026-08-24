@@ -3,24 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Account;
-use App\Models\Alert;
-use App\Models\Camera;
-use App\Models\CollaborativeList;
-use App\Models\File;
-use App\Models\InterestList;
-use App\Models\Lists;
 use App\Models\Log;
 use App\Models\ProgramLevel;
 use App\Models\ProgramObjective;
-use App\Models\Reason;
 use App\Models\Role;
 use App\Models\Strategy;
-use App\Models\Town;
 use App\Models\Trade;
 use App\Models\TradeAsset;
-use App\Models\Traffic;
 use App\Models\User;
-use App\Models\Zone;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;

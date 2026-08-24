@@ -1,10 +1,10 @@
-<div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+<div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
     {{-- Cabecera --}}
-    <div class="border-b border-gray-100 px-6 py-4">
-        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-900">
+    <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
+        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
             <i class="fa-solid fa-shield-halved text-indigo-500"></i> Actualizar Contraseña
         </h3>
-        <p class="text-sm text-gray-500">Asegúrate de usar una contraseña larga y aleatoria para mantener tu cuenta segura.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Asegúrate de usar una contraseña larga y aleatoria para mantener tu cuenta segura.</p>
     </div>
 
     {{-- Formulario --}}
@@ -14,7 +14,7 @@
 
             {{-- Contraseña Actual --}}
             <div class="max-w-xl">
-                <x-label class="mb-1 font-bold text-gray-700"
+                <x-label class="mb-1 font-bold text-gray-700 dark:text-gray-200"
                          for="current_password"
                          value="{{ __('Contraseña Actual') }}" />
                 <x-input id="current_password"
@@ -28,7 +28,7 @@
 
             {{-- Nueva Contraseña --}}
             <div class="max-w-xl">
-                <x-label class="mb-1 font-bold text-gray-700"
+                <x-label class="mb-1 font-bold text-gray-700 dark:text-gray-200"
                          for="password"
                          value="{{ __('Nueva Contraseña') }}" />
                 <x-input id="password"
@@ -42,7 +42,7 @@
 
             {{-- Confirmar --}}
             <div class="max-w-xl">
-                <x-label class="mb-1 font-bold text-gray-700"
+                <x-label class="mb-1 font-bold text-gray-700 dark:text-gray-200"
                          for="password_confirmation"
                          value="{{ __('Confirmar Contraseña') }}" />
                 <x-input id="password_confirmation"

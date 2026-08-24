@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50 p-6 font-sans text-gray-900"
+<div class="min-h-screen bg-gray-50 p-6 font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100"
      x-data="sessionHistory">
 
 
@@ -18,7 +18,7 @@
 
         {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
         {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-gray-900"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
@@ -27,7 +27,7 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading_dashboard') }}</span>
             </div>
         </div>
     </div>
@@ -46,26 +46,26 @@
 
         {{-- Título --}}
         <div>
-            <h1 class="text-3xl font-black tracking-tight text-gray-900">{{ __('labels.sesion_journal') }}</h1>
-            <p class="text-sm text-gray-500">{{ __('labels.sesion_journal_text') }}</p>
+            <h1 class="text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">{{ __('labels.sesion_journal') }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('labels.sesion_journal_text') }}</p>
         </div>
 
         {{-- KPI Cards --}}
         <div class="flex flex-wrap gap-3">
 
             {{-- Total sesiones --}}
-            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
-                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                     {{ __('labels.sesions') }}
                 </span>
-                <span class="text-xl font-black text-gray-800">
+                <span class="text-xl font-black text-gray-800 dark:text-gray-100">
                     {{ $stats['total'] }}
                 </span>
             </div>
 
             {{-- Sesiones ganadoras --}}
-            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
-                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                     {{ __('labels.winners_fe') }}
                 </span>
                 <span class="text-xl font-black text-emerald-600">
@@ -74,8 +74,8 @@
             </div>
 
             {{-- Win Rate --}}
-            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
-                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                     {{ __('labels.winrate') }}
                 </span>
                 <span class="text-xl font-black"
@@ -88,8 +88,8 @@
             </div>
 
             {{-- PnL Total acumulado --}}
-            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm">
-                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <span class="block text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                     {{ __('labels.total_pnl') }}
                 </span>
                 <span class="text-xl font-black"
@@ -105,17 +105,13 @@
     </div>
 
 
-    {{-- ? Show Alerta --}}
-    <x-modal-template show="showAlert">
-    </x-modal-template>
-
     {{-- BARRA DE FILTROS --}}
-    <div class="mb-6 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+    <div class="mb-6 flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center dark:border-gray-700 dark:bg-gray-800">
 
         {{-- Selects --}}
         <div class="flex flex-wrap gap-2">
 
-            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
+            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                     x-model="filterAccount"
                     @change="$wire.set('filterAccount', $event.target.value || null)">
                 <option value="">{{ __('labels.all_accounts') }}</option>
@@ -124,7 +120,7 @@
                 @endforeach
             </select>
 
-            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
+            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                     x-model="filterStrategy"
                     @change="$wire.set('filterStrategy', $event.target.value || null)">
                 <option value="">{{ __('labels.any_strategy') }}</option>
@@ -133,7 +129,7 @@
                 @endforeach
             </select>
 
-            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm"
+            <select class="rounded-lg border-gray-200 bg-gray-50 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                     x-model="filterMood"
                     @change="$wire.set('filterMood', $event.target.value || null)">
                 <option value="">{{ __('labels.any_mood') }}</option>
@@ -145,20 +141,20 @@
         </div>
 
         {{-- Fechas --}}
-        <div class="flex items-center gap-2 border-t border-gray-100 pt-2 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-            <input class="rounded-lg border-gray-200 bg-gray-50 text-sm text-gray-500"
+        <div class="flex items-center gap-2 border-t border-gray-100 pt-2 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0 dark:border-gray-700">
+            <input class="rounded-lg border-gray-200 bg-gray-50 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
                    x-model="dateFrom"
                    @change="$wire.set('dateFrom', $event.target.value || null)"
                    type="date">
-            <span class="text-gray-400">—</span>
-            <input class="rounded-lg border-gray-200 bg-gray-50 text-sm text-gray-500"
+            <span class="text-gray-400 dark:text-gray-500">—</span>
+            <input class="rounded-lg border-gray-200 bg-gray-50 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
                    x-model="dateTo"
                    @change="$wire.set('dateTo', $event.target.value || null)"
                    type="date">
         </div>
 
         {{-- Reset --}}
-        <button class="ml-auto flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+        <button class="ml-auto flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                 x-show="hasActiveFilters"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 scale-95"
@@ -185,28 +181,28 @@
 
     {{-- CASO 1: Usuario sin ninguna sesión registrada --}}
     @if ($stats['total'] === 0)
-        <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-20 text-center">
-            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
+        <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-20 text-center dark:border-gray-700 dark:bg-gray-800">
+            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/20">
                 <i class="fa-regular fa-calendar-xmark text-2xl text-indigo-400"></i>
             </div>
-            <p class="font-bold text-gray-900">{{ __('labels.not_sesiones_registered') }}</p>
-            <p class="mt-1 max-w-xs text-sm text-gray-400">
+            <p class="font-bold text-gray-900 dark:text-gray-100">{{ __('labels.not_sesiones_registered') }}</p>
+            <p class="mt-1 max-w-xs text-sm text-gray-400 dark:text-gray-500">
                 {{ __('labels.sesions_appear_here') }}
             </p>
         </div>
 
         {{-- CASO 2: Hay sesiones pero los filtros no devuelven resultados --}}
     @elseif($sessions->isEmpty())
-        <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-20 text-center">
-            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-400"></i>
+        <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-20 text-center dark:border-gray-700 dark:bg-gray-800">
+            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                <i class="fa-solid fa-filter-circle-xmark text-2xl text-gray-400 dark:text-gray-500"></i>
             </div>
-            <p class="font-bold text-gray-900">{{ __('labels.not_results_filters') }}</p>
-            <p class="mt-1 max-w-xs text-sm text-gray-400">
+            <p class="font-bold text-gray-900 dark:text-gray-100">{{ __('labels.not_results_filters') }}</p>
+            <p class="mt-1 max-w-xs text-sm text-gray-400 dark:text-gray-500">
                 {{ __('labels.adjust_delete_filter') }}
             </p>
             {{-- Atajo directo al reset — mismo comportamiento que el botón de la barra --}}
-            <button class="mt-5 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+            <button class="mt-5 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                     @click="resetFilters()">
                 <i class="fa-solid fa-xmark"></i>
                 {{ __('labels.clean_filters') }}
@@ -217,32 +213,32 @@
     @else
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             @foreach ($sessions as $session)
-                <div class="{{ $session->session_pnl < 0 ? 'border-rose-100' : 'border-gray-200' }} group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
+                <div class="{{ $session->session_pnl < 0 ? 'border-rose-100 dark:border-rose-500/30' : 'border-gray-200 dark:border-gray-700' }} group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-md dark:bg-gray-800">
 
                     {{-- HEADER TARJETA --}}
-                    <div class="flex flex-col border-b border-gray-100 bg-gray-50/50 p-4">
+                    <div class="flex flex-col border-b border-gray-100 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
 
                         {{-- Fila superior: fecha y cuenta --}}
                         <div class="mb-2 flex items-start justify-between">
                             <div class="flex flex-col">
-                                <span class="text-xs font-bold text-gray-400">
+                                <span class="text-xs font-bold text-gray-400 dark:text-gray-500">
                                     {{ $session->start_time->format('d M, Y') }}
                                 </span>
-                                <span class="text-[10px] font-bold uppercase tracking-wide text-indigo-600">
+                                <span class="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
                                     {{ $session->strategy->name ?? 'N/A' }}
                                 </span>
                             </div>
-                            <span class="rounded border border-gray-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase text-gray-500">
+                            <span class="rounded border border-gray-200 bg-white px-2 py-0.5 text-[9px] font-bold uppercase text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                 {{ Str::limit($session->account->name ?? 'Deleted', 12) }}
                             </span>
                         </div>
 
                         {{-- Fila inferior: horario y estado --}}
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1.5 rounded border border-gray-200 bg-white px-2 py-0.5 font-mono text-[10px] text-gray-500">
+                            <div class="flex items-center gap-1.5 rounded border border-gray-200 bg-white px-2 py-0.5 font-mono text-[10px] text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                 <i class="fa-regular fa-clock text-[9px]"></i>
                                 <span>{{ $session->start_time->format('H:i') }}</span>
-                                <span class="text-gray-300">—</span>
+                                <span class="text-gray-300 dark:text-gray-600">—</span>
                                 <span>{{ $session->end_time?->format('H:i') ?? '...' }}</span>
                             </div>
                             @if ($session->status === 'active')
@@ -260,14 +256,14 @@
                             <div class="{{ $session->session_pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-3xl font-black tracking-tighter">
                                 {{ ($session->session_pnl >= 0 ? '+' : '') . number_format($session->session_pnl, 2) }}$
                             </div>
-                            <span class="{{ $session->session_pnl >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' }} rounded px-1.5 py-0.5 text-xs font-bold">
+                            <span class="{{ $session->session_pnl >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' }} rounded px-1.5 py-0.5 text-xs font-bold">
                                 {{ $session->session_pnl_percent >= 0 ? '+' : '' }}{{ $session->session_pnl_percent }}%
                             </span>
                         </div>
                     </div>
 
                     {{-- BOTÓN ACCIÓN --}}
-                    <button class="flex w-full items-center justify-center gap-2 border-t border-gray-50 bg-white py-3 text-xs font-bold text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                    <button class="flex w-full items-center justify-center gap-2 border-t border-gray-50 bg-white py-3 text-xs font-bold text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
                             @click="openSession({{ $session->id }})">
                         {{ __('labels.analyze') }}
                         <i class="fa-solid fa-arrow-right"></i>
@@ -309,7 +305,7 @@
             <div class="absolute inset-0 overflow-hidden">
                 <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
 
-                    <div class="pointer-events-auto w-screen max-w-2xl bg-white shadow-2xl"
+                    <div class="pointer-events-auto w-screen max-w-2xl bg-white shadow-2xl dark:bg-gray-800"
                          x-show="isOpen"
                          x-transition:enter="transform transition ease-in-out duration-500"
                          x-transition:enter-start="translate-x-full"
@@ -327,7 +323,7 @@
                              style="display: none;">
                             <div class="flex flex-col items-center gap-3">
                                 <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-500"></i>
-                                <span class="text-xs font-bold text-gray-400">{{ __('labels.loading_data') }}</span>
+                                <span class="text-xs font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading_data') }}</span>
                             </div>
                         </div>
 
@@ -339,13 +335,13 @@
                              x-transition:enter-end="opacity-100 translate-y-0"
                              style="display: none;">
 
-                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-rose-50">
+                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/15">
                                 <i class="fa-solid fa-triangle-exclamation text-2xl text-rose-500"></i>
                             </div>
 
                             <div class="text-center">
-                                <p class="font-bold text-gray-900">{{ __('labels.error_loading_sesion') }}</p>
-                                <p class="mt-1 text-sm text-gray-500">
+                                <p class="font-bold text-gray-900 dark:text-gray-100">{{ __('labels.error_loading_sesion') }}</p>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                                     {{ __('labels.cant_obtain_data') }}<br>
                                     {{ __('labels.check_connection') }}
                                 </p>
@@ -357,7 +353,7 @@
                                 {{ __('labels.retry') }}
                             </button>
 
-                            <button class="text-xs text-gray-400 underline hover:text-gray-600"
+                            <button class="text-xs text-gray-400 dark:text-gray-500 underline hover:text-gray-600 dark:hover:text-gray-200"
                                     @click="close()">
                                 {{ __('labels.close_panel') }}
                             </button>
@@ -372,7 +368,7 @@
                             <div class="bg-gray-900 px-6 py-6 text-white">
                                 <div class="flex justify-between">
                                     <h2 class="text-lg font-medium">{{ __('labels.analyze_sesion') }}</h2>
-                                    <button class="text-gray-400 hover:text-white"
+                                    <button class="text-gray-400 dark:text-gray-500 hover:text-white"
                                             @click="close()">
                                         <i class="fa-solid fa-xmark text-xl"></i>
                                     </button>
@@ -382,13 +378,13 @@
                                         <span class="text-4xl font-black tracking-tight"
                                               :class="detail?.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'"
                                               x-text="(detail?.pnl > 0 ? '+' : '') + detail?.pnl + '$'"></span>
-                                        <span class="rounded bg-gray-800 px-2 py-1 text-xs font-bold text-gray-300"
+                                        <span class="rounded bg-gray-800 px-2 py-1 text-xs font-bold text-gray-300 dark:text-gray-600"
                                               x-text="detail?.pnl_percent + '%'"></span>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-sm text-gray-400"
+                                        <p class="text-sm text-gray-400 dark:text-gray-500"
                                            x-text="detail?.duration"></p>
-                                        <p class="text-xs text-gray-500"
+                                        <p class="text-xs text-gray-500 dark:text-gray-400"
                                            x-text="detail?.start_time + ' - ' + detail?.end_time"></p>
                                     </div>
                                 </div>
@@ -399,15 +395,15 @@
 
                                 {{-- Auditoría --}}
                                 <div class="mb-8 rounded-xl border p-4 shadow-sm"
-                                     :class="detail?.is_overtraded ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'">
+                                     :class="detail?.is_overtraded ? 'border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'">
                                     <div class="flex items-center gap-4">
-                                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm dark:bg-gray-700">
                                             <i class="fa-solid text-lg"
                                                :class="detail?.is_overtraded ? 'fa-ban text-rose-500' : 'fa-check text-emerald-500'"></i>
                                         </div>
                                         <div>
-                                            <p class="text-xs font-bold uppercase text-gray-500">{{ __('labels.rule_max_trades') }}</p>
-                                            <p class="font-bold text-gray-900"
+                                            <p class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.rule_max_trades') }}</p>
+                                            <p class="font-bold text-gray-900 dark:text-gray-100"
                                                x-text="detail?.is_overtraded
                                                ? '{{ __('labels.violated') }} (' + detail.total_trades + '/' + detail.limit_trades + ')'
                                                : '{{ __('labels.respected') }}'">
@@ -418,16 +414,16 @@
 
                                 {{-- Narrativa --}}
                                 <div class="mb-8">
-                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">{{ __('labels.session_narrative') }}</h3>
+                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.session_narrative') }}</h3>
 
                                     {{-- Pre-sesión --}}
                                     <div x-show="detail?.pre_notes"
                                          style="display: none;">
-                                        <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-indigo-500">
+                                        <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">
                                             {{ __('labels.before_to_operate') }}
                                         </p>
-                                        <div class="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
-                                            <p class="text-sm text-gray-700"
+                                        <div class="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 dark:border-indigo-500/30 dark:bg-indigo-500/10">
+                                            <p class="text-sm text-gray-700 dark:text-gray-300"
                                                x-text="detail?.pre_notes"></p>
                                         </div>
                                     </div>
@@ -435,21 +431,21 @@
                                     {{-- Notas intra-sesión (timeline) --}}
                                     <div x-show="detail?.notes && detail.notes.length > 0"
                                          style="display: none;">
-                                        <p class="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                        <p class="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                                             {{ __('labels.while_session') }}
                                         </p>
-                                        <div class="mb-4 space-y-4 border-l-2 border-gray-100 pl-4">
+                                        <div class="mb-4 space-y-4 border-l-2 border-gray-100 pl-4 dark:border-gray-700">
                                             <template x-for="note in detail?.notes"
                                                       :key="note.id">
                                                 <div class="relative">
-                                                    <div class="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-400"></div>
-                                                    <p class="text-xs font-bold text-gray-400">
+                                                    <div class="absolute -left-[21px] mt-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-400 dark:border-gray-800"></div>
+                                                    <p class="text-xs font-bold text-gray-400 dark:text-gray-500">
                                                         <span x-text="note.time"></span>
                                                         &nbsp;•&nbsp;
-                                                        <span class="uppercase text-indigo-500"
+                                                        <span class="uppercase text-indigo-500 dark:text-indigo-400"
                                                               x-text="note.mood"></span>
                                                     </p>
-                                                    <p class="text-sm text-gray-700"
+                                                    <p class="text-sm text-gray-700 dark:text-gray-300"
                                                        x-text="note.text"></p>
                                                 </div>
                                             </template>
@@ -459,17 +455,17 @@
                                     {{-- Post-sesión --}}
                                     <div x-show="detail?.post_notes"
                                          style="display: none;">
-                                        <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                                        <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                                             {{ __('labels.reflection_post') }}
                                         </p>
-                                        <div class="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
-                                            <p class="text-sm text-gray-700"
+                                        <div class="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                                            <p class="text-sm text-gray-700 dark:text-gray-300"
                                                x-text="detail?.post_notes"></p>
                                         </div>
                                     </div>
 
                                     {{-- Empty state: ninguno de los tres tiene contenido --}}
-                                    <div class="py-4 text-center text-xs text-gray-400"
+                                    <div class="py-4 text-center text-xs text-gray-400 dark:text-gray-500"
                                          x-show="!detail?.pre_notes && (!detail?.notes || detail.notes.length === 0) && !detail?.post_notes"
                                          style="display: none;">
                                         {{ __('labels.without_notes') }}
@@ -479,30 +475,30 @@
 
                                 {{-- Trades --}}
                                 <div>
-                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500">{{ __('labels.tecnique_execution') }}</h3>
-                                    <div class="overflow-hidden rounded-xl border border-gray-200">
-                                        <table class="min-w-full divide-y divide-gray-200">
-                                            <thead class="bg-gray-50">
+                                    <h3 class="mb-4 text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.tecnique_execution') }}</h3>
+                                    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                            <thead class="bg-gray-50 dark:bg-gray-900/50">
                                                 <tr>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.hour') }}</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.symbol') }}</th>
-                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500">{{ __('labels.direction') }}</th>
-                                                    <th class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500">{{ __('labels.p&l') }}</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.hour') }}</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.symbol') }}</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.direction') }}</th>
+                                                    <th class="px-4 py-3 text-right text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.p&l') }}</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-gray-200 bg-white">
+                                            <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
                                                 <template x-for="trade in detail?.trades"
                                                           :key="trade.id">
                                                     <tr>
-                                                        <td class="px-4 py-3 font-mono text-xs text-gray-500"
+                                                        <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400"
                                                             x-text="trade.time"></td>
-                                                        <td class="px-4 py-3 text-xs font-bold text-gray-900"
+                                                        <td class="px-4 py-3 text-xs font-bold text-gray-900 dark:text-gray-100"
                                                             x-text="trade.symbol"></td>
                                                         <td class="px-4 py-3 text-xs">
                                                             <span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
                                                                   :class="trade.direction === 'long' ?
-                                                                      'bg-emerald-100 text-emerald-700' :
-                                                                      'bg-rose-100 text-rose-700'"
+                                                                      'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                                                                      'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'"
                                                                   x-text="trade.direction"></span>
                                                         </td>
                                                         <td class="px-4 py-3 text-right text-xs font-bold"
@@ -513,7 +509,7 @@
                                             </tbody>
                                         </table>
 
-                                        <div class="p-8 text-center text-xs text-gray-400"
+                                        <div class="p-8 text-center text-xs text-gray-400 dark:text-gray-500"
                                              x-show="!detail?.trades || detail.trades.length === 0"
                                              style="display: none;">
                                             {{ __('labels.without_trades_registered') }}

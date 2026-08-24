@@ -35,10 +35,10 @@
          x-transition:leave="ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0">
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+        <div class="absolute inset-0 bg-gray-500 opacity-75 dark:bg-gray-900 dark:opacity-80"></div>
     </div>
 
-    <div class="{{ $maxWidth }} mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:mx-auto sm:w-full"
+    <div class="{{ $maxWidth }} mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all dark:bg-gray-800 sm:mx-auto sm:w-full"
          x-show="show"
          x-trap.inert.noscroll="show"
          x-transition:enter="ease-out duration-300"

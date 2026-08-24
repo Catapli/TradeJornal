@@ -185,7 +185,6 @@ class RecalculateStrategyStats
     {
         $rows = DB::table('trades')
             ->where('strategy_id', $strategyId)
-            ->whereNotNull('exit_time')
             ->selectRaw('
             extract(isodow from exit_time) as dow,
             count(*) as total,
@@ -222,7 +221,6 @@ class RecalculateStrategyStats
     {
         $rows = DB::table('trades')
             ->where('strategy_id', $strategyId)
-            ->whereNotNull('exit_time')
             ->selectRaw('
             extract(hour from exit_time) as hour,
             count(*) as total,

@@ -24,23 +24,23 @@
         </div>
 
         {{-- LISTA DE REGLAS --}}
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
 
             @if ($rules)
-                <ul class="divide-y divide-gray-50">
+                <ul class="divide-y divide-gray-50 dark:divide-gray-700">
                     @foreach ($rules as $i => $rule)
-                        <li class="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50"
+                        <li class="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
                             x-data="{ editing: false, value: @js($rule) }">
                             {{-- Número --}}
-                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 {{ $i + 1 }}
                             </span>
 
                             {{-- Texto o input de edición --}}
                             <div class="min-w-0 flex-1">
-                                <span class="text-sm text-gray-700"
+                                <span class="text-sm text-gray-700 dark:text-gray-200"
                                       x-show="!editing">{{ $rule }}</span>
-                                <input class="w-full rounded-lg border border-blue-400 bg-white px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                <input class="w-full rounded-lg border border-blue-400 bg-white dark:bg-gray-700 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        x-show="editing"
                                        x-model="value"
                                        @keydown.enter="editing = false; $wire.updateRule({{ $i }}, value)"
@@ -53,7 +53,7 @@
                             <div class="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 
                                 {{-- Editar / Guardar --}}
-                                <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                <button class="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
                                         type="button"
                                         @click="
                                     if (editing) {
@@ -90,7 +90,7 @@
 
                                 {{-- Subir --}}
                                 @if ($i > 0)
-                                    <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                                    <button class="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200"
                                             type="button"
                                             wire:click="moveRule({{ $i }}, 'up')"
                                             title="{{ __('labels.move_up') }}">
@@ -109,7 +109,7 @@
 
                                 {{-- Bajar --}}
                                 @if ($i < count($rules) - 1)
-                                    <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                                    <button class="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200"
                                             type="button"
                                             wire:click="moveRule({{ $i }}, 'down')"
                                             title="{{ __('labels.move_down') }}">
@@ -127,7 +127,7 @@
                                 @endif
 
                                 {{-- Eliminar --}}
-                                <button class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                <button class="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500"
                                         type="button"
                                         wire:click="removeRuleFromStrategy({{ $i }})"
                                         wire:confirm="{{ __('labels.delete_rule_confirm') }}"
@@ -153,7 +153,7 @@
             {{-- EMPTY STATE --}}
             @if (empty($rules))
                 <div class="flex flex-col items-center justify-center py-12 text-center">
-                    <svg class="mb-3 h-8 w-8 text-gray-300"
+                    <svg class="mb-3 h-8 w-8 text-gray-300 dark:text-gray-600"
                          xmlns="http://www.w3.org/2000/svg"
                          fill="none"
                          viewBox="0 0 24 24"
@@ -163,15 +163,15 @@
                               stroke-linejoin="round"
                               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p class="text-sm text-gray-500">{{ __('labels.not_rules_defined') }}</p>
-                    <p class="mt-1 text-xs text-gray-400">{{ __('labels.add_rule_conditions') }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('labels.not_rules_defined') }}</p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.add_rule_conditions') }}</p>
                 </div>
             @endif
 
             {{-- AÑADIR REGLA --}}
-            <div class="border-t border-gray-100 bg-gray-50 px-5 py-4">
+            <div class="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-5 py-4">
                 <div class="flex gap-2">
-                    <input class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                            wire:model="newRule"
                            wire:keydown.enter.prevent="addRuleToStrategy"
                            type="text"

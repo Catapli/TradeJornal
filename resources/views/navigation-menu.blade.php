@@ -2,20 +2,20 @@
     {{-- Navbar TradeForge --}}
     {{-- CAMBIO: bg-white, border-b, eliminamos el margin-left negativo si lo hubiera --}}
     {{-- IMPORTANTE: sm:ml-20 para que empiece DESPUÉS del sidebar en escritorio --}}
-    <nav class="fixed left-0 right-0 top-0 z-[40] h-16 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all sm:ml-20">
+    <nav class="fixed left-0 right-0 top-0 z-[40] h-16 border-b border-gray-200 bg-white/80 backdrop-blur-md transition-all dark:border-gray-800 dark:bg-gray-900/80 sm:ml-20">
 
         <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
 
             {{-- IZQUIERDA: TÍTULO O LOGO (En móvil se ve logo, en desktop título de sección o breadcrumbs) --}}
             <div class="flex items-center gap-4">
                 {{-- Hamburger Móvil (Solo visible en móvil) --}}
-                <button class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 sm:hidden"
+                <button class="rounded-lg p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 sm:hidden"
                         @click="$dispatch('open-mobile-menu')">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
 
                 {{-- En Desktop, el logo ya está en el Sidebar. Aquí podemos poner un Título dinámico o dejarlo limpio --}}
-                <div class="hidden font-bold text-gray-800 sm:block">
+                <div class="hidden font-bold text-gray-800 dark:text-gray-100 sm:block">
                     {{-- Puedes poner breadcrumbs aquí --}}
                     <span class="text-indigo-600">TradeForge</span>
                 </div>
@@ -49,26 +49,31 @@
             {{-- DERECHA: USER & IDIOMA --}}
             <div class="flex items-center gap-3">
 
-                {{-- @if (Auth::user()->subscribed('default'))
-                    <div class="flex items-center rounded-lg">
-                        <a class="relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 ease-out"
-                           href="{{ route('alerts') }}">
+                {{-- TOGGLE TEMA CLARO/OSCURO --}}
+                <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 shadow-sm transition-all hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-indigo-400"
+                        x-data
+                        @click="
+                            const html = document.documentElement;
+                            const isDark = html.classList.toggle('dark');
+                            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                            window.dispatchEvent(new CustomEvent('theme:changed', { detail: { dark: isDark } }));
+                        "
+                        type="button"
+                        title="{{ __('labels.toggle_theme') }}">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:inline"></i>
+                </button>
 
-                            {{~~ Icono ~~}}
-                            <i class="fa-solid fa-bell text-lg transition-transform duration-200 group-hover:scale-110"></i> </a>
-                    </div>
-                @endif --}}
-
-                <div class="flex items-center rounded-lg bg-gray-200 p-1"
+                <div class="flex items-center rounded-lg bg-gray-200 p-1 dark:bg-gray-800"
                      x-data>
                     <button class="rounded-md px-3 py-1 text-xs font-bold transition-all"
                             @click="$store.viewMode.mode = 'currency'; localStorage.setItem('tf_view_mode', 'currency')"
-                            :class="$store.viewMode.mode === 'currency' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                            :class="$store.viewMode.mode === 'currency' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">
                         $
                     </button>
                     <button class="rounded-md px-3 py-1 text-xs font-bold transition-all"
                             @click="$store.viewMode.mode = 'percentage'; localStorage.setItem('tf_view_mode', 'percentage')"
-                            :class="$store.viewMode.mode === 'percentage' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                            :class="$store.viewMode.mode === 'percentage' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">
                         %
                     </button>
                 </div>
@@ -91,7 +96,7 @@
                      @click.outside="open = false">
 
                     <!-- BOTÓN TRIGGER (Blanco con borde suave) -->
-                    <button class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    <button class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                             @click="open = !open"
                             type="button">
                         <img class="h-3 w-4 rounded-[1px] object-cover shadow-sm"
@@ -99,12 +104,12 @@
                              alt="flag">
                         <span class="hidden md:inline"
                               x-text="languages[current].name"></span>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 transition-transform duration-200"
+                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 dark:text-gray-500 transition-transform duration-200"
                            :class="open ? 'rotate-180' : ''"></i>
                     </button>
 
                     <!-- LISTA DESPLEGABLE (Blanca limpia) -->
-                    <div class="absolute right-0 z-50 mt-2 w-40 origin-top-right rounded-xl border border-gray-100 bg-white py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    <div class="absolute right-0 z-50 mt-2 w-40 origin-top-right rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none"
                          x-show="open"
                          x-transition:enter="transition ease-out duration-100"
                          x-transition:enter-start="opacity-0 scale-95"
@@ -116,7 +121,7 @@
 
                         <template x-for="(lang, key) in languages"
                                   :key="key">
-                            <button class="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600"
+                            <button class="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-indigo-600"
                                     @click="select(key)"
                                     :class="current === key ? 'bg-indigo-50 text-indigo-700 font-semibold' : ''">
                                 <img class="h-3 w-4 rounded-[1px] shadow-sm"
@@ -132,26 +137,26 @@
                             width="48">
                     <x-slot name="trigger">
                         <button
-                                class="flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1 pr-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                                class="flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1 pr-3 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                             <div class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
                                 <span class="text-xs font-bold">{{ substr(Auth::user()->name, 0, 2) }}</span>
                             </div>
                             <span class="hidden md:block">{{ Str::limit(Auth::user()->name, 12) }}</span>
-                            <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 dark:text-gray-500"></i>
                         </button>
                     </x-slot>
 
                     <x-slot name="content">
-                        <div class="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                        <div class="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                             {{ __('labels.account') }}
                         </div>
 
                         <x-dropdown-link class="flex items-center gap-2"
                                          href="{{ route('profile.show') }}">
-                            <i class="fa-regular fa-user text-gray-400"></i> {{ __('labels.profile') }}
+                            <i class="fa-regular fa-user text-gray-400 dark:text-gray-500"></i> {{ __('labels.profile') }}
                         </x-dropdown-link>
 
-                        <div class="my-1 border-t border-gray-100"></div>
+                        <div class="my-1 border-t border-gray-100 dark:border-gray-700"></div>
 
                         <form method="POST"
                               action="{{ route('logout') }}"

@@ -1,15 +1,15 @@
-<div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+<div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
     {{-- Cabecera --}}
-    <div class="border-b border-gray-100 px-6 py-4">
-        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-900">
+    <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
+        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
             <i class="fa-solid fa-mobile-screen-button text-indigo-500"></i> Autenticación de Doble Factor
         </h3>
-        <p class="text-sm text-gray-500">Añade seguridad adicional a tu cuenta usando una aplicación de autenticación.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Añade seguridad adicional a tu cuenta usando una aplicación de autenticación.</p>
     </div>
 
     <div class="p-6">
         {{-- Estado Actual --}}
-        <h3 class="text-base font-medium text-gray-900">
+        <h3 class="text-base font-medium text-gray-900 dark:text-gray-100">
             @if ($this->enabled)
                 @if ($showingConfirmation)
                     {{ __('Termina de habilitar la autenticación de dos factores.') }}
@@ -19,13 +19,13 @@
                     </span>
                 @endif
             @else
-                <span class="text-gray-600">
+                <span class="text-gray-600 dark:text-gray-300">
                     {{ __('No has habilitado la autenticación de dos factores.') }}
                 </span>
             @endif
         </h3>
 
-        <div class="mt-3 max-w-xl text-sm text-gray-600">
+        <div class="mt-3 max-w-xl text-sm text-gray-600 dark:text-gray-300">
             <p>
                 {{ __('Cuando la autenticación de dos factores está habilitada, se te pedirá un token seguro y aleatorio durante la autenticación. Puedes recuperar este token de la aplicación Google Authenticator de tu teléfono.') }}
             </p>
@@ -34,15 +34,15 @@
         {{-- Lógica de Códigos QR y Setup (Mantenemos la lógica de Jetstream pero mejoramos los botones) --}}
         @if ($this->enabled)
             @if ($showingQrCode)
-                <div class="mt-4 inline-block rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <div class="mt-4 inline-block rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         @if ($showingConfirmation)
                             {{ __('Escanea el QR para confirmar') }}
                         @else
                             {{ __('Código QR de configuración') }}
                         @endif
                     </p>
-                    <div class="inline-block rounded bg-white p-2 shadow-sm">
+                    <div class="inline-block rounded bg-white dark:bg-gray-800 p-2 shadow-sm">
                         {!! $this->user->twoFactorQrCodeSvg() !!}
                     </div>
                 </div>
@@ -63,7 +63,7 @@
             @else
                 @if ($showingRecoveryCodes)
                     <x-confirms-password wire:then="regenerateRecoveryCodes">
-                        <button class="mr-3 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                        <button class="mr-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900"
                                 type="button">
                             {{ __('Regenerar Códigos') }}
                         </button>
@@ -77,7 +77,7 @@
                     </x-confirms-password>
                 @else
                     <x-confirms-password wire:then="showRecoveryCodes">
-                        <button class="mr-3 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                        <button class="mr-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900"
                                 type="button">
                             {{ __('Ver Códigos de Recuperación') }}
                         </button>
@@ -86,7 +86,7 @@
 
                 @if ($showingConfirmation)
                     <x-confirms-password wire:then="disableTwoFactorAuthentication">
-                        <button class="rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 hover:underline"
+                        <button class="rounded-lg text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline"
                                 type="button">
                             {{ __('Cancelar') }}
                         </button>

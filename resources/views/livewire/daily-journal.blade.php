@@ -1,13 +1,13 @@
-<div class="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+<div class="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
     {{-- Cabecera --}}
-    <div class="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-5 py-4">
-        <h3 class="flex items-center gap-2 font-bold text-gray-800">
+    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 px-5 py-4">
+        <h3 class="flex items-center gap-2 font-bold text-gray-800 dark:text-gray-100">
             <i class="fa-solid fa-book text-indigo-500"></i> {{ __('labels.placeholder_bitacora_dashboard') }}
         </h3>
 
-        <div class="flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+        <div class="flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1 shadow-sm">
             @foreach (['fire' => '🔥', 'happy' => '🙂', 'neutral' => '😐', 'sad' => '😡'] as $key => $emoji)
-                <button class="{{ $mood === $key ? 'bg-indigo-100 scale-110 shadow-sm' : 'opacity-60 grayscale' }} flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-gray-100"
+                <button class="{{ $mood === $key ? 'bg-indigo-100 scale-110 shadow-sm' : 'opacity-60 grayscale' }} flex h-8 w-8 items-center justify-center rounded transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
                         wire:click="$set('mood', '{{ $key }}')">
                     {{ $emoji }}
                 </button>
@@ -22,7 +22,7 @@
 
     {{-- Editor Trix --}}
     <div id="daily-journal-wrapper"
-         class="relative flex-grow bg-white"
+         class="relative flex-grow bg-white dark:bg-gray-800"
          wire:ignore
          x-data="{
              init() {
@@ -55,7 +55,7 @@
     </div>
 
     {{-- Footer --}}
-    <div class="flex justify-end border-t border-gray-100 bg-gray-50 p-4">
+    <div class="flex justify-end border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
         <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-indigo-700"
                 @click="
                     let trix = document.querySelector('#daily-journal-input + trix-editor') || document.querySelector('trix-editor[input=daily-journal-input]');

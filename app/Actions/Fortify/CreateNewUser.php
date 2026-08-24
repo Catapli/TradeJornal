@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -30,7 +31,13 @@ class CreateNewUser implements CreatesNewUsers
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
-            'role_id' => 3, // Asigna el rol de "Usuario" por defecto
+            // Se busca por nombre en vez de hardcodear el id: con el id fijo, un
+            // reseed en distinto orden o un despliegue limpio rompia el registro
+            // entero con una violacion de clave foranea.
+            'role_id' => Role::firstOrCreate(
+                ['name' => 'user'],
+                ['label' => 'Usuario']
+            )->id,
         ]);
     }
 }

@@ -33,16 +33,16 @@
      x-cloak
      style="display: none;">
 
-    <div class="w-full max-w-md scale-100 transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all"
+    <div class="w-full max-w-md scale-100 transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all dark:bg-gray-800"
          @click.away="show = false">
 
         <div class="p-8 text-center">
             {{-- Icono Dinámico --}}
             <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full transition-colors"
                  :class="{
-                     'bg-indigo-50 text-indigo-600': type === 'indigo',
-                     'bg-red-50 text-red-600': type === 'red',
-                     'bg-amber-50 text-amber-600': type === 'warning'
+                     'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400': type === 'indigo',
+                     'bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-400': type === 'red',
+                     'bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400': type === 'warning'
                  }">
                 <i class="fa-solid text-3xl"
                    :class="{
@@ -51,15 +51,15 @@
                    }"></i>
             </div>
 
-            <h3 class="mb-3 text-2xl font-black text-gray-900"
+            <h3 class="mb-3 text-2xl font-black text-gray-900 dark:text-gray-100"
                 x-text="title"></h3>
-            <p class="text-gray-500"
+            <p class="text-gray-500 dark:text-gray-400"
                x-text="text"></p>
         </div>
 
         {{-- Footer Botones --}}
-        <div class="grid grid-cols-2 gap-4 bg-gray-50 p-6">
-            <button class="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
+        <div class="grid grid-cols-2 gap-4 bg-gray-50 p-6 dark:bg-gray-900/50">
+            <button class="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 font-bold text-gray-700 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
                     @click="show = false">
                 {{ __('labels.cancel') }}
             </button>

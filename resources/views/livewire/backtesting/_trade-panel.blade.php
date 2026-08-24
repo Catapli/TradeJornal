@@ -9,7 +9,7 @@
      @keydown.escape.window="closeTradePanel()"
      style="display:none">
 
-    <div class="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
+    <div class="relative w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-800 shadow-2xl"
          x-show="showTradePanel"
          x-data="{ showOptional: false }"
          x-transition:enter="transition ease-out duration-200"
@@ -20,15 +20,15 @@
          x-transition:leave-end="opacity-0 scale-95 -translate-y-2">
 
         {{-- Header --}}
-        <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-6 py-4">
             <div>
-                <h2 class="text-sm font-bold text-gray-900">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">
                     <span x-show="!isEditingTrade">{{ __('labels.new_trade') }}</span>
                     <span x-show="isEditingTrade">{{ __('labels.edit_trade') }}</span>
                 </h2>
-                <p class="mt-0.5 text-xs text-gray-400">{{ __('labels.complete_setup_data') }}</p>
+                <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ __('labels.complete_setup_data') }}</p>
             </div>
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            <button class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
                     type="button"
                     @click="closeTradePanel()">
                 <svg class="h-4 w-4"
@@ -52,8 +52,8 @@
 
                     {{-- Fecha --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.date') }}</label>
-                        <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.date') }}</label>
+                        <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="trade_date"
                                type="date" />
                         @error('trade_date')
@@ -63,7 +63,7 @@
 
                     {{-- Dirección --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.direction') }}</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.direction') }}</label>
                         <div class="grid h-10 grid-cols-2 gap-2">
                             <button class="rounded-lg border text-sm font-semibold transition-all duration-150"
                                     type="button"
@@ -71,7 +71,7 @@
                                     :class="tradeDirection === 'long'
                                         ?
                                         'bg-emerald-500 border-emerald-500 text-white shadow-sm' :
-                                        'bg-white border-gray-200 text-gray-500 hover:border-emerald-400 hover:text-emerald-600'">
+                                        'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-600'">
                                 Long
                             </button>
                             <button class="rounded-lg border text-sm font-semibold transition-all duration-150"
@@ -80,7 +80,7 @@
                                     :class="tradeDirection === 'short'
                                         ?
                                         'bg-red-500 border-red-500 text-white shadow-sm' :
-                                        'bg-white border-gray-200 text-gray-500 hover:border-red-400 hover:text-red-500'">
+                                        'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-red-400 hover:text-red-500'">
                                 Short
                             </button>
                         </div>
@@ -88,8 +88,8 @@
 
                     {{-- Entrada --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.entry') }}</label>
-                        <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.entry') }}</label>
+                        <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="entry_price"
                                type="number"
                                step="any"
@@ -101,8 +101,8 @@
 
                     {{-- Salida --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.exit_label') }}</label>
-                        <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.exit_label') }}</label>
+                        <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="exit_price"
                                type="number"
                                step="any"
@@ -114,8 +114,8 @@
 
                     {{-- Stop Loss --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.stop_loss') }}</label>
-                        <input class="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.stop_loss') }}</label>
+                        <input class="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                wire:model="stop_loss"
                                type="number"
                                step="any"
@@ -124,12 +124,12 @@
 
                     {{-- Resultado — solo R ──────────────────────────── --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.result') }}</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.result') }}</label>
                         <div class="flex h-10 items-center justify-center rounded-lg border px-3 transition-all duration-200"
                              :class="{
                                  'border-emerald-200 bg-emerald-50': computedR > 0,
                                  'border-red-200 bg-red-50': computedR < 0,
-                                 'border-gray-200 bg-gray-50': computedR === null || computedR === 0
+                                 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900': computedR === null || computedR === 0
                              }">
                             <span class="text-base font-bold tabular-nums transition-colors duration-200"
                                   :class="rColor"
@@ -141,7 +141,7 @@
                 </div>
 
                 {{-- ══ TOGGLE OPCIONAL ════════════════════════════════ --}}
-                <button class="mt-5 flex w-full items-center justify-between border-t border-gray-100 pt-4 text-xs font-medium text-gray-400 transition-colors hover:text-gray-600"
+                <button class="mt-5 flex w-full items-center justify-between border-t border-gray-100 dark:border-gray-700 pt-4 text-xs font-medium text-gray-400 dark:text-gray-500 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                         type="button"
                         @click="showOptional = !showOptional">
                     <span x-text="showOptional ? '{{ __('labels.hide_details') }}' : '{{ __('labels.add_optional_details') }}'"></span>
@@ -169,7 +169,7 @@
 
                         {{-- Sesión --}}
                         <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.session') }}</label>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.session') }}</label>
                             <div class="grid grid-cols-4 gap-1.5">
                                 @foreach (['london' => 'LON', 'new_york' => 'NY', 'asia' => 'ASIA', 'other' => 'Otra'] as $val => $label)
                                     <button class="rounded-lg border py-2 text-xs font-semibold transition-all duration-150"
@@ -178,7 +178,7 @@
                                             :class="tradeSession === '{{ $val }}'
                                                 ?
                                                 'bg-blue-600 border-blue-600 text-white' :
-                                                'bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-500'">
+                                                'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'">
                                         {{ $label }}
                                     </button>
                                 @endforeach
@@ -187,7 +187,7 @@
 
                         {{-- Rating --}}
                         <div>
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.setup_quality') }}</label>
+                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.setup_quality') }}</label>
                             <div class="flex h-9 items-center gap-1.5">
                                 @foreach ([1, 2, 3, 4, 5] as $star)
                                     <button class="flex-1 rounded-lg border py-1.5 text-base transition-all duration-150"
@@ -195,7 +195,7 @@
                                             @click="setRating({{ $star }})"
                                             :class="tradeRating >= {{ $star }} ?
                                                 'bg-amber-400 border-amber-400 text-white' :
-                                                'bg-white border-gray-200 text-gray-300 hover:border-amber-300'">★</button>
+                                                'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 hover:border-amber-300'">★</button>
                                 @endforeach
                             </div>
                         </div>
@@ -205,21 +205,21 @@
                     {{-- ¿Siguió reglas? --}}
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-700">{{ __('labels.followed_rules_question') }}</p>
-                            <p class="text-xs text-gray-400">{{ __('labels.setup_met_criteria') }}</p>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('labels.followed_rules_question') }}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.setup_met_criteria') }}</p>
                         </div>
                         <button class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                                 type="button"
                                 @click="toggleFollowedRules()"
-                                :class="tradeFollowedRules ? 'bg-emerald-500' : 'bg-gray-300'">
-                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                                :class="tradeFollowedRules ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-800 shadow transition-transform"
                                   :class="tradeFollowedRules ? 'translate-x-6' : 'translate-x-1'"></span>
                         </button>
                     </div>
 
                     {{-- Confluencias --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.confluences') }}</label>
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.confluences') }}</label>
                         <div class="mb-2 flex flex-wrap gap-1.5">
                             @foreach ($confluences as $i => $tag)
                                 <span class="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
@@ -242,12 +242,12 @@
                             @endforeach
                         </div>
                         <div class="flex gap-2">
-                            <input class="h-10 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            <input class="h-10 flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                    wire:model="newConfluence"
                                    wire:keydown.enter.prevent="addConfluence"
                                    type="text"
                                    placeholder="EMA200, FVG, POI..." />
-                            <button class="h-10 rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-100"
+                            <button class="h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 text-sm font-bold text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                                     type="button"
                                     wire:click="addConfluence">+</button>
                         </div>
@@ -255,8 +255,8 @@
 
                     {{-- Notas --}}
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.notes') }}</label>
-                        <textarea class="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.notes') }}</label>
+                        <textarea class="w-full resize-none rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-2 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   wire:model="notes"
                                   rows="2"
                                   placeholder="Observaciones del trade..."></textarea>
@@ -264,10 +264,10 @@
 
                     {{-- Screenshot --}}
                     <div>
-                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __('labels.screenshot_chart') }}</label>
+                        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('labels.screenshot_chart') }}</label>
                         <div class="flex w-full items-center justify-center">
-                            <label class="relative flex h-48 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-gray-50 hover:bg-gray-100"
-                                   :class="isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300'"
+                            <label class="relative flex h-48 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                   :class="isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300 dark:border-gray-600'"
                                    @dragover.prevent="isDragging = true"
                                    @dragleave.prevent="isDragging = false"
                                    @drop.prevent="handleDrop($event)">
@@ -286,7 +286,7 @@
 
                                 <div class="flex flex-col items-center justify-center pb-6 pt-5"
                                      x-show="!photoPreview && !existingPhotoUrl">
-                                    <svg class="mb-3 h-8 w-8 text-gray-400"
+                                    <svg class="mb-3 h-8 w-8 text-gray-400 dark:text-gray-500"
                                          xmlns="http://www.w3.org/2000/svg"
                                          fill="none"
                                          viewBox="0 0 24 24"
@@ -296,15 +296,15 @@
                                               stroke-linejoin="round"
                                               d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                                     </svg>
-                                    <p class="text-sm text-gray-500">{{ __('labels.drag_drop_or_click') }}</p>
-                                    <p class="text-xs text-gray-400">PNG, JPG, WebP — máx. 10MB</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">PNG, JPG, WebP — máx. 10MB</p>
                                 </div>
 
                                 {{-- Overlay carga --}}
                                 <div class="absolute inset-0 z-10 flex items-center justify-center bg-white/80"
                                      wire:loading
                                      wire:target="screenshot">
-                                    <div class="flex items-center gap-3 rounded-lg bg-white px-4 py-2 shadow-lg">
+                                    <div class="flex items-center gap-3 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 shadow-lg">
                                         <svg class="h-5 w-5 animate-spin text-blue-600"
                                              xmlns="http://www.w3.org/2000/svg"
                                              fill="none"
@@ -319,7 +319,7 @@
                                                   fill="currentColor"
                                                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        <span class="text-sm font-semibold text-gray-600">{{ __('labels.uploading_img') }}</span>
+                                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ __('labels.uploading_img') }}</span>
                                     </div>
                                 </div>
 
@@ -333,7 +333,7 @@
                         </div>
 
                         {{-- Botón limpiar foto --}}
-                        <button class="mt-2 text-xs text-gray-400 underline transition-colors hover:text-red-400"
+                        <button class="mt-2 text-xs text-gray-400 dark:text-gray-500 underline transition-colors hover:text-red-400"
                                 type="button"
                                 x-show="photoPreview || existingPhotoUrl"
                                 @click="clearPhoto()">
@@ -349,8 +349,8 @@
             </div>
 
             {{-- Footer --}}
-            <div class="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-700"
+            <div class="flex items-center justify-between rounded-b-2xl border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 px-6 py-4">
+                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200"
                         type="button"
                         @click="closeTradePanel()">
                     {{ __('labels.cancel') }}

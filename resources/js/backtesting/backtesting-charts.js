@@ -19,7 +19,7 @@ window.initBacktestCharts = function (metrics, wire) {
     // ── Curva de Capital ─────────────────────────────────────────
     const equityEl = document.querySelector("#chart-equity");
     if (equityEl && metrics.equity_curve.equity.length) {
-        const c = new ApexCharts(equityEl, {
+        const c = window.tjChart(equityEl, {
             chart: {
                 type: "area",
                 height: 180,
@@ -67,7 +67,7 @@ window.initBacktestCharts = function (metrics, wire) {
     // ── Distribución de R ────────────────────────────────────────
     const rDistEl = document.querySelector("#chart-r-dist");
     if (rDistEl && metrics.r_distribution.values.length) {
-        const c = new ApexCharts(rDistEl, {
+        const c = window.tjChart(rDistEl, {
             chart: {
                 type: "bar",
                 height: 200,

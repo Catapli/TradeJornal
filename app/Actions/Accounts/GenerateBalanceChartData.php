@@ -4,19 +4,27 @@ namespace App\Actions\Accounts;
 
 use App\Models\Account;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class GenerateBalanceChartData
 {
     /**
      * Genera los datos del gráfico de balance con agrupación en SQL
-     * 
+     *
      * @param Account $account
      * @param string $timeframe '1h', '24h', '7d', 'all'
+     * @param bool $forceRefresh Ignora la caché y recalcula
      * @return array
      */
-    public function execute(Account $account, string $timeframe = 'all'): array
+    public function execute(Account $account, string $timeframe = 'all', bool $forceRefresh = false): array
     {
+        $cacheKey = "account_chart_{$account->id}_{$timeframe}";
+
+        if (!$forceRefresh && Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
         // ========================================
         // 1. FECHA DE CORTE SEGÚN TIMEFRAME
         // ========================================
@@ -76,7 +84,6 @@ class GenerateBalanceChartData
 ")
             ->where('account_id', $account->id)
             ->when($cutoffDate, fn($q) => $q->where('exit_time', '>=', $cutoffDate))
-            ->whereNotNull('exit_time')
             ->groupByRaw("{$groupFormat}, {$orderField}")
             ->orderBy('order_time', 'asc')
             ->get();
@@ -119,7 +126,7 @@ class GenerateBalanceChartData
         // ========================================
         // 6. ESTRUCTURA FINAL PARA APEXCHARTS
         // ========================================
-        return [
+        $result = [
             'categories' => $labels,
             'series' => [
                 [
@@ -136,6 +143,21 @@ class GenerateBalanceChartData
                 ]
             ]
         ];
+
+        // Caché de 5 minutos (alineada con CalculateAccountStatistics)
+        Cache::put($cacheKey, $result, now()->addMinutes(5));
+
+        return $result;
+    }
+
+    /**
+     * Borra la caché del gráfico de una cuenta para todos los timeframes.
+     */
+    public static function clearCache(int $accountId): void
+    {
+        foreach (['1h', '24h', '7d', 'all'] as $timeframe) {
+            Cache::forget("account_chart_{$accountId}_{$timeframe}");
+        }
     }
 
     /**

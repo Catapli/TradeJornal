@@ -7,11 +7,6 @@ document.addEventListener("alpine:init", () => {
         detail: null,
         lastSessionId: null,
 
-        // === STATE: ALERTAS ===
-        showAlert: false,
-        bodyAlert: "",
-        typeAlert: "error",
-
         // === STATE: FILTROS ===
         filterAccount: null,
         filterMood: null,
@@ -38,18 +33,11 @@ document.addEventListener("alpine:init", () => {
             this.dateFrom = this.$wire.dateFrom ?? null;
             this.dateTo = this.$wire.dateTo ?? null;
 
-            window.addEventListener("show-alert", (e) => {
-                const data = e.detail[0] || e.detail;
-                this.triggerAlert(data.message, data.type);
-            });
         },
 
-        // === ALERT ===
+        // === ALERT (delegada al sistema global core/notify.js) ===
         triggerAlert(message, type = "error") {
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-            setTimeout(() => (this.showAlert = false), 4000);
+            window.tjToast(message, type);
         },
 
         // === ACTIONS: FILTROS ===

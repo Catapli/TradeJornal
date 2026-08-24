@@ -18,7 +18,7 @@
               aria-hidden="true">&#8203;</span>
 
         {{-- CONTENEDOR MODAL --}}
-        <div class="inline-block w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:align-middle"
+        <div class="inline-block w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:align-middle dark:bg-gray-800"
              x-show="open"
              x-transition:enter="ease-out duration-300"
              x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -28,7 +28,7 @@
              x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
 
             {{-- HEADER: NAVEGACIÓN Y CIERRE --}}
-            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
                 {{-- Navegación --}}
                 <div class="flex items-center gap-3">
                     {{-- Botón ANTERIOR --}}
@@ -36,57 +36,57 @@
                             @click="isLoading = true; $wire.goToPrev()"
                             :disabled="!$wire.prevTradeId || isLoading"
                             :class="$wire.prevTradeId && !isLoading ?
-                                'text-gray-500 hover:text-indigo-600' :
-                                'text-gray-300 pointer-events-none'">
+                                'text-gray-500 dark:text-gray-400 hover:text-indigo-600' :
+                                'text-gray-300 dark:text-gray-600 pointer-events-none'">
                         <div class="mr-2 rounded-full p-2 transition"
                              :class="$wire.prevTradeId && !isLoading ?
-                                 'bg-gray-100 group-hover:bg-indigo-100' :
-                                 'bg-gray-50'">
+                                 'bg-gray-100 group-hover:bg-indigo-100 dark:bg-gray-700 dark:group-hover:bg-indigo-500/30' :
+                                 'bg-gray-50 dark:bg-gray-800'">
                             <i class="fa-solid fa-arrow-left text-sm transition"
                                :class="$wire.prevTradeId && !isLoading ?
-                                   'text-gray-500 group-hover:text-indigo-600' :
-                                   'text-gray-300'"></i>
+                                   'text-gray-500 dark:text-gray-400 group-hover:text-indigo-600' :
+                                   'text-gray-300 dark:text-gray-600'"></i>
                         </div>
                         <span class="text-sm font-bold transition"
-                              :class="$wire.prevTradeId && !isLoading ? 'text-gray-600' : 'text-gray-300'">
+                              :class="$wire.prevTradeId && !isLoading ? 'text-gray-600 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600'">
                             {{ __('labels.previous') }}
                         </span>
                     </button>
 
-                    <div class="mx-2 hidden h-4 w-px bg-gray-200 sm:block"></div>
+                    <div class="mx-2 hidden h-4 w-px bg-gray-200 sm:block dark:bg-gray-700"></div>
 
                     {{-- Botón SIGUIENTE --}}
                     <button class="group flex items-center font-medium transition disabled:cursor-not-allowed"
                             @click="isLoading = true; $wire.goToNext()"
                             :disabled="!$wire.nextTradeId || isLoading"
                             :class="$wire.nextTradeId && !isLoading ?
-                                'text-gray-500 hover:text-indigo-600' :
-                                'text-gray-300 pointer-events-none'">
+                                'text-gray-500 dark:text-gray-400 hover:text-indigo-600' :
+                                'text-gray-300 dark:text-gray-600 pointer-events-none'">
                         <span class="mr-2 text-sm font-bold transition"
-                              :class="$wire.nextTradeId && !isLoading ? 'text-gray-600' : 'text-gray-300'">
+                              :class="$wire.nextTradeId && !isLoading ? 'text-gray-600 dark:text-gray-200' : 'text-gray-300 dark:text-gray-600'">
                             {{ __('labels.next') }}
                         </span>
                         <div class="rounded-full p-2 transition"
                              :class="$wire.nextTradeId && !isLoading ?
-                                 'bg-gray-100 group-hover:bg-indigo-100' :
-                                 'bg-gray-50'">
+                                 'bg-gray-100 group-hover:bg-indigo-100 dark:bg-gray-700 dark:group-hover:bg-indigo-500/30' :
+                                 'bg-gray-50 dark:bg-gray-800'">
                             <i class="fa-solid fa-arrow-right text-sm transition"
                                :class="$wire.nextTradeId && !isLoading ?
-                                   'text-gray-500 group-hover:text-indigo-600' :
-                                   'text-gray-300'"></i>
+                                   'text-gray-500 dark:text-gray-400 group-hover:text-indigo-600' :
+                                   'text-gray-300 dark:text-gray-600'"></i>
                         </div>
                     </button>
 
                 </div>
 
                 {{-- Botón Cerrar (Alpine Directo) --}}
-                <button class="text-gray-400 transition-colors hover:text-gray-500"
+                <button class="text-gray-400 dark:text-gray-500 transition-colors hover:text-gray-500 dark:hover:text-gray-400"
                         @click="close()">
                     <i class="fa-solid fa-times text-xl"></i>
                 </button>
             </div>
 
-            <div class="min-h-[500px] bg-white p-6">
+            <div class="min-h-[500px] bg-white p-6 dark:bg-gray-800">
 
                 {{-- A. SKELETON DE CARGA (Controlado por Alpine) --}}
                 {{-- Se muestra mientras isLoading es true --}}
@@ -94,18 +94,18 @@
                      x-show="isLoading"
                      style="display: none;">
                     <div class="flex justify-between">
-                        <div class="h-8 w-1/3 rounded bg-gray-200"></div>
-                        <div class="h-8 w-1/4 rounded bg-gray-200"></div>
+                        <div class="h-8 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+                        <div class="h-8 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
                     </div>
                     <div class="grid grid-cols-3 gap-6">
                         <div class="col-span-1 space-y-4">
-                            <div class="h-40 rounded-xl bg-gray-200"></div>
-                            <div class="h-24 rounded-xl bg-gray-200"></div>
+                            <div class="h-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+                            <div class="h-24 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                         </div>
-                        <div class="col-span-2 h-80 rounded-xl bg-gray-200"></div>
+                        <div class="col-span-2 h-80 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                     </div>
                     <div class="mt-12 flex justify-center">
-                        <span class="flex items-center gap-2 text-sm text-gray-400">
+                        <span class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
                             <i class="fa-solid fa-circle-notch fa-spin text-indigo-500"></i> {{ __('labels.loading_operation') }}
                         </span>
                     </div>
@@ -120,15 +120,15 @@
                         {{-- Fallback de Livewire (por si hay un micro-lapso sin datos) --}}
                         <div class="w-full animate-pulse space-y-6">
                             <div class="flex justify-between">
-                                <div class="h-8 w-1/3 rounded bg-gray-200"></div>
-                                <div class="h-8 w-1/4 rounded bg-gray-200"></div>
+                                <div class="h-8 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+                                <div class="h-8 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
                             </div>
                             <div class="grid grid-cols-3 gap-6">
                                 <div class="col-span-1 space-y-4">
-                                    <div class="h-40 rounded-xl bg-gray-200"></div>
-                                    <div class="h-24 rounded-xl bg-gray-200"></div>
+                                    <div class="h-40 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+                                    <div class="h-24 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                                 </div>
-                                <div class="col-span-2 h-80 rounded-xl bg-gray-200"></div>
+                                <div class="col-span-2 h-80 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
                             </div>
                         </div>
                     @else
@@ -140,17 +140,17 @@
                             {{-- 1. CABECERA TRADE --}}
                             <div class="mb-4 flex items-end justify-between">
                                 <div>
-                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ __('labels.ticket') }}{{ $this->trade->ticket ?? 'N/A' }}</span>
-                                    <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('labels.ticket') }}{{ $this->trade->ticket ?? 'N/A' }}</span>
+                                    <h2 class="mt-1 flex items-center gap-3 text-4xl font-black text-gray-900 dark:text-gray-100">
                                         {{ $this->trade->tradeAsset->name ?? 'N/A' }}
-                                        <span class="{{ $this->trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
+                                        <span class="{{ $this->trade->direction == 'long' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400' }} rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide">
                                             {{ $this->trade->direction }}
                                         </span>
                                     </h2>
-                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700"> {{ $this->trade->account->name }}</span>
+                                    <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"> {{ $this->trade->account->name }}</span>
                                 </div>
                                 <div class="text-right">
-                                    <span class="block text-sm font-medium text-gray-500">{{ __('labels.net_result') }}</span>
+                                    <span class="block text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('labels.net_result') }}</span>
                                     {{--  --}}
                                     <span class="{{ $this->trade->pnl >= 0 ? 'text-emerald-600' : 'text-rose-600' }} text-4xl font-black"
                                           x-text="$store.viewMode.format({{ $this->trade->pnl }}, {{ $this->trade->pnl_percentage ?? 0 }})">
@@ -171,40 +171,40 @@
 
                                 {{-- COLUMNA DATOS --}}
                                 <div class="space-y-6 lg:col-span-1">
-                                    <div class="rounded-2xl border border-gray-100 bg-gray-50 p-6">
-                                        <h4 class="mb-4 text-xs font-bold uppercase text-gray-400">{{ __('labels.execution_data') }}</h4>
+                                    <div class="rounded-2xl border border-gray-100 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900/40">
+                                        <h4 class="mb-4 text-xs font-bold uppercase text-gray-400 dark:text-gray-500">{{ __('labels.execution_data') }}</h4>
                                         <dl class="space-y-4 text-sm">
-                                            <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                <dt class="text-gray-500">{{ __('labels.entry_exit') }}</dt>
-                                                <dd class="font-mono font-bold text-gray-900">{{ $this->trade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400"></i> {{ $this->trade->exit_price }}</dd>
+                                            <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                <dt class="text-gray-500 dark:text-gray-400">{{ __('labels.entry_exit') }}</dt>
+                                                <dd class="font-mono font-bold text-gray-900 dark:text-gray-100">{{ $this->trade->entry_price }} <i class="fa-solid fa-arrow-right mx-1 text-xs text-gray-400 dark:text-gray-500"></i> {{ $this->trade->exit_price }}</dd>
                                             </div>
-                                            <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                <dt class="text-gray-500">{{ __('labels.timetable') }}</dt>
+                                            <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                <dt class="text-gray-500 dark:text-gray-400">{{ __('labels.timetable') }}</dt>
                                                 {{-- Después (CORRECTO) --}}
-                                                <dd class="text-right font-mono font-bold text-gray-900">
+                                                <dd class="text-right font-mono font-bold text-gray-900 dark:text-gray-100">
                                                     {{ \Carbon\Carbon::parse($this->trade->entry_time)->format('H:i') }}
                                                     @if ($this->trade->exit_time)
                                                         - {{ \Carbon\Carbon::parse($this->trade->exit_time)->format('H:i') }}
-                                                        <span class="block text-[10px] font-normal text-gray-400">{{ \Carbon\Carbon::parse($this->trade->exit_time)->format('d M Y') }}</span>
+                                                        <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">{{ \Carbon\Carbon::parse($this->trade->exit_time)->format('d M Y') }}</span>
                                                     @else
                                                         <span class="text-xs text-yellow-500">({{ __('labels.open') }})</span>
                                                     @endif
                                                 </dd>
                                             </div>
-                                            <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                <dt class="text-gray-500">{{ __('labels.volume') }}</dt>
-                                                <dd class="font-bold text-gray-900">{{ $this->trade->size }} {{ __('labels.lots') }}</dd>
+                                            <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                <dt class="text-gray-500 dark:text-gray-400">{{ __('labels.volume') }}</dt>
+                                                <dd class="font-bold text-gray-900 dark:text-gray-100">{{ $this->trade->size }} {{ __('labels.lots') }}</dd>
                                             </div>
 
-                                            <div class="flex justify-between border-b border-gray-200 pb-2">
-                                                <dt class="text-gray-500">{{ __('labels.pips_moved') }}</dt>
-                                                <dd class="font-bold text-gray-900">{{ $this->trade->pips_traveled }} {{ __('labels.pips') }}</dd>
+                                            <div class="flex justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+                                                <dt class="text-gray-500 dark:text-gray-400">{{ __('labels.pips_moved') }}</dt>
+                                                <dd class="font-bold text-gray-900 dark:text-gray-100">{{ $this->trade->pips_traveled }} {{ __('labels.pips') }}</dd>
                                             </div>
 
                                             {{-- BARRA MAE/MFE --}}
                                             <div class="flex justify-between">
-                                                <dt class="text-gray-500">{{ __('labels.execution') }}</dt>
-                                                <dd class="w-32 font-medium text-gray-900">
+                                                <dt class="text-gray-500 dark:text-gray-400">{{ __('labels.execution') }}</dt>
+                                                <dd class="w-32 font-medium text-gray-900 dark:text-gray-100">
                                                     @if ($this->trade->mae_price && $this->trade->mfe_price)
                                                         @php
                                                             // 1. Distancias Absolutas
@@ -278,14 +278,14 @@
                                                                  style="left: {{ $markerPos }}%; transform: translateX(-50%);"></div>
                                                         </div>
                                                     @else
-                                                        <span class="text-xs text-gray-300">-</span>
+                                                        <span class="text-xs text-gray-300 dark:text-gray-600">-</span>
                                                     @endif
                                                 </dd>
                                             </div>
                                         </dl>
                                     </div>
 
-                                    <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm transition-all focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2"
+                                    <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm transition-all focus-within:ring-2 focus-within:ring-yellow-400 focus-within:ring-offset-2 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:focus-within:ring-offset-gray-800"
                                          x-data="{
                                              notes: '',
                                              saving: false,
@@ -304,7 +304,7 @@
                                              }
                                          }">
                                         <div class="mb-2 flex items-center justify-between">
-                                            <h4 class="flex items-center gap-2 text-xs font-bold uppercase text-yellow-700">
+                                            <h4 class="flex items-center gap-2 text-xs font-bold uppercase text-yellow-700 dark:text-yellow-400">
                                                 <i class="fa-regular fa-note-sticky"></i> {{ __('labels.session_notes') }}
                                             </h4>
 
@@ -325,7 +325,7 @@
 
                                         {{-- x-model en lugar de wire:model: Alpine gestiona el valor localmente --}}
                                         {{-- @blur dispara save(): en ese momento, .defer sube notes + llama saveNotes en 1 request --}}
-                                        <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 placeholder-yellow-800/50 focus:ring-0"
+                                        <textarea class="w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-gray-800 placeholder-yellow-800/50 focus:ring-0 dark:text-gray-100 dark:placeholder-yellow-200/30"
                                                   x-model="notes"
                                                   @blur="save()"
                                                   rows="4"
@@ -361,7 +361,7 @@
                                              wire:ignore>
                                             @if ($this->trade?->chart_data_path)
                                                 <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
-                                                    <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 transition-all hover:text-white"
+                                                    <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 transition-all hover:text-white"
                                                             @click="changeTimeframe(tf)"
                                                             :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
                                                             x-text="tf.toUpperCase()"></button>
@@ -370,7 +370,7 @@
                                                 {{-- BOTÓN VOLUMEN --}}
                                                 <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
                                                         @click="toggleVol()"
-                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-600'"
                                                         title="{{ __('labels.show_hide_volume') }}">
 
                                                     {{-- Icono de barras (FontAwesome o SVG manual) --}}
@@ -380,7 +380,7 @@
                                                 {{-- BOTÓN EMA --}}
                                                 <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
                                                         @click="toggleEma()"
-                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 hover:text-gray-300'"
+                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-600'"
                                                         title="{{ __('labels.show_hide_ema') }}">
 
                                                     {{-- Icono de línea --}}
@@ -398,7 +398,7 @@
                                                 @if ($this->trade?->chart_data_path)
                                                     <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
                                                             @click="activeTab = 'chart'"
-                                                            :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                            :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
                                                         <i class="fa-solid fa-chart-line"></i>
                                                         <span class="hidden sm:inline">{{ __('labels.chart') }}</span>
                                                     </button>
@@ -407,14 +407,14 @@
                                                 {{-- Botón Ver Captura --}}
                                                 <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
                                                         @click="activeTab = 'image'"
-                                                        :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'">
+                                                        :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
                                                     <i class="fa-solid fa-image"></i>
                                                     <span class="hidden sm:inline">{{ __('labels.screenshot') }}</span>
                                                 </button>
 
                                                 <div class="mx-1 h-3 w-px bg-gray-600"></div>
 
-                                                <button class="ml-2 px-2 text-gray-400 transition-colors hover:text-white"
+                                                <button class="ml-2 px-2 text-gray-400 dark:text-gray-500 transition-colors hover:text-white"
                                                         @click="toggleFullscreen()"
                                                         :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
 
@@ -499,7 +499,7 @@
                                                                     <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
                                                                 </div>
                                                                 <h3 class="mb-1 text-lg font-bold text-white">{{ __('labels.upload_screenshot') }}</h3>
-                                                                <p class="text-xs text-gray-400">{{ __('labels.drag_drop_or_click') }}</p>
+                                                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('labels.drag_drop_or_click') }}</p>
                                                             </div>
 
                                                             <div class="text-center"
@@ -524,21 +524,21 @@
                                     {{-- </template> --}}
                                     {{-- IA --}}
                                     @if (Auth::user()->subscribed('default'))
-                                        <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
+                                        <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10">
                                             <div class="relative z-10 mb-4 flex items-start justify-between">
                                                 <div>
-                                                    <h4 class="flex items-center gap-2 text-sm font-bold text-indigo-900">
-                                                        <i class="fa-solid fa-brain text-indigo-600"></i> {{ __('labels.mentor_analyze') }}
+                                                    <h4 class="flex items-center gap-2 text-sm font-bold text-indigo-900 dark:text-indigo-300">
+                                                        <i class="fa-solid fa-brain text-indigo-600 dark:text-indigo-400"></i> {{ __('labels.mentor_analyze') }}
                                                     </h4>
                                                     {{-- CONTADOR VISUAL --}}
-                                                    <p class="mt-1 text-[10px] font-medium text-gray-500">
+                                                    <p class="mt-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
                                                         {{ __('labels.daily_uses') }}
                                                         <span class="{{ $this->aiCreditsLeft() > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                                                            {{ $this->aiCreditsLeft() }} / 10
+                                                            {{ $this->aiCreditsLeft() }} / {{ $this->aiDailyLimit() }}
                                                         </span>
                                                     </p>
                                                     @if (!$this->trade->ai_analysis)
-                                                        <p class="mt-1 text-xs text-indigo-600">
+                                                        <p class="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
                                                             {{ __('labels.explain_analyze_mentor') }}
                                                         </p>
                                                     @endif
@@ -580,14 +580,14 @@
                                             <div class="w-full animate-pulse space-y-2"
                                                  wire:loading
                                                  wire:target="analyzeIndividualTrade">
-                                                <div class="h-3 w-full rounded bg-indigo-200"></div>
-                                                <div class="h-3 w-5/6 rounded bg-indigo-200"></div>
-                                                <div class="h-3 w-4/6 rounded bg-indigo-200"></div>
+                                                <div class="h-3 w-full rounded bg-indigo-200 dark:bg-indigo-500/20"></div>
+                                                <div class="h-3 w-5/6 rounded bg-indigo-200 dark:bg-indigo-500/20"></div>
+                                                <div class="h-3 w-4/6 rounded bg-indigo-200 dark:bg-indigo-500/20"></div>
                                             </div>
 
 
                                             @if ($this->trade->ai_analysis)
-                                                <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800">
+                                                <div class="prose prose-sm rounded-lg border border-indigo-50/50 bg-white/50 p-3 text-sm text-gray-800 dark:prose-invert dark:border-indigo-500/20 dark:bg-gray-900/40 dark:text-gray-200">
                                                     {!! Str::markdown($this->trade->ai_analysis) !!}
                                                 </div>
                                                 <div class="mt-2 text-right">

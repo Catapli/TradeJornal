@@ -340,31 +340,7 @@ document.addEventListener("alpine:init", () => {
                 });
             });
 
-            // Toast visible para los avisos del servidor (límite IA, errores, confirmaciones).
-            // Antes esta página no escuchaba 'notify' y los mensajes se perdían.
-            this.$wire.on("notify", (payload) => {
-                const data = Array.isArray(payload) ? payload[0] : payload;
-                const message =
-                    typeof data === "string" ? data : (data?.message ?? "");
-                if (!message || !window.Swal) return;
-
-                const type = typeof data === "object" ? data?.type : "success";
-                const icon = ["success", "error", "warning", "info"].includes(
-                    type,
-                )
-                    ? type
-                    : "success";
-
-                window.Swal.fire({
-                    toast: true,
-                    position: "top-end",
-                    icon,
-                    title: message,
-                    showConfirmButton: false,
-                    timer: 4000,
-                    timerProgressBar: true,
-                });
-            });
+            // Los toasts de 'notify' los pinta el sistema global (core/notify.js).
         },
     }));
 });

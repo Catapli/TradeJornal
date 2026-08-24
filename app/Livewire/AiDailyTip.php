@@ -89,7 +89,7 @@ class AiDailyTip extends Component
 
         $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
-        $result = app(AiService::class)->complete($prompt, temperature: 0.5, maxTokens: 350);
+        $result = app(AiService::class)->complete($prompt, temperature: 0.5, maxTokens: 700);
 
         if ($result->ok) {
             $this->tip = $result->content;

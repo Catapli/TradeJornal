@@ -3,10 +3,6 @@ document.addEventListener("alpine:init", () => {
     // COMPONENTE PRINCIPAL: REPORTS (ALPINE-FIRST)
     // ============================================
     Alpine.data("reports", () => ({
-        // --- SISTEMA DE ALERTAS ---
-        showAlert: false,
-        typeAlert: "info",
-        bodyAlert: "",
         activeTab: "mechanical",
 
         // --- ESTADO DE ESCENARIOS (Alpine es la fuente de verdad) ---
@@ -34,10 +30,7 @@ document.addEventListener("alpine:init", () => {
          * Inicialización del componente
          */
         init() {
-            window.addEventListener("show-alert", (e) => {
-                const data = e.detail[0] || e.detail;
-                this.triggerAlert(data.message, data.type);
-            });
+            // El toast de 'show-alert' lo pinta el sistema global (core/notify.js).
 
             // Sincronización inicial
             this.scenarios = {
@@ -149,20 +142,7 @@ document.addEventListener("alpine:init", () => {
          * Muestra una alerta visual
          */
         triggerAlert(message, type = "error") {
-            this.bodyAlert = message;
-            this.typeAlert = type;
-            this.showAlert = true;
-
-            setTimeout(() => {
-                this.showAlert = false;
-            }, 4000);
-        },
-
-        /**
-         * Cierra la alerta manualmente
-         */
-        closeAlert() {
-            this.showAlert = false;
+            window.tjToast(message, type);
         },
     }));
 
@@ -259,7 +239,7 @@ document.addEventListener("alpine:init", () => {
                     show: false,
                 },
             };
-            this.chart = new ApexCharts(
+            this.chart = window.tjChart(
                 document.querySelector("#equityChart"),
                 options,
             );
@@ -359,7 +339,7 @@ document.addEventListener("alpine:init", () => {
                     },
                 },
             };
-            this.chart = new ApexCharts(el, options);
+            this.chart = window.tjChart(el, options);
             this.chart.render();
         },
     }));
@@ -473,7 +453,7 @@ document.addEventListener("alpine:init", () => {
                 },
             };
 
-            this.chart = new ApexCharts(
+            this.chart = window.tjChart(
                 document.querySelector("#efficiencyChart"),
                 options,
             );
@@ -551,7 +531,7 @@ document.addEventListener("alpine:init", () => {
                     },
                 },
             };
-            this.chart = new ApexCharts(
+            this.chart = window.tjChart(
                 document.querySelector("#distChart"),
                 options,
             );
@@ -648,7 +628,7 @@ document.addEventListener("alpine:init", () => {
                 },
             };
 
-            this.chart = new ApexCharts(
+            this.chart = window.tjChart(
                 document.querySelector("#radarChart"),
                 options,
             );
@@ -802,7 +782,7 @@ document.addEventListener("alpine:init", () => {
             // Render con pequeño delay de seguridad
             setTimeout(() => {
                 if (document.querySelector("#mistakesChart")) {
-                    this.chart = new ApexCharts(
+                    this.chart = window.tjChart(
                         document.querySelector("#mistakesChart"),
                         options,
                     );

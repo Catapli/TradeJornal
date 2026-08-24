@@ -4,10 +4,8 @@ namespace App\Livewire;
 
 use App\LogActions;
 use App\Models\Account;
-use App\Models\Alert;
 use App\Models\JournalEntry;
 use App\Models\Trade;
-use App\Models\Traffic;
 use App\Services\StorageService;
 use Carbon\Carbon;
 use App\Services\AiService;
@@ -21,6 +19,7 @@ use App\WithAiLimits;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Session;
 
 class DashboardPage extends Component
 {
@@ -30,6 +29,8 @@ class DashboardPage extends Component
     use WithAiLimits; // <--- 2. Usar el Trait
     use LogActions;
     // ? Variables Nuevas
+    // #[Session]: el filtro de cuentas persiste entre recargas y navegación (por usuario).
+    #[Session]
     public $selectedAccounts = []; // Aquí se guardarán los IDs (ej: [1, 5, 8])
     public $availableAccounts = [];
     // Datos para el gráfico
@@ -84,8 +85,10 @@ class DashboardPage extends Component
     // 👇 NUEVAS PROPIEDADES PRIVADAS (no se envían al navegador)
     private $_recentTradesCache = null;
 
-    // Rango de fechas (solo se aplican juntas)
+    // Rango de fechas (solo se aplican juntas). Persisten igual que el filtro de cuentas.
+    #[Session]
     public string $dateFrom = '';
+    #[Session]
     public string $dateTo   = '';
 
     // 👇 NUEVO: Listener para cuando se actualiza un trade
@@ -121,7 +124,23 @@ class DashboardPage extends Component
                     ];
                 });
 
-            $this->selectedAccounts = ['all'];
+            // Saneamos el filtro restaurado de sesión: descartamos IDs de cuentas
+            // que ya no existan o estén quemadas (si no, el dashboard saldría vacío
+            // sin explicación). Si no queda ninguna válida, volvemos a 'all'.
+            $validIds = $this->availableAccounts->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+
+            $this->selectedAccounts = collect($this->selectedAccounts)
+                ->filter(fn ($id) => $id === 'all' || in_array((string) $id, $validIds, true))
+                ->values()
+                ->all();
+
+            if (empty($this->selectedAccounts)) {
+                $this->selectedAccounts = ['all'];
+            }
+
+            $this->calendarDate = Carbon::now()->format('Y-m-d');
             $this->calculateStats();
             $this->generateCalendar();
         } catch (Exception $e) {
@@ -279,7 +298,7 @@ class DashboardPage extends Component
             $this->pnlTotal = 0;
             $this->pnlTotal_perc = 0;
             $this->avgPnLChartData = ['avg_win' => 0, 'avg_loss' => 0, 'rr_ratio' => 0];
-            $this->extraKpis = ['profit_factor' => 0, 'expectancy' => 0, 'streak' => ['type' => null, 'count' => 0], 'best_trade' => null, 'worst_trade' => null];
+            $this->extraKpis = ['profit_factor' => 0, 'expectancy' => 0, 'streak' => ['type' => null, 'count' => 0], 'best_trade' => null, 'worst_trade' => null, 'max_drawdown' => 0];
         }
 
         // --- 2. COMPARATIVA CON EL PERIODO ANTERIOR (solo si hay rango activo) ---
@@ -363,7 +382,6 @@ class DashboardPage extends Component
     private function calculateCurrentStreak(): array
     {
         $pnls = $this->getTradesQuery()
-            ->whereNotNull('exit_time')
             ->orderByDesc('exit_time')
             ->limit(50)
             ->pluck('pnl');
@@ -629,7 +647,6 @@ class DashboardPage extends Component
     {
         return $this->getTradesQuery()
             ->selectRaw('DATE(exit_time) as date, SUM(pnl) as daily_pnl')
-            ->whereNotNull('exit_time')
             ->groupByRaw('DATE(exit_time)')
             ->orderBy('date', 'asc')
             ->get();
@@ -642,10 +659,21 @@ class DashboardPage extends Component
             $data = [0];
 
             $runningTotal = 0;
+            $peak = 0;
+            $maxDrawdown = 0;
             foreach ($dailyPnl as $day) {
                 $runningTotal += $day->daily_pnl;
                 $labels[] = $day->date;
                 $data[] = round($runningTotal, 2);
+
+                // Max Drawdown: mayor caída pico→valle de la curva de equity
+                if ($runningTotal > $peak) {
+                    $peak = $runningTotal;
+                }
+                $drawdown = $peak - $runningTotal;
+                if ($drawdown > $maxDrawdown) {
+                    $maxDrawdown = $drawdown;
+                }
             }
 
             $this->evolutionChartData = [
@@ -653,6 +681,8 @@ class DashboardPage extends Component
                 'data' => $data,
                 'is_positive' => $runningTotal >= 0
             ];
+
+            $this->extraKpis['max_drawdown'] = round($maxDrawdown, 2);
         } catch (\Exception $e) {
             $this->logError($e, 'CalculateEvolution', 'DashboardPage', 'Error al calcular evolución del PnL');
             $this->evolutionChartData = ['categories' => [], 'data' => [], 'is_positive' => true];
@@ -757,7 +787,7 @@ class DashboardPage extends Component
             $journals = JournalEntry::where('user_id', Auth::id())
                 ->whereBetween('date', [$startOfCalendar, $endOfCalendar])
                 ->get()
-                ->keyBy('date');
+                ->keyBy(fn ($j) => $j->date->format('Y-m-d'));
 
             // 4. Construir el Grid
             $grid = [];
@@ -769,9 +799,7 @@ class DashboardPage extends Component
                 $pnl = $dayData ? $dayData->daily_pnl : null;
                 $percentage = $dayData ? $dayData->daily_percent : null;
 
-                $journalData = $journals->first(function ($item) use ($dayString) {
-                    return $item->date->format('Y-m-d') === $dayString;
-                });
+                $journalData = $journals->get($dayString);
 
                 $grid[] = [
                     'day' => $currentDay->format('d'),
@@ -877,7 +905,7 @@ class DashboardPage extends Component
             $result = $ai->complete(
                 $prompt,
                 temperature: 0.4,
-                maxTokens: 1024,
+                maxTokens: 2048,
                 cacheKey: 'session:' . Auth::id() . ':' . $this->selectedDate,
             );
 
@@ -1132,7 +1160,7 @@ class DashboardPage extends Component
             $result = $ai->complete(
                 $prompt,
                 temperature: 0.4,
-                maxTokens: 1024,
+                maxTokens: 2048,
                 cacheKey: 'audit:' . $trade->id,
             );
 

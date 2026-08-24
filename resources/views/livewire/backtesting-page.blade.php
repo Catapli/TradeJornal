@@ -17,7 +17,7 @@
 
         {{-- 1. LOADER DE CARGA INICIAL (Pantalla completa al refrescar) --}}
         {{-- Se muestra mientras 'initialLoad' sea true. Tiene z-index máximo (z-50) --}}
-        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-gray-800"
              x-show="initialLoad"
              x-transition:leave="transition ease-in duration-500"
              x-transition:leave-start="opacity-100"
@@ -26,7 +26,7 @@
             {{-- Aquí tu componente loader --}}
             <div class="flex flex-col items-center">
                 <x-loader />
-                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+                <span class="mt-4 animate-pulse text-sm font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading_dashboard') }}</span>
             </div>
         </div>
     </div>
@@ -35,7 +35,7 @@
     {{-- Loader de navegación listado ↔ detalle (mismo loader que la carga inicial) --}}
     {{-- !mt-0: anula el margin-top que inyecta el space-y-6 del contenedor
          (su selector tiene más especificidad que .mt-0 normal) --}}
-    <div class="fixed inset-0 z-[9999] !mt-0 flex items-center justify-center bg-white"
+    <div class="fixed inset-0 z-[9999] !mt-0 flex items-center justify-center bg-white dark:bg-gray-800"
          wire:loading.flex
          x-transition:leave="transition ease-in duration-500"
          x-transition:leave-start="opacity-100"
@@ -43,7 +43,7 @@
          wire:target="selectStrategy, backToList">
         <div class="flex flex-col items-center">
             <x-loader />
-            <span class="mt-4 animate-pulse text-sm font-bold text-gray-400">{{ __('labels.loading_dashboard') }}</span>
+            <span class="mt-4 animate-pulse text-sm font-bold text-gray-400 dark:text-gray-500">{{ __('labels.loading_dashboard') }}</span>
         </div>
     </div>
 
@@ -63,7 +63,7 @@
              @click="cancelDelete()"></div>
 
         {{-- Panel --}}
-        <div class="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+        <div class="relative z-10 w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 p-6 shadow-xl"
              x-transition:enter="ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100">
@@ -82,15 +82,15 @@
                 </svg>
             </div>
 
-            <h3 class="mb-1 text-center text-base font-semibold text-gray-900">
+            <h3 class="mb-1 text-center text-base font-semibold text-gray-900 dark:text-gray-100">
                 {{ __('labels.bt_delete_trade_title') }}
             </h3>
-            <p class="mb-6 text-center text-sm text-gray-500">
+            <p class="mb-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 {{ __('labels.bt_delete_trade_text') }}
             </p>
 
             <div class="flex gap-3">
-                <button class="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                <button class="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
                         type="button"
                         @click="cancelDelete()">
                     {{ __('labels.cancel') }}
@@ -110,9 +110,9 @@
 
 
     {{-- TOGGLE ARCHIVADAS (solo tiene sentido en el listado) --}}
-    <div class="mt-8 border-t border-gray-100 pt-6"
+    <div class="mt-8 border-t border-gray-100 dark:border-gray-700 pt-6"
          x-show="!$wire.selectedStrategyId">
-        <button class="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gray-600"
+        <button class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                 wire:click="toggleArchived">
             <svg class="h-4 w-4"
                  xmlns="http://www.w3.org/2000/svg"
@@ -126,7 +126,7 @@
             </svg>
             {{ $showArchived ? __('labels.hide_archived') : __('labels.view_archived_strategies') }}
             @if (!$showArchived)
-                <span class="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+                <span class="rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ $archivedCount }}
                 </span>
             @endif
@@ -134,16 +134,16 @@
 
         @if ($showArchived)
             @if ($archivedStrategies->isEmpty())
-                <p class="mt-4 text-sm text-gray-400">{{ __('labels.no_archived_strategies') }}</p>
+                <p class="mt-4 text-sm text-gray-400 dark:text-gray-500">{{ __('labels.no_archived_strategies') }}</p>
             @else
                 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($archivedStrategies as $strategy)
-                        <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                        <div class="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3">
                             <div>
-                                <p class="text-sm font-medium text-gray-600">{{ $strategy->name }}</p>
-                                <p class="text-xs text-gray-400">{{ $strategy->symbol }} · {{ $strategy->timeframe }} · {{ $strategy->trades_count }} trades</p>
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $strategy->name }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $strategy->symbol }} · {{ $strategy->timeframe }} · {{ $strategy->trades_count }} trades</p>
                             </div>
-                            <button class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-blue-300 hover:text-blue-600"
+                            <button class="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 transition-colors hover:border-blue-300 hover:text-blue-600"
                                     type="button"
                                     wire:click="unarchive({{ $strategy->id }})">
                                 <svg class="h-3.5 w-3.5"
@@ -176,7 +176,7 @@
          x-transition:leave-end="opacity-0"
          @keydown.escape.window="cancelArchive()"
          style="display:none">
-        <div class="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+        <div class="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100">
@@ -192,10 +192,10 @@
                           d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                 </svg>
             </div>
-            <h3 class="mb-1 text-sm font-bold text-gray-900">{{ __('labels.archive_strategy_title') }}</h3>
-            <p class="mb-5 text-sm text-gray-500">{{ __('labels.archive_strategy_text') }}</p>
+            <h3 class="mb-1 text-sm font-bold text-gray-900 dark:text-gray-100">{{ __('labels.archive_strategy_title') }}</h3>
+            <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">{{ __('labels.archive_strategy_text') }}</p>
             <div class="flex justify-end gap-3">
-                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+                <button class="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
                         type="button"
                         @click="cancelArchive()">
                     {{ __('labels.cancel') }}

@@ -11,6 +11,7 @@ use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\AuthActions; // Tu trait
 use Illuminate\Support\Facades\Log;
 
@@ -29,11 +30,26 @@ class PropFirmsManager extends Component
     public array $tree = [];
     public function mount()
     {
-        if (!$this->isSuperAdmin(Auth::user())) {
+        $this->ensureSuperAdmin();
+        $this->tree = $this->getTreeData();
+    }
+
+    /**
+     * Re-valida el permiso en cada request (defensa en profundidad): las
+     * acciones de Livewire son invocables de forma individual, no basta con
+     * el check de mount() en la carga inicial.
+     */
+    public function hydrate()
+    {
+        $this->ensureSuperAdmin();
+    }
+
+    private function ensureSuperAdmin(): void
+    {
+        $user = Auth::user();
+        if (!$user || !$this->isSuperAdmin($user)) {
             abort(403);
         }
-
-        $this->tree = $this->getTreeData();
     }
 
     /**
@@ -78,13 +94,7 @@ class PropFirmsManager extends Component
 
         PropFirm::updateOrCreate(['id' => $this->firmForm['id'] ?? null], $data);
 
-        // 1. Refrescar datos en JS (silent update)
-        $this->dispatch('refresh-tree', tree: $this->getTreeData());
-
-        // 2. Lanzar alerta visual
-        $this->dispatch('notify', message: 'Empresa guardada correctamente', type: 'success');
-
-        $this->skipRender(); // <--- AÑADIR ESTO
+        $this->syncTree('Empresa guardada correctamente');
     }
 
     // --- CRUD PROGRAMAS ---
@@ -97,29 +107,19 @@ class PropFirmsManager extends Component
             'programForm.step_count' => 'required|in:0,1,2,3',
         ]);
 
-        $firm = PropFirm::find($this->programForm['firm_id']);
+        $firmName = PropFirm::where('id', $this->programForm['firm_id'])->value('name');
 
         $program = Program::updateOrCreate(
             ['id' => $this->programForm['id'] ?? null],
             [
                 'prop_firm_id' => $this->programForm['firm_id'],
                 'name' => $this->programForm['name'],
-                'slug' => Str::slug($firm->name . '-' . $this->programForm['name']),
+                'slug' => Str::slug($firmName . '-' . $this->programForm['name']),
                 'step_count' => $this->programForm['step_count'],
             ]
         );
 
-        // 1. Refrescar árbol
-        $this->dispatch('refresh-tree', tree: $this->getTreeData());
-
-        // 2. Notificar con el ID del programa recién creado
-        $this->dispatch('notify', [
-            'message' => 'Programa creado correctamente',
-            'type' => 'success',
-            'newProgramId' => $program->id  // <-- CLAVE: Pasar el ID
-        ]);
-
-        $this->skipRender(); // <--- AÑADIR ESTO
+        $this->syncTree('Programa creado correctamente', 'success', ['newProgramId' => $program->id]);
     }
 
 
@@ -197,10 +197,7 @@ class PropFirmsManager extends Component
             }
         });
 
-        // Refrescar y Salir
-        $this->dispatch('refresh-tree', tree: $this->getTreeData());
-        $this->dispatch('notify', message: 'Nivel configurado con éxito', type: 'success');
-        $this->skipRender();
+        $this->syncTree('Nivel configurado con éxito');
     }
 
 
@@ -223,16 +220,7 @@ class PropFirmsManager extends Component
                 }
             });
 
-            // SOLO UN dispatch de refresh-tree
-            $this->dispatch('refresh-tree', tree: $this->getTreeData());
-
-            // Y notify por separado
-            $this->dispatch('notify', [
-                'message' => 'Nivel duplicado con éxito',
-                'type' => 'success'
-            ]);
-
-            $this->skipRender(); // <--- AÑADIR ESTO
+            $this->syncTree('Nivel duplicado con éxito');
         } catch (\Exception $e) {
             Log::error('Error duplicando nivel', [
                 'levelId' => $levelId,
@@ -251,9 +239,20 @@ class PropFirmsManager extends Component
     {
         // El delete cascade de la BD borrará los objetivos
         ProgramLevel::destroy($id);
+
+        $this->syncTree('Nivel eliminado');
+    }
+
+    /**
+     * Invalida la caché compartida, refresca el árbol en el cliente y notifica.
+     */
+    private function syncTree(string $message, string $type = 'success', array $extra = []): void
+    {
+        Cache::forget(PropFirm::CACHE_KEY);
+
         $this->dispatch('refresh-tree', tree: $this->getTreeData());
-        $this->dispatch('notify', message: 'Nivel eliminado', type: 'success');
-        $this->skipRender(); // <--- AÑADIR ESTO
+        $this->dispatch('notify', array_merge(['message' => $message, 'type' => $type], $extra));
+        $this->skipRender();
     }
 
     public function render()

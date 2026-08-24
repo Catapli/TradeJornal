@@ -22,13 +22,15 @@ class CalculateAccountStatistics
         $stats = DB::table('trades as t')
             ->leftJoin('trade_assets as ta', 't.trade_asset_id', '=', 'ta.id')
             ->where('t.account_id', $account->id)
-            ->whereNotNull('t.exit_time')
             ->selectRaw("
                 COUNT(*) as total_trades,
                 SUM(CASE WHEN t.pnl > 0 THEN 1 ELSE 0 END) as winning_trades,
                 AVG(t.duration_minutes) as avg_duration_minutes,
-                MAX(t.pnl) as max_win,
-                MIN(t.pnl) as max_loss,
+                -- Se filtra por signo. Con MAX/MIN a secas, una cuenta sin perdidas
+                -- devolvia como perdida maxima su ganancia mas pequena, y una cuenta
+                -- sin ganancias devolvia una ganancia maxima negativa.
+                MAX(CASE WHEN t.pnl > 0 THEN t.pnl END) as max_win,
+                MIN(CASE WHEN t.pnl < 0 THEN t.pnl END) as max_loss,
                 AVG(CASE WHEN t.pnl > 0 THEN t.pnl END) as avg_win,
                 AVG(CASE WHEN t.pnl < 0 THEN ABS(t.pnl) END) as avg_loss_abs,
                 SUM(CASE WHEN t.pnl > 0 THEN t.pnl ELSE 0 END) as gross_profit,
@@ -42,7 +44,6 @@ class CalculateAccountStatistics
         $topAsset = DB::table('trades as t')
             ->join('trade_assets as ta', 't.trade_asset_id', '=', 'ta.id')
             ->where('t.account_id', $account->id)
-            ->whereNotNull('t.exit_time')
             ->selectRaw('ta.symbol, COUNT(*) as trade_count')
             ->groupBy('ta.id', 'ta.symbol')
             ->orderByDesc('trade_count')
@@ -83,6 +84,14 @@ class CalculateAccountStatistics
         Cache::put($cacheKey, $result, now()->addMinutes(5));
 
         return $result;
+    }
+
+    /**
+     * Borra la caché de estadísticas de una cuenta.
+     */
+    public static function clearCache(int $accountId): void
+    {
+        Cache::forget("account_stats_{$accountId}");
     }
 
     private function formatDuration($minutes): string
