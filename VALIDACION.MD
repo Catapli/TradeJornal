@@ -55,7 +55,7 @@ tu histórico** en tu propia cuenta.
 
 ## Índice de lo pendiente
 
-**139 comprobaciones en 9 bloques.** Ninguna marcada todavía.
+**147 comprobaciones en 10 bloques.** Ninguna marcada todavía.
 
 | # | Bloque | Entregado | Migración | Ctrl+F5 |
 |---|---|---|---|---|
@@ -68,6 +68,7 @@ tu histórico** en tu propia cuenta.
 | 7 | Correcciones sueltas del 27-ago | 27-ago | no lleva | sí |
 | 8 | Archivar cuentas · selector · tarjetas plegables | 18-sep | **no lleva** | **sí, obligatorio** |
 | 9 | Opción A · el análisis mira al trader | 18-sep | no lleva | sí |
+| 10 | Endurecimiento antes de producción | 18-sep | no lleva | no |
 
 > **P3 · Centro de mando ya no está aquí.** Se construyó y se retiró el mismo día:
 > con 7 días operados la simulación se callaba y lo que quedaba en pantalla ya lo
@@ -480,6 +481,38 @@ tests no lo ven: hay que mirarlo)*
 - [ ] **Se puede archivar una cuenta quemada.** Elígela y pulsa «Archivar
       cuenta»: pasa a la sección de archivadas como cualquier otra.
 - [ ] **Modo oscuro y `?lang=en`** en el aviso de mezcla y en el desplegable.
+
+### Endurecimiento antes de producción
+*(entregado 2026-09-18 · **sin migración** · no toca pantalla: esto se comprueba
+con el `.exe` y por consola)*
+
+**El freno de la API** — lo más importante de probar, porque afecta al `.exe`
+
+- [ ] **El `.exe` sigue sincronizando igual.** Lánzalo como siempre: el tope son
+      60 peticiones por minuto y por token, así que un terminal normal ni se
+      entera. **Si te sale un error 429, dímelo enseguida** y subimos
+      `MT5_RATE_LIMIT_TOKEN`.
+- [ ] **Con varios terminales a la vez** (si puedes probarlo): el tope por IP son
+      120/min y se comparte entre todos los que salgan por la misma IP.
+- [ ] **Se puede subir sin tocar código.** Cambia `MT5_RATE_LIMIT_TOKEN` en el
+      `.env`, `php artisan config:cache`, y comprueba que el nuevo tope manda.
+
+**Prueba retroactiva** — en producción, cuando despliegues
+
+- [ ] **En seco primero:** `php artisan prueba:retroactiva --dry-run`. Lee la
+      lista de correos que saldría **antes** de aplicar nada.
+- [ ] **Comprueba que no está quien no debe**: nadie con suscripción viva, nadie
+      que ya gastara su prueba, y el usuario de la demo fuera.
+- [ ] **Aplícalo** sin `--dry-run` y entra con uno de esos usuarios: tiene que
+      ver los módulos PRO y los días restantes en la barra.
+- [ ] *(En tu base de desarrollo no hay a quién dársela: tú tienes suscripción y
+      el otro usuario es la demo. Esto solo se puede probar en producción.)*
+
+**Clockwork fuera de producción**
+
+- [ ] **En el servidor**, tras desplegar: `composer install --no-dev` y comprueba
+      que `vendor/itsgoingd` **no existe**. En local sigue estando, que es lo que
+      se quiere.
 
 ### Correcciones sueltas del 2026-08-27
 *(build ✅ hecho — necesitan **Ctrl+F5**)*

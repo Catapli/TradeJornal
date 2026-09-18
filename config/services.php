@@ -58,6 +58,23 @@ return [
         'r2_bucket'  => env('R2_BUCKET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Agente de MetaTrader
+    |--------------------------------------------------------------------------
+    |
+    | Topes por minuto de los endpoints del `.exe`. Un terminal normal sincroniza
+    | una vez por minuto, así que 60 le sobra de largo; el tope por IP es más
+    | alto para que una oficina con varios terminales detrás del mismo NAT no se
+    | frene sola, y es el que acota la fuerza bruta sobre `sync_token`.
+    |
+    */
+
+    'mt5' => [
+        'rate_limit_token' => (int) env('MT5_RATE_LIMIT_TOKEN', 60),
+        'rate_limit_ip' => (int) env('MT5_RATE_LIMIT_IP', 120),
+    ],
+
 
 
 ];

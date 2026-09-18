@@ -119,8 +119,11 @@ tanda? ¿el importador crea la cuenta si no existe?
 >   si hay `RECOVERY_COUPON` configurado: nunca se promete una rebaja que el
 >   checkout no vaya a aplicar.
 >
-> **Anotado, no hecho:** los usuarios ya existentes no reciben prueba
-> (`trial_ends_at` sigue a null). Si se quiere dársela, es un comando de una línea.
+> **Anotado, no hecho → HECHO el 2026-09-18:** los usuarios ya existentes se
+> quedaron sin prueba (`trial_ends_at` a null). Ya existe el comando:
+> `php artisan prueba:retroactiva`, con `--dry-run`, `--days=` y `--user=`. Deja
+> fuera a quien ya la gastó, a quien tiene suscripción viva y al usuario de la
+> demo. **No se programa**: es de un solo uso y se lanza a mano.
 
 ### Lo previsto originalmente
 
@@ -927,3 +930,4 @@ adaptativa, y el diario rápido de R6 como puerta de entrada móvil.
 | 2026-09-18 | — | Panel del principiante: las tres tarjetas de puesta en marcha se pliegan (`tfMinimizable`, estado en localStorage) y aplicar el filtro de cuentas avisa mientras recalcula. Corregida una petición duplicada del multiselect. 4 tests nuevos. |
 | 2026-09-18 | — | Opción A: el Mentor, la cola de repaso y los hallazgos pasan a mirar al trader (quemadas dentro, archivadas fuera); el panel y el consejo del día se quedan con las vivas. El perfil declara sobre cuántas cuentas se calcula. 8 tests nuevos. |
 | 2026-09-18 | — | `/cuentas` ofrece también las cuentas quemadas, al final y marcadas: antes no había forma de llegar a una cuenta reventada desde su propia pantalla. Las tres pantallas con selector comparten ya el criterio. 3 tests nuevos. |
+| 2026-09-18 | — | Endurecido antes de producción: `clockwork` sale de `require` (se instalaba en producción), los 4 endpoints del `.exe` pasan a tener `throttle` con dos topes (token e IP), y `prueba:retroactiva` da por fin la prueba de 14 días a los usuarios que ya existían. 14 tests nuevos. |

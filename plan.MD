@@ -425,10 +425,18 @@ cuenta (`mt5_login`) pertenece al usuario del token. `User::regenerateSyncToken(
 rotarlo.
 
 Lo que sí conviene revisar de este flujo:
-- [ ] **Rate limiting por token**: hoy no hay `throttle` en estas rutas. Un `.exe` en
-      bucle o un token filtrado pueden martillear la API sin freno.
+- [x] ~~**Rate limiting por token**~~ — **HECHO (2026-09-18)**. Limitador `mt5-sync`
+      en `AppServiceProvider` con **dos topes**: por token (`MT5_RATE_LIMIT_TOKEN`,
+      60/min) y por IP (`MT5_RATE_LIMIT_IP`, 120/min). Los dos hacen falta: con
+      solo el de token, quien probase tokens al azar estrenaría cubo en cada
+      intento y la fuerza bruta saldría gratis; con solo el de IP, una oficina con
+      varios terminales tras el mismo NAT compartiría cubo sin motivo. Se leen de
+      configuración en cada petición, así que se suben sin tocar código.
+      Cubierto por `tests/Feature/Api/Mt5RateLimitTest.php` (4 tests).
 - [ ] El token viaja en el **body** en vez de en una cabecera: acaba en cualquier log de
       request que capture el payload. Considerar `Authorization: Bearer`.
+      **Ojo al retomarlo:** cambiarlo rompe el `.exe` que ya está instalado, así
+      que hay que versionarlo antes o aceptar los dos formatos durante un tiempo.
 - [ ] Versionado del `.exe` y comportamiento ante un payload de versión antigua.
 
 ### 2.5.d Traducciones — ✅ ARREGLADO (2026-08-21)
@@ -625,12 +633,14 @@ Cubierto por `tests/Feature/Api/Mt5SyncTest.php` — **13 tests**.
 
 #### D. Hallazgos anotados, no tocados
 
-- **`itsgoingd/clockwork` está en `require`, no en `require-dev`** → se instala en
-  producción con `composer install --no-dev`. Mover a `require-dev`.
+- [x] ~~**`itsgoingd/clockwork` está en `require`, no en `require-dev`**~~ —
+  **HECHO (2026-09-18)**: movido a `require-dev`. En el lock ya no aparece en
+  `packages`, así que `composer install --no-dev` deja de instalarlo. Nada del
+  código lo usaba: solo el auto-discovery.
 - **`CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` = `database`.** Los 22 `Cache::`
   que se decidió mantener (§2.3) **son consultas contra la misma BD que intentan aliviar**.
   Redis cambiaría eso de golpe y encaja con la decisión de "optimizar lo que hay".
-- Sigue sin `throttle` en `routes/api.php` (§2.5.b).
+- ~~Sigue sin `throttle` en `routes/api.php`~~ — resuelto el 2026-09-18, ver §2.5.b.
 - `User::booted()` sobrescribe siempre el `sync_token` al crear, así que no se puede
   inyectar uno ni desde un seeder ni desde un test. Es defendible como decisión de
   seguridad; queda anotado porque obliga a leer el token generado.
