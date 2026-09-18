@@ -735,14 +735,23 @@ Decisión de Jordi: las tres tarjetas de puesta en marcha **ocupan demasiado**
 cuando aún no hay datos, pero cerrarlas no es la respuesta —la guía de primeros
 pasos todavía tiene trabajo pendiente—. Se pueden **plegar**.
 
-- **`tfMinimizable`**, un `Alpine.data` compartido por las tres tarjetas
-  (`onboarding`, `ritual`, `sample`). Plegada, cada una es una línea.
+- **`tfStartupBlock`**, un `Alpine.data` que envuelve las tres tarjetas
+  (ritual, primeros pasos y datos de ejemplo) y las pliega **juntas**, dejando
+  una sola línea con el título y cuántas hay.
+- **Se intentó primero una a una y no servía** (corregido el mismo día, a la
+  segunda vuelta de Jordi): tres tarjetas plegadas siguen ocupando tres barras
+  encima de los números, que es justo lo que molestaba.
+- **El bloque desaparece con la última tarjeta.** Cada componente Livewire deja
+  su `<div>` raíz aunque no pinte nada, así que el recuento mira el
+  `textContent` —no `innerText`, que devuelve vacío con el bloque plegado— y un
+  `MutationObserver` lo rehace tras cada morph, sin depender de los internos de
+  Livewire.
 - **El estado va en `localStorage`, no en la base**: es una preferencia de vista
   de ese navegador, no un dato del usuario, así que no cuesta ni una consulta ni
   una migración. Todos los accesos van en `try/catch`: en modo privado o con el
   almacenamiento bloqueado el getter lanza.
-- **El ritual conserva su botón de empezar aunque esté plegado.** Esconderlo
-  convertiría el plegado en un cierre, y cerrar ya lo hace «Hoy no».
+- **La autopsia de la cuenta quemada se queda fuera del bloque**: no es puesta
+  en marcha, aparece una sola vez y se cierra sola.
 - **Aviso al aplicar el filtro de cuentas.** Pulsar «Aplicar» iba al servidor sin
   que nada lo dijera. Ahora el botón pasa a «Aplicando…» y el selector a
   «Actualizando datos…» durante exactamente lo que dura la petición (`$refresh()`
@@ -751,8 +760,14 @@ pasos todavía tiene trabajo pendiente—. Se pueden **plegar**.
   `$watch('open')` mandaba otro al cerrarse el desplegable. Cerrar pulsando fuera
   ahora pasa por el mismo camino, con su aviso.
 
-4 tests nuevos, que solo pueden fijar que **el enganche está en el marcado**: el
-plegado lo resuelve Alpine, así que el comportamiento va a la lista manual.
+3 tests sobre la página del panel, que solo pueden fijar que **el enganche está
+en el marcado** y que el bloque no se pinta sin tarjetas: el plegado lo resuelve
+Alpine, así que el comportamiento va a la lista manual.
+
+**Y la sección de cuentas archivadas cambia de sitio** (segunda vuelta de Jordi):
+estaba al pie de `/cuentas`, que es donde no la ve nadie. Pasa a un botón con
+contador **junto al enlace de conexión con MetaTrader**, en la cabecera, y abre
+un modal. Los dos son destinos, no contenido.
 
 ### A · El análisis mira al trader, no a la cuenta viva ✅ (2026-09-18)
 

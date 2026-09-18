@@ -11,16 +11,12 @@
             ];
         @endphp
 
-        <div class="mb-5 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-             x-data="tfMinimizable('onboarding')">
+        <div class="mb-5 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
 
-            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-                 :class="min || 'border-b border-gray-100 dark:border-gray-700'">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700">
                 <div>
                     <h2 class="text-base font-black text-gray-900 dark:text-gray-100">{{ __('onboarding.title') }}</h2>
-                    {{-- El subtítulo se va con el cuerpo: plegada, la tarjeta es una línea. --}}
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
-                       x-show="!min">{{ __('onboarding.subtitle') }}</p>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('onboarding.subtitle') }}</p>
                 </div>
 
                 <div class="flex items-center gap-4">
@@ -37,22 +33,10 @@
                     <button class="text-xs font-semibold text-gray-400 underline transition hover:text-gray-600 dark:hover:text-gray-200"
                             type="button"
                             wire:click="dismiss">{{ __('onboarding.dismiss') }}</button>
-
-                    <button class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                            type="button"
-                            @click="toggle()"
-                            :aria-expanded="(!min).toString()"
-                            :title="min ? @js(__('labels.card_expand')) : @js(__('labels.card_minimize'))"
-                            :aria-label="min ? @js(__('labels.card_expand')) : @js(__('labels.card_minimize'))">
-                        <i class="fa-solid fa-chevron-up text-xs transition-transform"
-                           :class="min && 'rotate-180'"></i>
-                    </button>
                 </div>
             </div>
 
-            <ol class="divide-y divide-gray-100 dark:divide-gray-700"
-                x-show="!min"
-                x-collapse>
+            <ol class="divide-y divide-gray-100 dark:divide-gray-700">
                 @foreach ($steps as $key => $meta)
                     @php($isDone = $done[$key] ?? false)
                     <li class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

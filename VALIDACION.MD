@@ -55,7 +55,7 @@ tu histórico** en tu propia cuenta.
 
 ## Índice de lo pendiente
 
-**135 comprobaciones en 9 bloques.** Ninguna marcada todavía.
+**139 comprobaciones en 9 bloques.** Ninguna marcada todavía.
 
 | # | Bloque | Entregado | Migración | Ctrl+F5 |
 |---|---|---|---|---|
@@ -358,11 +358,14 @@ enero · necesita **Ctrl+F5**, cambia el JS)*
 - [ ] **Archiva de verdad.** Confirma: la cuenta desaparece de `/cuentas`, del
       selector del panel y de `/trades`. **Apunta antes el total de operaciones
       de `/trades`** y comprueba que baja en las de esa cuenta.
-- [ ] **Aparece la sección «Cuentas archivadas»** al final de `/cuentas`, con el
-      número de cuentas en la cabecera. Ábrela: cada una dice **cuántas
+- [ ] **El acceso está arriba, junto a «Conexión»**: un botón «Cuentas
+      archivadas» con el número en una pastilla ámbar, al lado del enlace de
+      MetaTrader. Ábrelo: sale un modal donde cada cuenta dice **cuántas
       operaciones guarda** y en qué fecha se archivó.
-- [ ] **La sección no existe si no has archivado nada.** Con la cola vacía no
-      debe salir ni el desplegable.
+- [ ] **El botón no existe si no has archivado nada.** Sin archivadas, en la
+      cabecera solo está «Conexión».
+- [ ] **El modal se cierra** con la X, con Escape y pulsando fuera.
+- [ ] **Ya no hay nada al pie de `/cuentas`.** La sección de abajo se retiró.
 - [ ] **Restaurar la devuelve entera.** Pulsa «Restaurar»: vuelve a `/cuentas`,
       vuelve al selector del panel y **el total de `/trades` vuelve a ser el de
       antes**, operación por operación.
@@ -409,23 +412,25 @@ enero · necesita **Ctrl+F5**, cambia el JS)*
 *(mismo día · sin migración · **Ctrl+F5** · esto lo resuelve Alpine, así que los
 tests no lo ven: hay que mirarlo)*
 
-- [ ] **Las tres tarjetas tienen un botón de plegar** (galón, arriba a la
-      derecha): «Primeros pasos», «Ritual pre-mercado» y «¿Todavía sin
-      operaciones?». Con un usuario recién registrado salen las tres a la vez,
-      que es el caso que se queja.
-- [ ] **Plegada, la tarjeta es una línea.** La guía se queda con su título, la
-      barra de progreso y el enlace de descartar; el ritual con su título y el
-      botón de empezar; la de ejemplo con su título.
-- [ ] **El ritual conserva «Empezar»** aunque esté plegado. Si lo esconde,
-      plegar sería cerrar y eso ya lo hace «Hoy no».
-- [ ] **Se recuerda al recargar.** Pliega las tres, pulsa F5: siguen plegadas.
+- [ ] **Hay una sola barra encima de las tres tarjetas**: «Puesta en marcha»
+      con el número de tarjetas y un botón «Minimizar» a la derecha. Con un
+      usuario recién registrado salen las tres, así que el contador dice 3.
+- [ ] **Se pliegan todas de golpe.** Al pulsar «Minimizar» desaparecen las tres
+      y queda **solo esa línea**. Es el punto de todo esto: si sigues viendo
+      varias barras apiladas, está mal.
+- [ ] **El botón cambia a «Desplegar»** y las devuelve enteras.
+- [ ] **Ya no hay galones por tarjeta.** Ninguna de las tres se pliega sola.
+- [ ] **Se recuerda al recargar.** Pliega el bloque, pulsa F5: sigue plegado.
 - [ ] **Es por navegador, no por cuenta.** Ábrelo en otro navegador o en una
       ventana privada: salen desplegadas. Es a propósito —es una preferencia de
       vista, no un dato tuyo—, pero conviene que lo sepas.
 - [ ] **Descartar sigue funcionando.** «Ya lo tengo» en la guía la quita del todo
       y no vuelve al recargar.
-- [ ] **El galón gira** al plegar y desplegar, y el `title` cambia entre
-      «Minimizar» y «Desplegar».
+- [ ] **El bloque desaparece entero cuando ya no hay tarjetas.** Completa los
+      tres pasos (o descarta la guía con el ritual hecho): no debe quedar ni la
+      barra ni un hueco encima de los números.
+- [ ] **La autopsia de la cuenta quemada se queda fuera del bloque** y no se
+      pliega con él. Solo se ve si acabas de quemar una cuenta.
 - [ ] **Al aplicar el filtro de cuentas se nota.** `/dashboard` → abre el
       selector, cambia la selección y pulsa **Aplicar**: el botón pasa a
       «Aplicando…» con su ruedecita y el propio selector dice «Actualizando

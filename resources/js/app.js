@@ -53,37 +53,69 @@ import "./admin/adminpanel.js";
 
 document.addEventListener("alpine:init", () => {
     /**
-     * Tarjeta que el usuario puede plegar.
+     * El bloque de puesta en marcha del panel, plegable de una vez.
      *
-     * Las tres tarjetas de puesta en marcha (primeros pasos, ritual pre-mercado y
-     * datos de ejemplo) se apilan justo donde un principiante espera ver sus
-     * números, y son las que más sitio ocupan precisamente cuando menos datos
-     * hay. Cerrarlas del todo no sirve: la de primeros pasos aún tiene trabajo
-     * pendiente. Plegarlas sí.
+     * Las tres tarjetas (ritual pre-mercado, primeros pasos y datos de ejemplo)
+     * se apilan justo donde un principiante espera ver sus números, y son las
+     * que más sitio ocupan precisamente cuando menos datos hay. Plegarlas una a
+     * una no resolvía nada: tres tarjetas plegadas siguen siendo tres barras.
+     * Se pliega el bloque entero y queda una sola línea.
+     *
+     * Cerrarlas del todo no vale como alternativa: la guía de primeros pasos
+     * todavía tiene trabajo pendiente y tiene que poder volver.
      *
      * El estado va en localStorage y no en la base: es una preferencia de vista
      * de este navegador, no un dato del usuario, y así no cuesta ni una consulta.
      * Todos los accesos van en try/catch porque en modo privado o con el
      * almacenamiento bloqueado el getter lanza.
      */
-    Alpine.data("tfMinimizable", (key) => ({
+    Alpine.data("tfStartupBlock", () => ({
         min: false,
+
+        /** Cuántas tarjetas hay pintadas ahora mismo (0 = no enseñar el bloque). */
+        cards: 0,
+
+        observer: null,
 
         init() {
             try {
-                this.min = localStorage.getItem("tf_min_" + key) === "1";
+                this.min = localStorage.getItem("tf_min_startup") === "1";
             } catch (e) {
                 this.min = false;
             }
+
+            this.count();
+
+            // Las tarjetas son componentes Livewire y se despintan solas al
+            // completarse un paso o al descartarlas. Con un observador, el
+            // bloque desaparece con la última sin depender de los internos de
+            // Livewire ni de recargar la página.
+            this.observer = new MutationObserver(() => this.count());
+            this.observer.observe(this.$refs.cards, { childList: true, subtree: true });
+        },
+
+        destroy() {
+            this.observer?.disconnect();
+        },
+
+        /**
+         * Cada componente Livewire deja su <div> raíz aunque no pinte nada, así
+         * que lo que cuenta es si tiene contenido. textContent y no innerText:
+         * el primero funciona también con el bloque plegado (display:none).
+         */
+        count() {
+            this.cards = Array.from(this.$refs.cards?.children ?? []).filter(
+                (el) => el.textContent.trim() !== "",
+            ).length;
         },
 
         toggle() {
             this.min = !this.min;
 
             try {
-                localStorage.setItem("tf_min_" + key, this.min ? "1" : "0");
+                localStorage.setItem("tf_min_startup", this.min ? "1" : "0");
             } catch (e) {
-                // Sin persistencia, pero la tarjeta se pliega igual en esta sesión.
+                // Sin persistencia, pero el bloque se pliega igual en esta sesión.
             }
         },
     }));

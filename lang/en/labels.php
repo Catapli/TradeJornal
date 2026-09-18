@@ -198,6 +198,8 @@ return [
     'account_badge_burned' => 'Burned',
     'card_minimize' => 'Minimise',
     'card_expand' => 'Expand',
+    'close_dialog' => 'Close',
+    'startup_block' => 'Getting started',
     'applying_filters' => 'Applying…',
     'updating_data' => 'Updating data…',
     'account_restored' => 'Account restored with its full history.',

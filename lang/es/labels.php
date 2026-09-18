@@ -198,6 +198,8 @@ return [
     'account_badge_burned' => 'Quemada',
     'card_minimize' => 'Minimizar',
     'card_expand' => 'Desplegar',
+    'close_dialog' => 'Cerrar',
+    'startup_block' => 'Puesta en marcha',
     'applying_filters' => 'Aplicando…',
     'updating_data' => 'Actualizando datos…',
     'account_restored' => 'Cuenta restaurada con todo su histórico.',

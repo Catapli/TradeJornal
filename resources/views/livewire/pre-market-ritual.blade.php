@@ -1,45 +1,27 @@
 {{-- Ritual pre-mercado (R5): tarjeta en el panel + modal de tres pasos. --}}
 <div>
     @if ($this->shouldShow())
-        <div class="mb-5 overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white dark:border-indigo-500/30 dark:from-indigo-500/10 dark:to-gray-800"
-             x-data="tfMinimizable('ritual')">
-            <div class="flex flex-wrap items-center justify-between gap-4 px-5 transition-all"
-                 :class="min ? 'py-2.5' : 'py-4'">
+        <div class="mb-5 overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white dark:border-indigo-500/30 dark:from-indigo-500/10 dark:to-gray-800">
+            <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
 
                 <div class="flex items-start gap-3">
-                    <span class="flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-all"
-                          :class="min ? 'mt-0 h-7 w-7 text-xs' : 'mt-0.5 h-9 w-9'">
+                    <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
                         <i class="fa-solid fa-mug-hot"></i>
                     </span>
                     <div>
-                        <h2 class="font-black text-gray-900 transition-all dark:text-gray-100"
-                            :class="min ? 'text-sm leading-7' : 'text-base'">{{ __('ritual.card.title') }}</h2>
-                        <p class="mt-0.5 max-w-xl text-xs leading-relaxed text-gray-600 dark:text-gray-400"
-                           x-show="!min">{{ __('ritual.card.lead') }}</p>
+                        <h2 class="text-base font-black text-gray-900 dark:text-gray-100">{{ __('ritual.card.title') }}</h2>
+                        <p class="mt-0.5 max-w-xl text-xs leading-relaxed text-gray-600 dark:text-gray-400">{{ __('ritual.card.lead') }}</p>
                     </div>
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2">
-                    {{-- El botón de empezar se queda aunque esté plegada: son 60
-                         segundos y esconderlo convertiría el plegado en un cierre. --}}
                     <button class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
                             type="button"
                             wire:click="start">{{ __('ritual.card.cta') }}</button>
 
                     <button class="text-xs font-semibold text-gray-400 underline transition hover:text-gray-600 dark:hover:text-gray-200"
                             type="button"
-                            x-show="!min"
                             wire:click="postpone">{{ __('ritual.card.skip') }}</button>
-
-                    <button class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/60 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                            type="button"
-                            @click="toggle()"
-                            :aria-expanded="(!min).toString()"
-                            :title="min ? @js(__('labels.card_expand')) : @js(__('labels.card_minimize'))"
-                            :aria-label="min ? @js(__('labels.card_expand')) : @js(__('labels.card_minimize'))">
-                        <i class="fa-solid fa-chevron-up text-xs transition-transform"
-                           :class="min && 'rotate-180'"></i>
-                    </button>
                 </div>
             </div>
         </div>
