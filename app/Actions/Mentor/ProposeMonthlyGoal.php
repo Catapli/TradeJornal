@@ -80,7 +80,10 @@ class ProposeMonthlyGoal
      */
     private function monthTrades(int $userId, CarbonImmutable $month): \Illuminate\Support\Collection
     {
-        return Trade::forUserActiveAccounts($userId)
+        // Cuenta lo mismo que `BuildTraderProfile` (quemadas dentro, archivadas
+        // fuera). Si una contara las quemadas y la otra no, el objetivo se
+        // propondría sobre una base y se mediría sobre otra.
+        return Trade::forUser($userId)
             ->whereBetween('exit_time', [$month->startOfMonth(), $month->endOfMonth()])
             ->with('mistakes')
             ->get();

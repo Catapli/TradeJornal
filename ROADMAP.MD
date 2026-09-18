@@ -754,18 +754,52 @@ pasos todavía tiene trabajo pendiente—. Se pueden **plegar**.
 4 tests nuevos, que solo pueden fijar que **el enganche está en el marcado**: el
 plegado lo resuelve Alpine, así que el comportamiento va a la lista manual.
 
+### A · El análisis mira al trader, no a la cuenta viva ✅ (2026-09-18)
+
+**La regla, en una frase: quemada no es lo mismo que archivada.** Una cuenta
+quemada guarda el historial más instructivo que tiene un trader —es el que
+explica por qué se quemó— y quien la pierde sigue operando igual al día
+siguiente. Una archivada la aparta el usuario a propósito.
+
+`Trade::forUser()` ya hacía exactamente eso (quemadas dentro, archivadas fuera
+por el scope global), así que A es elegir bien el scope en cada sitio:
+
+| Pasa a `forUser` (habla del trader) | Se queda en `forUserActiveAccounts` (habla de dinero vivo) |
+|---|---|
+| `BuildTraderProfile` · `ProposeMonthlyGoal` · `TrackMonthlyGoal` | El valor por defecto del panel (`DashboardTradeQuery`) |
+| `CountPendingReview` · `ReviewPage` | `AiDailyTip` — una cuenta muerta no opera hoy |
+| `FindingsPanel` y su selector de cuenta | |
+
+- **Los tres del Mentor van juntos a propósito.** Si la propuesta contara las
+  quemadas y el seguimiento no, el objetivo del mes se propondría sobre una base
+  y se mediría sobre otra.
+- **Los hallazgos eran la incoherencia declarada en el diagnóstico:** la consulta
+  grande del Laboratorio (`ReportsPage`) ya usaba `forUser`, así que sobre las
+  mismas operaciones convivían dos criterios.
+- **La cola de repaso puede crecer de golpe** en cuanto haya una cuenta quemada
+  con perdedoras sin marcar. Es lo correcto: son justo las que hay que repasar.
+- **Se declara la mezcla, no se normaliza.** Con las quemadas dentro el perfil
+  puede juntar cuentas de tamaños distintos, así que lleva `accounts` y la
+  pantalla avisa cuando son más de una. Normalizar por balance sigue descartado
+  mientras haya una sola cuenta real: sería la matemática inventada que costó P1.
+
+8 tests nuevos en `tests/Feature/Mentor/BurnedAccountScopeTest.php`. No había
+ninguno que fijara la exclusión anterior: era una decisión implícita.
+
 ### Lo que sigue abierto
 
-- **A · Que el análisis de comportamiento mire al trader, no a la cuenta viva.**
-  Cambiar `forUserActiveAccounts` por `forUser` en Mentor, hallazgos y coste de
-  errores, dejando la exclusión donde se habla de dinero vivo y reglas de la
-  firma. Es lo que de verdad resuelve la queja. **Decisión tomada el 2026-09-18:
-  no se construye el % agregado ahora.** El conmutador `$ / %` del navbar es un
-  `Alpine.store` que solo elige entre dos números que el servidor ya manda
-  (`format(amount, percent)`) y solo lo consumen 4 vistas: no llega al Mentor ni
-  al coste de errores. Y con **una sola cuenta real**, normalizar por balance es
-  matemática para datos que no existen — la lección de P1 y P3. Cuando se abra A,
-  la mezcla se **declara** como se declara la cobertura.
+- ~~**A (resto) · El selector de `/cuentas`.**~~ **Hecho el 2026-09-18**: la
+  lista ofrece también las quemadas, al final y marcadas en el propio texto de la
+  opción —un `<select>` no admite más—, así que la selección por defecto sigue
+  cayendo en una cuenta viva. Con esto se llega al histórico, a las reglas y al
+  botón de archivar de una cuenta reventada, que antes no tenían puerta. Las tres
+  pantallas con selector (panel, Laboratorio y cuentas) usan ya el mismo criterio.
+- **El % agregado sigue descartado, y conviene recordar por qué.** El conmutador
+  `$ / %` del navbar es un `Alpine.store` que solo elige entre dos números que el
+  servidor ya manda (`format(amount, percent)`), y solo lo consumen 4 vistas: no
+  llega al Mentor ni al coste de errores. Con **una sola cuenta real**,
+  normalizar por balance es matemática para datos que no existen — la lección de
+  P1 y P3. Por eso A declara la mezcla en vez de normalizarla.
 - **B · Linaje de cuentas** (`previous_account_id`): «esta cuenta continúa
   aquella», para ver varios challenges como una sola trayectoria. Solo si de
   verdad se van a encadenar.
@@ -876,3 +910,5 @@ adaptativa, y el diario rápido de R6 como puerta de entrada móvil.
 | 2026-09-18 | — | Continuidad de los datos: `Account` pasa a soft deletes y «Eliminar» archiva. El botón dice cuántas operaciones aparta, hay sección de archivadas con restaurar, y el borrado real es un segundo paso sobre una cuenta ya archivada. Atados los dos agujeros del scope global (`mt5_login` único y los `join` de rachas y resumen semanal). Sin migración: `deleted_at` existía desde enero sin usar. 11 tests nuevos. |
 | 2026-09-18 | — | El selector de cuentas del panel pasa a ofrecer también las quemadas y las archivadas, con etiqueta. «Todas» sigue siendo solo las vivas: la regla es que elegir a mano es pedirlas. 8 tests nuevos. |
 | 2026-09-18 | — | Panel del principiante: las tres tarjetas de puesta en marcha se pliegan (`tfMinimizable`, estado en localStorage) y aplicar el filtro de cuentas avisa mientras recalcula. Corregida una petición duplicada del multiselect. 4 tests nuevos. |
+| 2026-09-18 | — | Opción A: el Mentor, la cola de repaso y los hallazgos pasan a mirar al trader (quemadas dentro, archivadas fuera); el panel y el consejo del día se quedan con las vivas. El perfil declara sobre cuántas cuentas se calcula. 8 tests nuevos. |
+| 2026-09-18 | — | `/cuentas` ofrece también las cuentas quemadas, al final y marcadas: antes no había forma de llegar a una cuenta reventada desde su propia pantalla. Las tres pantallas con selector comparten ya el criterio. 3 tests nuevos. |

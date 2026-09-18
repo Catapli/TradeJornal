@@ -398,9 +398,11 @@
                 <select class="w-full appearance-none rounded-xl border-2 border-gray-200 bg-gradient-to-r from-white via-gray-50 to-white px-4 py-3 pr-12 text-lg font-bold text-gray-900 shadow-sm transition-all duration-300 hover:border-gray-300 hover:shadow-md focus:border-gray-400 focus:shadow-lg focus:ring-4 focus:ring-gray-100 dark:border-gray-600 dark:bg-none dark:bg-gray-700 dark:text-gray-100 dark:hover:border-gray-500"
                         @change="$wire.changeAccount($event.target.value)">
                     @forelse($this->accounts as $account)
+                        {{-- Una quemada se elige igual que las demás, pero tiene que
+                             saberse cuál es: el <select> no admite más que texto. --}}
                         <option value="{{ $account->id }}"
                                 {{ $this->selectedAccount?->id == $account->id ? 'selected' : '' }}>
-                            {{ $account->name }}
+                            {{ $account->name }}@if ($account->status === 'burned') · {{ __('labels.account_badge_burned') }}@endif
                         </option>
                     @empty
                         <option value="">{{ __('labels.without_accounts') }}</option>

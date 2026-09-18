@@ -112,17 +112,24 @@ class AccountPage extends Component
     public $syncCheckEnabled = true; // Por si quieres desactivarlo
 
     /**
-     * Cuentas activas (no quemadas) del usuario. Computed: se resuelve por
-     * request y NO se serializa en el snapshot de Livewire.
+     * Cuentas del usuario, quemadas incluidas. Computed: se resuelve por request
+     * y NO se serializa en el snapshot de Livewire.
+     *
+     * Las quemadas estaban escondidas, así que a una cuenta reventada no se
+     * llegaba desde su propia pantalla: ni a su histórico, ni a sus reglas, ni
+     * para archivarla. Salen al final de la lista y marcadas, de modo que la
+     * selección por defecto —la primera— sigue cayendo en una cuenta viva.
+     *
+     * Las archivadas sí siguen fuera: tienen su propia sección al pie.
      */
     #[Computed]
     public function accounts()
     {
         return Account::where('user_id', Auth::id())
-            ->where('status', '!=', 'burned')
             // El aviso de archivado dice cuántas operaciones se apartan: sin el
             // número, «se archiva el histórico» no significa nada.
             ->withCount('trades')
+            ->orderByRaw("CASE WHEN status = 'burned' THEN 1 ELSE 0 END")
             ->orderBy('name')
             ->get();
     }

@@ -32,6 +32,11 @@ class Trade extends Model
 
     /**
      * Trades cuyas cuentas pertenecen al usuario (por defecto, el autenticado).
+     *
+     * Incluye las **quemadas** —el historial sigue siendo suyo y es el más
+     * instructivo que tiene— y deja fuera las **archivadas**, que las aparta el
+     * scope global de SoftDeletes de `Account`. Es el filtro de todo lo que
+     * habla del trader: Mentor, hallazgos y cola de repaso.
      */
     public function scopeForUser($query, $userId = null)
     {
@@ -41,7 +46,12 @@ class Trade extends Model
     }
 
     /**
-     * Igual que forUser, pero excluyendo cuentas quemadas (filtro estándar de los dashboards).
+     * Igual que forUser, pero excluyendo también las cuentas quemadas.
+     *
+     * Es el filtro de lo que habla de **dinero vivo**: el valor por defecto del
+     * panel y el consejo del día. Una cuenta muerta no opera hoy. Para verla en
+     * el panel se elige a mano en el selector, y entonces `DashboardTradeQuery`
+     * no aplica este scope.
      */
     public function scopeForUserActiveAccounts($query, $userId = null)
     {

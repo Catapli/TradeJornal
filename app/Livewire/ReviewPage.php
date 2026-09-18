@@ -64,7 +64,7 @@ class ReviewPage extends Component
 
         return $id === null
             ? null
-            : Trade::forUserActiveAccounts()
+            : Trade::forUser()
                 // `currency` va en el select: sin ella la ficha pinta el símbolo por
                 // defecto sin fallar, que es la trampa clásica de esta base.
                 ->with(['tradeAsset', 'account:id,name,currency', 'mistakes'])

@@ -54,7 +54,10 @@ class FindingsPanel extends Component
     #[Computed]
     public function findings(): array
     {
-        $query = Trade::forUserActiveAccounts(Auth::id())->with('mistakes');
+        // La consulta grande del Laboratorio (`ReportsPage`) ya usaba `forUser`,
+        // así que los hallazgos eran la única pieza de la pantalla que dejaba las
+        // quemadas fuera: mismas operaciones, dos criterios.
+        $query = Trade::forUser(Auth::id())->with('mistakes');
 
         if ($this->accountId !== 'all') {
             $query->where('account_id', (int) $this->accountId);
@@ -88,8 +91,9 @@ class FindingsPanel extends Component
     #[Computed]
     public function accounts(): Collection
     {
+        // Si los hallazgos ya cuentan las quemadas, el filtro tiene que dejar
+        // elegirlas; si no, se pueden ver mezcladas pero no aisladas.
         return Account::where('user_id', Auth::id())
-            ->where('status', '!=', 'burned')
             ->get(['id', 'name']);
     }
 

@@ -42,7 +42,12 @@ class BuildTraderProfile
         $desde = $hoy->startOfMonth()->subMonths(self::MONTHS - 1);
         $mesActual = $hoy->startOfMonth();
 
-        $trades = Trade::forUserActiveAccounts($userId)
+        // `forUser` y no `forUserActiveAccounts`: una cuenta **quemada** guarda
+        // el historial más instructivo que tiene un trader, y quien la quema
+        // sigue operando igual al día siguiente. Dejarla fuera borraba meses de
+        // perfil justo el día en que más falta hacía mirarlos. Las **archivadas**
+        // sí siguen fuera: esas las aparta el usuario a propósito.
+        $trades = Trade::forUser($userId)
             ->where('exit_time', '>=', $desde)
             ->with('mistakes')
             ->get();
@@ -54,6 +59,11 @@ class BuildTraderProfile
             'from' => $desde->toDateString(),
             'months' => self::MONTHS,
             'trades' => $trades->count(),
+            // Con las quemadas dentro, el perfil puede juntar cuentas de tamaños
+            // distintos y los euros dejan de ser comparables entre sí. No se
+            // normaliza —con una sola cuenta real sería matemática inventada—,
+            // pero se declara, igual que se declara la cobertura.
+            'accounts' => $trades->pluck('account_id')->unique()->count(),
             'reviewed' => $coste['reviewed'],
             'coverage' => $coste['coverage'],
             'marks' => $marcas,

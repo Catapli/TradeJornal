@@ -62,6 +62,12 @@
                         'trades' => $perfil['trades'],
                         'coverage' => number_format($perfil['coverage'], 1, ',', '.'),
                     ]) }}
+
+                    {{-- Con una sola cuenta sobra decirlo; con varias, el importe
+                         en euros mezcla tamaños y hay que avisarlo. --}}
+                    @if (($perfil['accounts'] ?? 1) > 1)
+                        · {{ __('mentor.accounts_mixed', ['accounts' => $perfil['accounts']]) }}
+                    @endif
                 </p>
             </div>
 

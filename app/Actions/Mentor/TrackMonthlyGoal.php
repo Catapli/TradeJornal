@@ -100,7 +100,8 @@ class TrackMonthlyGoal
     /** @return Collection<int, Trade> */
     private function monthTrades(int $userId, CarbonImmutable $month): Collection
     {
-        return Trade::forUserActiveAccounts($userId)
+        // Mismo criterio que la propuesta: quemadas dentro, archivadas fuera.
+        return Trade::forUser($userId)
             ->whereBetween('exit_time', [$month->startOfMonth(), $month->endOfMonth()])
             ->with('mistakes')
             ->get();

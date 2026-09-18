@@ -55,7 +55,7 @@ tu histórico** en tu propia cuenta.
 
 ## Índice de lo pendiente
 
-**123 comprobaciones en 8 bloques.** Ninguna marcada todavía.
+**135 comprobaciones en 9 bloques.** Ninguna marcada todavía.
 
 | # | Bloque | Entregado | Migración | Ctrl+F5 |
 |---|---|---|---|---|
@@ -67,6 +67,7 @@ tu histórico** en tu propia cuenta.
 | 6 | Fase 6 · Repaso de errores (usabilidad) | 28-ago | no lleva | **sí, obligatorio** |
 | 7 | Correcciones sueltas del 27-ago | 27-ago | no lleva | sí |
 | 8 | Archivar cuentas · selector · tarjetas plegables | 18-sep | **no lleva** | **sí, obligatorio** |
+| 9 | Opción A · el análisis mira al trader | 18-sep | no lleva | sí |
 
 > **P3 · Centro de mando ya no está aquí.** Se construyó y se retiró el mismo día:
 > con 7 días operados la simulación se callaba y lo que quedaba en pantalla ya lo
@@ -435,6 +436,45 @@ tests no lo ven: hay que mirarlo)*
       tiene que salir **una**.
 - [ ] **Modo oscuro y `?lang=en`** en las tres tarjetas plegadas y en el aviso
       del selector.
+
+### Opción A · El análisis mira al trader
+*(entregado 2026-09-18 · **sin migración** · **Ctrl+F5**)*
+
+> **Qué cambia.** El Mentor, la cola de repaso y los hallazgos del Laboratorio
+> dejan de excluir las cuentas **quemadas**. Las **archivadas** siguen fuera:
+> esas las apartas tú. El panel y el consejo del día no cambian.
+>
+> **Ojo:** con tu usuario **no vas a notar nada**, porque no tienes ninguna
+> cuenta quemada. Esto se ve en `/demo`, que sí tiene. Lo que sí puedes
+> comprobar con tu cuenta es que **nada ha cambiado a peor**.
+
+- [ ] **Tu perfil no se mueve.** `/mentor` con tu usuario: las mismas 25 marcas y
+      la misma cobertura del 75 % que había antes. Si cambia alguna cifra, avísame.
+- [ ] **En `/demo`, el perfil ahora incluye la cuenta quemada.** Compara el total
+      de operaciones del perfil con el de antes: tiene que ser mayor.
+- [ ] **Sale el aviso de mezcla.** En la demo, junto a la cobertura, aparece
+      «sobre N cuentas, con importes sin normalizar». Con una sola cuenta —tu
+      caso— **no debe salir**.
+- [ ] **La cola de repaso puede subir.** El número rojo del carril lateral cuenta
+      ahora las perdedoras sin repasar de las cuentas quemadas. Es correcto: son
+      las que explican por qué se quemó. Si te sube de golpe, es esto.
+- [ ] **Los hallazgos cuadran con el resto del Laboratorio.** `/reports`: el
+      panel de arriba («Lo que tus datos te están diciendo») y el desglose de más
+      abajo tienen que estar mirando las mismas operaciones. Antes no.
+- [ ] **El filtro de cuenta del Laboratorio ofrece las quemadas.** Elige una: los
+      hallazgos se recalculan solo sobre ella.
+- [ ] **El objetivo del mes sigue cuadrando.** En la demo, la cifra de la que
+      parte la propuesta tiene que coincidir con la que enseña el perfil.
+- [ ] **El consejo del día no cambia.** Es lo de hoy, y una cuenta muerta no
+      opera hoy: sigue mirando solo a las vivas.
+- [ ] **`/cuentas` ofrece las quemadas.** El desplegable de arriba las lista al
+      final, con « · Quemada» detrás del nombre. Elige una: tienen que salir sus
+      operaciones, sus objetivos y sus reglas.
+- [ ] **No se selecciona una quemada sola.** Al entrar en `/cuentas`, la que sale
+      elegida tiene que ser una viva, aunque la quemada vaya antes por nombre.
+- [ ] **Se puede archivar una cuenta quemada.** Elígela y pulsa «Archivar
+      cuenta»: pasa a la sección de archivadas como cualquier otra.
+- [ ] **Modo oscuro y `?lang=en`** en el aviso de mezcla y en el desplegable.
 
 ### Correcciones sueltas del 2026-08-27
 *(build ✅ hecho — necesitan **Ctrl+F5**)*

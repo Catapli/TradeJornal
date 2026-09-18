@@ -10,6 +10,7 @@ return [
     // ── Accumulated profile ──────────────────────────────────────────────────
     'profile_title' => 'Your profile',
     'coverage' => ':reviewed of :trades trades reviewed (:coverage%)',
+    'accounts_mixed' => 'across :accounts accounts, amounts not normalised',
     'coverage_hint' => 'The profile can only see what you have tagged. The less you review, the less it knows.',
 
     'not_enough_title' => 'Not enough yet to talk about patterns',

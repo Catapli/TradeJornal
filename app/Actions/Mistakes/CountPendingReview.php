@@ -47,7 +47,9 @@ class CountPendingReview
      */
     public static function query(int $userId): Builder
     {
-        return Trade::forUserActiveAccounts($userId)
+        // Las perdedoras de una cuenta quemada son las que más hay que repasar:
+        // son las que explican por qué se quemó. Las archivadas quedan fuera.
+        return Trade::forUser($userId)
             ->where('pnl', '<', 0)
             ->whereNull('mistakes_reviewed_at')
             ->whereDoesntHave('mistakes')

@@ -155,3 +155,44 @@ it('detecta que el login MT5 pertenece a una cuenta archivada', function () {
     expect(Account::where('mt5_login', '55512345')->exists())->toBeFalse()
         ->and(Account::withTrashed()->where('mt5_login', '55512345')->first()?->trashed())->toBeTrue();
 });
+
+// ---------------------------------------------------------------------------
+// LA PANTALLA OFRECE LAS QUEMADAS
+// ---------------------------------------------------------------------------
+
+it('ofrece las cuentas quemadas en la lista, detrás de las vivas', function () {
+    // Estaban escondidas, así que a una cuenta reventada no se llegaba desde su
+    // propia pantalla: ni a su histórico, ni a sus reglas, ni para archivarla.
+    $quemada = Account::factory()->create([
+        'user_id' => $this->jordi->id,
+        'name' => 'AAA quemada',   // primera por nombre: solo el orden por estado la baja
+        'status' => 'burned',
+    ]);
+
+    $lista = Livewire::test(AccountPage::class)->instance()->accounts();
+
+    expect($lista->pluck('id'))->toContain($quemada->id)
+        ->and($lista->last()->id)->toBe($quemada->id)
+        ->and($lista->first()->id)->toBe($this->cuenta->id);
+});
+
+it('no selecciona una cuenta quemada por defecto', function () {
+    Account::factory()->create([
+        'user_id' => $this->jordi->id,
+        'name' => 'AAA quemada',
+        'status' => 'burned',
+    ]);
+
+    $componente = Livewire::test(AccountPage::class)->instance();
+
+    expect($componente->selectedAccount()->status)->toBe('active');
+});
+
+it('no ofrece las archivadas en la lista principal', function () {
+    // Esas tienen su propia sección al pie.
+    Livewire::test(AccountPage::class)->call('deleteAccount', $this->cuenta->id);
+
+    $lista = Livewire::test(AccountPage::class)->instance()->accounts();
+
+    expect($lista->pluck('id'))->not->toContain($this->cuenta->id);
+});

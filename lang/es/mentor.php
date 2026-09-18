@@ -10,6 +10,7 @@ return [
     // ── Perfil acumulado ─────────────────────────────────────────────────────
     'profile_title' => 'Tu perfil',
     'coverage' => ':reviewed de :trades operaciones repasadas (:coverage %)',
+    'accounts_mixed' => 'sobre :accounts cuentas, con importes sin normalizar',
     'coverage_hint' => 'El perfil solo puede ver lo que has marcado. Cuanto menos repases, menos sabe.',
 
     'not_enough_title' => 'Todavía no hay suficiente para hablar de patrones',
