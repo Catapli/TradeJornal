@@ -337,106 +337,11 @@
                                 {{-- COLUMNA GRÁFICO + IA --}}
                                 <div class="space-y-6 lg:col-span-2">
 
-                                    {{-- <template x-if="!isLoading"> --}}
-                                    {{-- 
-        1. Usamos 'data-*' para pasar valores de PHP a JS sin errores de sintaxis.
-        2. Usamos '@trade-selected.window' nativo de Alpine (se limpia solo, adiós error $cleanup).
-    --}}
-                                    <div class="relative aspect-video w-full overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-lg"
-                                         data-path="{{ $this->trade?->chart_data_path ? route('trades.chart-data', $this->trade->id) : '' }}"
-                                         data-entry="{{ $this->trade?->entry_price }}"
-                                         data-exit="{{ $this->trade?->exit_price }}"
-                                         data-dir="{{ $this->trade?->direction }}"
-                                         x-show="!isLoading"
-                                         x-transition:enter="transition ease-out duration-200"
-                                         x-transition:enter-start="opacity-0"
-                                         x-transition:enter-end="opacity-100"
-                                         style="display:none"
-                                         x-data="chartViewer({{ $this->trade?->chart_data_path ? '\'chart\'' : '\'image\'' }})"
-                                         @trade-selected.window="load(event.detail.path, event.detail.entry, event.detail.exit, event.detail.direction)"
-                                         x-init="setTimeout(() => { if ($el.dataset.path) load($el.dataset.path, $el.dataset.entry, $el.dataset.exit, $el.dataset.dir) }, 100)">
-
-                                        {{-- BARRA DE HERRAMIENTAS (Sin cambios) --}}
-                                        <div class="absolute left-4 top-4 z-30 flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm"
-                                             wire:ignore>
-                                            @if ($this->trade?->chart_data_path)
-                                                <template x-for="tf in ['1m', '5m', '15m', '1h', '4h']">
-                                                    <button class="rounded px-2 py-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 transition-all hover:text-white"
-                                                            @click="changeTimeframe(tf)"
-                                                            :class="currentTimeframe === tf ? 'bg-indigo-600 text-white shadow-md' : ''"
-                                                            x-text="tf.toUpperCase()"></button>
-                                                </template>
-                                                <div class="mx-1 h-3 w-px bg-gray-600"></div>
-                                                {{-- BOTÓN VOLUMEN --}}
-                                                <button class="flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                        @click="toggleVol()"
-                                                        :class="showVolume ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-600'"
-                                                        title="{{ __('labels.show_hide_volume') }}">
-
-                                                    {{-- Icono de barras (FontAwesome o SVG manual) --}}
-                                                    <i class="fa-solid fa-chart-column"></i>
-                                                    <span>{{ __('labels.vol') }}</span>
-                                                </button>
-                                                {{-- BOTÓN EMA --}}
-                                                <button class="ml-1 flex items-center space-x-1 rounded border border-transparent px-2 py-1 text-xs font-bold transition-all"
-                                                        @click="toggleEma()"
-                                                        :class="showEma ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-600'"
-                                                        title="{{ __('labels.show_hide_ema') }}">
-
-                                                    {{-- Icono de línea --}}
-                                                    <i class="fa-solid fa-wave-square"></i>
-                                                    <span>{{ __('labels.ema_50') }}</span>
-                                                </button>
-
-                                                {{-- SEPARADOR FLEXIBLE (Empuja el siguiente botón a la derecha) --}}
-                                                <div class="flex-grow"></div>
-                                            @endif
-                                            {{-- BOTÓN PANTALLA COMPLETA --}}
-                                            {{-- LADO DERECHO: TOGGLE VISTA (Siempre visible) --}}
-                                            <div class="flex items-center space-x-1 rounded-lg border border-gray-700/50 bg-gray-800/90 p-1 backdrop-blur-sm">
-                                                {{-- Botón Ver Gráfico --}}
-                                                @if ($this->trade?->chart_data_path)
-                                                    <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
-                                                            @click="activeTab = 'chart'"
-                                                            :class="activeTab === 'chart' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
-                                                        <i class="fa-solid fa-chart-line"></i>
-                                                        <span class="hidden sm:inline">{{ __('labels.chart') }}</span>
-                                                    </button>
-                                                @endif
-
-                                                {{-- Botón Ver Captura --}}
-                                                <button class="flex items-center gap-2 rounded px-3 py-1 text-xs font-bold transition-all"
-                                                        @click="activeTab = 'image'"
-                                                        :class="activeTab === 'image' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 dark:text-gray-500 hover:text-white'">
-                                                    <i class="fa-solid fa-image"></i>
-                                                    <span class="hidden sm:inline">{{ __('labels.screenshot') }}</span>
-                                                </button>
-
-                                                <div class="mx-1 h-3 w-px bg-gray-600"></div>
-
-                                                <button class="ml-2 px-2 text-gray-400 dark:text-gray-500 transition-colors hover:text-white"
-                                                        @click="toggleFullscreen()"
-                                                        :title="isFullscreen ? '{{ __('labels.exit_screen_complete') }}' : '{{ __('labels.screen_complete') }}'">
-
-                                                    {{-- Icono Cambiante --}}
-                                                    <template x-if="!isFullscreen">
-                                                        <i class="fa-solid fa-expand"></i>
-                                                    </template>
-                                                    <template x-if="isFullscreen">
-                                                        <i class="fa-solid fa-compress"></i>
-                                                    </template>
-                                                </button>
-                                            </div>
-
-                                        </div>
-
-                                        {{-- CONTENEDOR GRÁFICO --}}
-                                        <div id="firstContainer"
-                                             class="h-full w-full bg-gray-900"
-                                             wire:ignore
-                                             x-show="activeTab === 'chart'"
-                                             x-ref="chartContainer"></div>
-
+                                    {{-- El visor vive en <x-trade-chart>: lo comparten este modal y la
+                                         pantalla de repaso. Aquí se le cuelga el panel de la captura,
+                                         que es lo único propio del detalle de la operación. --}}
+                                    <x-trade-chart :trade="$this->trade"
+                                                   gate="!isLoading">
                                         {{-- 2. CONTENEDOR IMAGEN / UPLOAD --}}
                                         <div class="absolute inset-0 z-10 flex h-full w-full flex-col items-center justify-center bg-gray-900"
                                              x-show="activeTab === 'image'"
@@ -513,17 +418,10 @@
                                                 @endif
                                             </div>
                                         </div>
-
-                                        {{-- LOADING OVERLAY --}}
-                                        <div class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90"
-                                             x-show="loading"
-                                             x-transition>
-                                            <i class="fa-solid fa-circle-notch fa-spin mb-2 text-2xl text-indigo-500"></i>
-                                        </div>
-                                    </div>
+                                    </x-trade-chart>
                                     {{-- </template> --}}
                                     {{-- IA --}}
-                                    @if (Auth::user()->subscribed('default'))
+                                    @if (Auth::user()->hasProAccess())
                                         <div class="relative overflow-hidden rounded-xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10">
                                             <div class="relative z-10 mb-4 flex items-start justify-between">
                                                 <div>

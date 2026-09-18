@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    # La deuda del código antiguo queda congelada aquí: PHPStan solo falla por
+    # errores NUEVOS. Se va vaciando a medida que se toca cada fichero.
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+
+    # Nivel 5: detecta tipos mentirosos, propiedades inexistentes y nulls mal
+    # propagados sin ahogarnos en avisos del código antiguo. Subir cuando esté limpio.
+    level: 5

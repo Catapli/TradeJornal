@@ -1,4 +1,6 @@
-<div class="h-screen w-full overflow-hidden bg-gray-50 font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100"
+{{-- Vive dentro de app-layout con navbar fijo (h-16): restamos esa altura para ocupar
+     el viewport exacto y evitar el scroll global de la página. --}}
+<div class="h-[calc(100vh-4rem)] w-full overflow-hidden bg-gray-50 font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100"
      x-data="sessionPage(@js($accounts), @js($strategies), @js($restoredSessionData), @js($moodConfig))"
      x-on:resize.window="width = window.innerWidth">
 
@@ -42,7 +44,7 @@
     {{-- ========================================= --}}
     {{-- STEP 1: SETUP (CONFIGURACIÓN)             --}}
     {{-- ========================================= --}}
-    <div class="flex h-full flex-col items-center justify-center p-6"
+    <div class="flex h-full flex-col items-center justify-center overflow-y-auto p-6"
          x-show="step === 1"
          x-transition:leave="transition ease-in duration-300"
          x-transition:leave-start="opacity-100 scale-100"
@@ -54,6 +56,14 @@
                     <i class="fa-solid fa-bolt text-indigo-600 dark:text-indigo-400"></i> {{ __('labels.focus_mode') }}
                 </h1>
                 <p class="mt-2 text-gray-500 dark:text-gray-400">{{ __('labels.configure_session_delete_noise') }}</p>
+
+                {{-- El histórico es el pasado de esta misma pantalla, así que se
+                     entra desde aquí en vez de desde un icono aparte. --}}
+                <div class="mt-4">
+                    <x-page-link :href="route('session-history')"
+                                 icon="fa-solid fa-note-sticky"
+                                 :label="__('menu.go_session_history')" />
+                </div>
             </div>
 
             <div class="space-y-6 rounded-2xl border border-gray-200 bg-white p-8 shadow-xl shadow-gray-200/50 dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
@@ -92,35 +102,58 @@
                     <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ __('labels.strategy') }}
                     </label>
-                    <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                            x-model="selectedStrategyId">
-                        <template x-for="strat in strategies"
-                                  :key="strat.id">
-                            <option :value="strat.id"
-                                    x-text="strat.name"></option>
-                        </template>
-                    </select>
+                    {{-- Con estrategias: selector + preview de reglas --}}
+                    <template x-if="strategies.length > 0">
+                        <div>
+                            <select class="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                    x-model="selectedStrategyId">
+                                <template x-for="strat in strategies"
+                                          :key="strat.id">
+                                    <option :value="strat.id"
+                                            x-text="strat.name"></option>
+                                </template>
+                            </select>
 
-                    {{-- ✅ Preview de reglas (100% Alpine) --}}
-                    <div class="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50"
-                         x-show="currentStrategy.rules?.length > 0">
-                        <p class="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">{{ __('labels.strategy_rules') }}</p>
-                        <ul class="space-y-1">
-                            <template x-for="(rule, index) in currentStrategy.rules"
-                                      :key="index">
-                                <li class="flex items-start text-xs text-gray-700 dark:text-gray-300">
-                                    <svg class="mr-1 mt-0.5 h-3 w-3 flex-shrink-0 text-indigo-500"
-                                         fill="currentColor"
-                                         viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                              clip-rule="evenodd" />
-                                    </svg>
-                                    <span x-text="rule"></span>
-                                </li>
-                            </template>
-                        </ul>
-                    </div>
+                            {{-- ✅ Preview de reglas (100% Alpine) --}}
+                            <div class="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50"
+                                 x-show="currentStrategy.rules?.length > 0">
+                                <p class="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">{{ __('labels.strategy_rules') }}</p>
+                                <ul class="space-y-1">
+                                    <template x-for="(rule, index) in currentStrategy.rules"
+                                              :key="index">
+                                        <li class="flex items-start text-xs text-gray-700 dark:text-gray-300">
+                                            <svg class="mr-1 mt-0.5 h-3 w-3 flex-shrink-0 text-indigo-500"
+                                                 fill="currentColor"
+                                                 viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                      clip-rule="evenodd" />
+                                            </svg>
+                                            <span x-text="rule"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Sin estrategias: estado vacío con CTA al playbook --}}
+                    <template x-if="strategies.length === 0">
+                        <div class="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-5 text-center dark:border-gray-600 dark:bg-gray-700/40">
+                            <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/20">
+                                <i class="fa-solid fa-chess-knight text-indigo-400"></i>
+                            </div>
+                            <p class="text-xs font-bold text-gray-700 dark:text-gray-200">{{ __('labels.without_strategies') }}</p>
+                            <p class="mt-1 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+                                {{ __('labels.create_strategy_hint') }}
+                            </p>
+                            <a class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-indigo-700"
+                               href="{{ route('playbook') }}">
+                                <i class="fa-solid fa-plus text-[9px]"></i>
+                                {{ __('labels.create_strategy') }}
+                            </a>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Estado Emocional Inicial -->
@@ -151,7 +184,8 @@
                             'bg-indigo-600 hover:bg-indigo-700 cursor-pointer': selectedAccountId && selectedStrategyId,
                             'bg-gray-300 cursor-not-allowed dark:bg-gray-600': !selectedAccountId || !selectedStrategyId
                         }">
-                    <span x-show="!selectedAccountId || !selectedStrategyId">{{ __('labels.select_account_strategy') }}</span>
+                    <span x-show="strategies.length === 0">{{ __('labels.need_strategy_to_start') }}</span>
+                    <span x-show="strategies.length > 0 && (!selectedAccountId || !selectedStrategyId)">{{ __('labels.select_account_strategy') }}</span>
                     <span x-show="selectedAccountId && selectedStrategyId">{{ __('labels.login') }}</span>
                 </button>
             </div>
@@ -346,7 +380,7 @@
                                           :class="isOvertrading ? 'text-rose-600 animate-pulse dark:text-rose-400' : 'text-gray-400'">
                                         <i class="fa-solid fa-ban mr-1"
                                            x-show="isOvertrading"></i>
-                                        <span x-text="isOvertrading ? {{ __('labels.overtrading_detected') }} : {{ __('labels.ammo_daily') }}"></span>
+                                        <span x-text="isOvertrading ? @js(__('labels.overtrading_detected')) : @js(__('labels.ammo_daily'))"></span>
                                     </span>
                                     <div class="font-mono text-xs font-bold"
                                          :class="isOvertrading ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-gray-100'">
@@ -416,7 +450,7 @@
                                 </div>
                                 <div class="mt-0.5 text-[9px] font-bold uppercase"
                                      :class="isTimeValid ? 'text-emerald-500' : 'text-rose-500'">
-                                    <span x-text="isTimeValid ? {{ __('labels.market_open') }} : {{ __('labels.closed') }}"></span>
+                                    <span x-text="isTimeValid ? @js(__('labels.market_open')) : @js(__('labels.closed'))"></span>
                                 </div>
                             </div>
                         </div>
@@ -695,7 +729,7 @@
     </div>
 
     {{-- STEP 3: SUMMARY --}}
-    <div class="flex h-full flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-white p-6 dark:from-gray-900 dark:to-gray-900"
+    <div class="flex h-full flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-gray-50 to-white p-6 dark:from-gray-900 dark:to-gray-900"
          x-show="step === 3"
          {{-- ✅ Transición de entrada suave --}}
          x-transition:enter="transition ease-out duration-500"

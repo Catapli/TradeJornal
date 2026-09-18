@@ -19,6 +19,15 @@ class TradeChartController {
         this.fullData = null; // Aquí guardamos todo el JSON
         this.currentTf = "5m"; // Default
 
+        // Velas del marco visible, marcadores ya pegados a su vela y momento en
+        // que el precio tocó cada nivel. Los tres los recalcula renderTimeframe.
+        this.candles = null;
+        this.adjustedMarkers = [];
+        this.levelTimes = { entry: null, exit: null, mae: null, mfe: null };
+
+        // Reproductor barra a barra (Fase 6 - P8).
+        this.replay = { active: false, cursor: 0 };
+
         this.init();
     }
 
@@ -152,138 +161,286 @@ class TradeChartController {
         }
     }
 
-    // --- NUEVO MÉTODO PARA CAMBIAR TF ---
+    // --- NUEVO METODO PARA CAMBIAR TF ---
     renderTimeframe(tf) {
         if (!this.fullData || !this.series) return;
 
-        // Verificar si existe el TF en el JSON
         const candles = this.fullData.timeframes[tf];
 
         if (!candles || candles.length === 0) {
-            console.warn(`⚠️ No data for timeframe: ${tf}`);
-            // Podrías mostrar un toast o alerta aquí
+            console.warn(`No data for timeframe: ${tf}`);
             return;
         }
 
-
-        // 1. Actualizar Velas
-        this.series.setData(candles);
-
-        // 2. Actualizar Volumen (CON LÓGICA DE COLOR TV)
-        // Si la vela sube (C >= O) -> Verde Transparente
-        // Si la vela baja (C < O) -> Rojo Transparente
-        const volumeData = candles.map((c) => ({
-            time: c.time,
-            value: c.volume || 0, // Protección por si es null
-            color:
-                c.close >= c.open
-                    ? "rgba(38, 166, 154, 0.4)" // Verde TV muy suave
-                    : "rgba(239, 83, 80, 0.4)", // Rojo TV muy suave
-        }));
-
-        this.volumeSeries.setData(volumeData); // <--- Pintar volumen
-
-        // 3. ACTUALIZAR EMA
-        const emaData = candles
-            .filter((c) => c.ema !== null) // Filtramos nulos (el principio del cálculo)
-            .map((c) => ({
-                time: c.time,
-                value: c.ema,
-            }));
-
-        this.emaSeries.setData(emaData);
-
+        this.candles = candles;
         this.currentTf = tf;
 
-        // 2. Recalcular Marcadores (Snap to nearest candle)
-        // Los marcadores son timestamp exactos, pero en M15 o H1
-        // la vela exacta puede no existir, hay que buscar la más cercana.
-        if (this.fullData.markers && Array.isArray(this.fullData.markers)) {
-            const candleTimes = candles.map((c) => c.time);
+        // Los marcadores del JSON traen timestamps exactos, pero en M15 o H1 esa
+        // vela puede no existir: cada marca se pega a la vela mas cercana.
+        this.adjustedMarkers = this.snapMarkers(candles);
 
-            const adjustedMarkers = this.fullData.markers
-                .map((m) => {
-                    // Encontrar la vela más cercana temporalmente
-                    const closestTime = candleTimes.reduce((prev, curr) => {
-                        return Math.abs(curr - m.time) < Math.abs(prev - m.time)
-                            ? curr
-                            : prev;
-                    });
+        // Cuando toco el precio cada nivel, en las velas de ESTE marco. Se calcula
+        // aqui porque el reproductor solo puede ensenyar el MAE y el MFE cuando la
+        // barra que los toco ya esta pintada: dibujarlos desde el principio seria
+        // contar el final de la pelicula en el minuto uno.
+        this.levelTimes = this.findLevelTimes(candles);
 
-                    return {
-                        ...m,
-                        time: closestTime,
-                        size: 1,
-                    };
-                })
-                .sort((a, b) => a.time - b.time); // Lightweight charts exige orden
-
-            this.seriesMarkers.setMarkers(adjustedMarkers);
-        }
-
-        // 3. Re-dibujar líneas de precio (Entrada/Salida)
-        // Necesitamos la info del trade, que ya venía en loadData o podemos guardarla en this
-        if (this.tradeInfo) {
-            this.drawTradeLines(
-                this.tradeInfo.entry,
-                this.tradeInfo.exit,
-                this.tradeInfo.direction,
+        if (this.replay.active) {
+            // Cambiar de marco a media reproduccion: el cursor se recorta al
+            // numero de velas del marco nuevo (en 1m hay muchas mas que en 4h).
+            this.replay.cursor = Math.max(
+                1,
+                Math.min(candles.length, this.replay.cursor),
             );
+            this.paint(this.replay.cursor);
+            return;
         }
 
-        // 4. Ajustar Zoom
+        this.paint(candles.length);
+
         setTimeout(() => {
             if (this.chart) this.chart.timeScale().fitContent();
         }, 50);
     }
 
-    drawTradeLines(entryPrice, exitPrice, direction) {
+    /** Pega cada marcador del JSON a la vela mas cercana del marco actual. */
+    snapMarkers(candles) {
+        if (!this.fullData.markers || !Array.isArray(this.fullData.markers)) {
+            return [];
+        }
+
+        const times = candles.map((c) => c.time);
+
+        return this.fullData.markers
+            .map((m) => {
+                const closest = times.reduce((prev, curr) =>
+                    Math.abs(curr - m.time) < Math.abs(prev - m.time) ? curr : prev,
+                );
+
+                return { ...m, time: closest, size: 1 };
+            })
+            .sort((a, b) => a.time - b.time); // Lightweight charts exige orden
+    }
+
+    /**
+     * Pinta las primeras `upTo` velas del marco actual.
+     *
+     * Es el unico sitio que toca las series: la vista completa es este mismo
+     * metodo con todas las velas y el reproductor es este mismo metodo con el
+     * cursor. Asi no hay dos caminos capaces de pintar cosas distintas.
+     */
+    paint(upTo) {
+        if (!this.candles || !this.series) return;
+
+        const candles = this.candles.slice(0, upTo);
+        if (candles.length === 0) return;
+
+        this.series.setData(candles);
+
+        // Volumen con color de vela: verde si cierra arriba, rojo si cierra abajo.
+        this.volumeSeries.setData(
+            candles.map((c) => ({
+                time: c.time,
+                value: c.volume || 0,
+                color:
+                    c.close >= c.open
+                        ? "rgba(38, 166, 154, 0.4)"
+                        : "rgba(239, 83, 80, 0.4)",
+            })),
+        );
+
+        this.emaSeries.setData(
+            candles
+                .filter((c) => c.ema !== null && c.ema !== undefined)
+                .map((c) => ({ time: c.time, value: c.ema })),
+        );
+
+        const hasta = candles[candles.length - 1].time;
+
+        this.seriesMarkers.setMarkers(
+            this.adjustedMarkers.filter((m) => m.time <= hasta),
+        );
+
+        this.drawTradeLines(hasta);
+    }
+
+    /**
+     * Primer instante en que el precio alcanza `nivel` en este marco.
+     *
+     * `campo` es la mecha que hay que mirar y `haciaAbajo` el sentido de la
+     * comparacion. Devuelve null si el nivel no llega a tocarse.
+     */
+    firstTouch(candles, nivel, campo, haciaAbajo) {
+        const precio = parseFloat(nivel);
+        if (!precio) return null;
+
+        const vela = candles.find((c) =>
+            haciaAbajo ? c[campo] <= precio : c[campo] >= precio,
+        );
+
+        return vela ? vela.time : null;
+    }
+
+    /** Cuando se toco cada nivel: entrada, salida, MAE y MFE. */
+    findLevelTimes(candles) {
+        const marcas = this.adjustedMarkers;
+        const entrada = marcas.length ? marcas[0].time : candles[0].time;
+        const salida =
+            marcas.length > 1
+                ? marcas[marcas.length - 1].time
+                : candles[candles.length - 1].time;
+
+        const info = this.tradeInfo || {};
+        const isLong = info.direction === "long";
+
+        // La excursion solo cuenta con la posicion abierta.
+        const dentro = candles.filter(
+            (c) => c.time >= entrada && c.time <= salida,
+        );
+
+        return {
+            entry: entrada,
+            exit: salida,
+            // El MAE va en tu contra: minimo si estas largo, maximo si estas corto.
+            mae: this.firstTouch(dentro, info.mae, isLong ? "low" : "high", isLong),
+            mfe: this.firstTouch(dentro, info.mfe, isLong ? "high" : "low", !isLong),
+        };
+    }
+
+    /**
+     * Lineas de entrada, salida, MAE y MFE, hasta el instante `hasta`.
+     *
+     * Un nivel que todavia no se ha alcanzado no se dibuja: en el reproductor eso
+     * destriparia el final, y en la vista completa `hasta` es la ultima vela, asi
+     * que salen todos igualmente.
+     */
+    drawTradeLines(hasta) {
         if (!this.series) return;
-        // Limpiar anteriores
+
         this.priceLines.forEach((l) => this.series.removePriceLine(l));
         this.priceLines = [];
 
-        if (!entryPrice || !exitPrice) return;
+        const info = this.tradeInfo;
+        if (!info || !info.entry || !info.exit) return;
 
-        const isLong = direction === "long";
-        const isWin = isLong
-            ? exitPrice >= entryPrice
-            : exitPrice <= entryPrice;
-        const exitColor = isWin ? "#10B981" : "#EF4444";
+        const isLong = info.direction === "long";
+        const isWin = isLong ? info.exit >= info.entry : info.exit <= info.entry;
 
-        this.priceLines.push(
-            this.series.createPriceLine({
-                price: parseFloat(entryPrice),
+        const niveles = [
+            {
+                precio: info.entry,
                 color: "#3B82F6",
-                lineWidth: 2,
-                lineStyle: 2,
-                axisLabelVisible: true,
-                title: "ENTRY",
-            }),
-        );
+                titulo: "ENTRY",
+                estilo: 2,
+                desde: this.levelTimes.entry,
+            },
+            {
+                precio: info.mfe,
+                color: "#10B981",
+                titulo: "MFE",
+                estilo: 3,
+                desde: this.levelTimes.mfe,
+            },
+            {
+                precio: info.mae,
+                color: "#F59E0B",
+                titulo: "MAE",
+                estilo: 3,
+                desde: this.levelTimes.mae,
+            },
+            {
+                precio: info.exit,
+                color: isWin ? "#10B981" : "#EF4444",
+                titulo: "EXIT",
+                estilo: 0,
+                desde: this.levelTimes.exit,
+            },
+        ];
 
-        this.priceLines.push(
-            this.series.createPriceLine({
-                price: parseFloat(exitPrice),
-                color: exitColor,
-                lineWidth: 2,
-                lineStyle: 0,
-                axisLabelVisible: true,
-                title: "EXIT",
-            }),
-        );
+        niveles.forEach((n) => {
+            const precio = parseFloat(n.precio);
+            if (!precio) return;
+
+            // Si el nivel no se toca en este marco, se guarda para el final.
+            const desde = n.desde === null ? this.levelTimes.exit : n.desde;
+            if (desde !== null && hasta < desde) return;
+
+            this.priceLines.push(
+                this.series.createPriceLine({
+                    price: precio,
+                    color: n.color,
+                    lineWidth: 2,
+                    lineStyle: n.estilo,
+                    axisLabelVisible: true,
+                    title: n.titulo,
+                }),
+            );
+        });
     }
 
-    async loadData(path, entryPrice, exitPrice, direction) {
+    // Reproductor barra a barra (Fase 6 - P8)
+
+    /** Entra en modo reproduccion y devuelve el cursor inicial. */
+    replayStart() {
+        if (!this.candles) return 0;
+
+        this.replay.active = true;
+        // Arranca con algo de contexto: una vela suelta no cuenta ninguna historia.
+        this.replay.cursor = Math.min(
+            this.candles.length,
+            Math.max(2, Math.ceil(this.candles.length * 0.15)),
+        );
+        this.paint(this.replay.cursor);
+
+        return this.replay.cursor;
+    }
+
+    /** Sale del reproductor y vuelve a la vista completa. */
+    replayStop() {
+        this.replay.active = false;
+
+        if (!this.candles) return;
+
+        this.paint(this.candles.length);
+        if (this.chart) this.chart.timeScale().fitContent();
+    }
+
+    replaySeek(cursor) {
+        if (!this.replay.active || !this.candles) return;
+
+        this.replay.cursor = Math.max(1, Math.min(this.candles.length, cursor));
+        this.paint(this.replay.cursor);
+    }
+
+    replayStep(delta) {
+        this.replaySeek(this.replay.cursor + delta);
+    }
+
+    replayAtEnd() {
+        return !!this.candles && this.replay.cursor >= this.candles.length;
+    }
+
+    replayTotal() {
+        return this.candles ? this.candles.length : 0;
+    }
+
+    async loadData(path, entryPrice, exitPrice, direction, mae, mfe) {
         if (!this.series) this.init();
         if (!path) return false;
 
-        // Guardamos info del trade para repintar líneas al cambiar TF
+        // Guardamos info del trade para repintar lineas al cambiar TF. El MAE y el
+        // MFE vienen del trade (columnas mae_price/mfe_price), no del JSON de
+        // velas: el agente los manda calculados y aqui solo hay que situarlos.
         this.tradeInfo = {
             entry: entryPrice,
             exit: exitPrice,
             direction: direction,
+            mae: mae,
+            mfe: mfe,
         };
+
+        // Un trade nuevo empieza siempre en vista completa.
+        this.replay = { active: false, cursor: 0 };
 
         try {
             const res = await fetch(path);
@@ -897,6 +1054,16 @@ document.addEventListener("alpine:init", () => {
             currentTimeframe: "5m", // Variable para controlar el botón activo
             showVolume: false,
             showEma: false,
+
+            // Reproductor barra a barra (Fase 6 - P8). El cursor y el total viven
+            // aqui para que la barra de progreso sea reactiva; el pintado lo hace
+            // el controlador.
+            replay: false,
+            playing: false,
+            speed: 2,
+            cursor: 0,
+            total: 0,
+            timer: null,
             // 1. NUEVA VARIABLE
             isFullscreen: false,
 
@@ -914,6 +1081,7 @@ document.addEventListener("alpine:init", () => {
 
                 window.addEventListener("trade-selected", (e) => {
                     this.currentTimeframe = "5m"; // Resetear al cargar nuevo trade
+                    this.stopReplay();
 
                     // 2. LÓGICA AUTOMÁTICA AL CAMBIAR DE TRADE
                     // Si viene path, forzamos la pestaña chart, si no, image
@@ -923,6 +1091,8 @@ document.addEventListener("alpine:init", () => {
                         e.detail.entry,
                         e.detail.exit,
                         e.detail.direction,
+                        e.detail.mae,
+                        e.detail.mfe,
                     );
                 });
 
@@ -932,7 +1102,7 @@ document.addEventListener("alpine:init", () => {
                 });
             },
 
-            load(path, entry, exit, direction) {
+            load(path, entry, exit, direction, mae, mfe) {
                 // Si no hay controller, reintentamos un poco
                 if (!controller) {
                     if (this.$refs.chartContainer) {
@@ -941,7 +1111,8 @@ document.addEventListener("alpine:init", () => {
                         );
                     } else {
                         setTimeout(
-                            () => this.load(path, entry, exit, direction),
+                            () =>
+                                this.load(path, entry, exit, direction, mae, mfe),
                             200,
                         );
                         return;
@@ -953,10 +1124,11 @@ document.addEventListener("alpine:init", () => {
 
                 // Cuando cargue, asegurarnos de respetar el estado actual del volumen
                 controller
-                    .loadData(path, entry, exit, direction)
+                    .loadData(path, entry, exit, direction, mae, mfe)
                     .then((success) => {
                         this.hasData = success;
                         this.loading = false;
+                        this.total = controller ? controller.replayTotal() : 0;
                         // Aplicar estado del volumen al cargar
                         if (controller) {
                             controller.toggleVolume(this.showVolume);
@@ -1007,6 +1179,94 @@ document.addEventListener("alpine:init", () => {
                 if (controller && this.hasData) {
                     controller.renderTimeframe(tf);
                     this.currentTimeframe = tf; // Actualizar estado visual botón
+
+                    // Cada marco tiene su propio numero de velas: la barra de
+                    // progreso se queda mintiendo si no se resincroniza.
+                    this.total = controller.replayTotal();
+                    this.cursor = controller.replay.cursor;
+                }
+            },
+
+            // ── Reproductor barra a barra (Fase 6 - P8) ──────────────────────
+
+            toggleReplay() {
+                if (!controller || !this.hasData) return;
+
+                if (this.replay) {
+                    this.stopReplay();
+                    return;
+                }
+
+                this.replay = true;
+                this.cursor = controller.replayStart();
+                this.total = controller.replayTotal();
+            },
+
+            stopReplay() {
+                this.pauseReplay();
+
+                if (!this.replay) return;
+
+                this.replay = false;
+                if (controller) controller.replayStop();
+            },
+
+            playPause() {
+                if (!controller) return;
+
+                if (this.playing) {
+                    this.pauseReplay();
+                    return;
+                }
+
+                // Volver a darle al play al final rebobina: es lo que espera
+                // cualquiera que haya usado un reproductor.
+                if (controller.replayAtEnd()) {
+                    controller.replaySeek(1);
+                    this.cursor = controller.replay.cursor;
+                }
+
+                this.playing = true;
+                this.timer = setInterval(() => {
+                    if (!controller || controller.replayAtEnd()) {
+                        this.pauseReplay();
+                        return;
+                    }
+
+                    controller.replayStep(1);
+                    this.cursor = controller.replay.cursor;
+                }, 700 / this.speed);
+            },
+
+            pauseReplay() {
+                if (this.timer) clearInterval(this.timer);
+                this.timer = null;
+                this.playing = false;
+            },
+
+            stepReplay(delta) {
+                if (!controller) return;
+
+                this.pauseReplay();
+                controller.replayStep(delta);
+                this.cursor = controller.replay.cursor;
+            },
+
+            seekReplay(valor) {
+                if (!controller) return;
+
+                this.pauseReplay();
+                controller.replaySeek(parseInt(valor, 10));
+                this.cursor = controller.replay.cursor;
+            },
+
+            setSpeed(valor) {
+                this.speed = valor;
+
+                // Si estaba sonando, se rearma el intervalo con el ritmo nuevo.
+                if (this.playing) {
+                    this.pauseReplay();
+                    this.playPause();
                 }
             },
         };

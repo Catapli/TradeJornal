@@ -25,6 +25,8 @@
         <link rel="icon"
               href="{{ asset('img/favicon/logo_only.ico') }}"
               type="image/x-icon">
+
+        @include('partials.pwa-head')
         <!-- Fonts -->
         <link rel="preconnect"
               href="https://fonts.bunny.net">
@@ -50,6 +52,25 @@
             @include('sidebar-menu')
 
             @livewire('trade-toast') {{-- El espía invisible --}}
+
+            {{-- BANNER DE DEMO: la sesión pública de solo lectura tiene que ser
+                 evidente en todo momento, y llevar de vuelta al registro. --}}
+            @if (\App\Support\Demo::active())
+                <div class="fixed inset-x-0 bottom-0 z-[60] border-t border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-500/40 dark:bg-amber-950/95">
+                    <div class="mx-auto flex max-w-5xl flex-col items-center gap-3 sm:flex-row sm:justify-between">
+                        <p class="flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-200">
+                            <i class="fa-solid fa-eye"></i>
+                            {{ __('landing.demo.banner') }}
+                        </p>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <a class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-700"
+                               href="{{ route('register') }}">{{ __('landing.demo.banner_cta') }}</a>
+                            <a class="rounded-lg px-3 py-2 text-sm font-semibold text-amber-800 underline transition hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+                               href="{{ route('demo.exit') }}">{{ __('landing.demo.banner_exit') }}</a>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- NOTIFICACIONES FLASH (Éxito/Error) → toast unificado (core/notify.js) --}}
             @if (session('status') || session('error'))
@@ -78,7 +99,11 @@
 
 
             {{-- Page Content --}}
-            <main class="ml-20 min-h-screen transition-all duration-300">
+            {{-- pb-28 en demo: deja hueco al banner fijo del pie. --}}
+            <main @class([
+                'ml-20 min-h-screen transition-all duration-300',
+                'pb-28' => \App\Support\Demo::active(),
+            ])>
                 {{ $slot }}
             </main>
         </div>
@@ -92,6 +117,11 @@
     {{-- Solo datos de Blade hacia JS; la lógica vive en resources/js/core/ --}}
     <script>
         window.translations = @json($translations);
+
+        // Destinos de los atajos de teclado (resources/js/core/shortcuts.js).
+        // Llegan en variable desde AppLayout: la directiva de serialización parte
+        // su argumento por comas, así que un array literal aquí no compilaría.
+        window.tjRoutes = @json($shortcutRoutes);
     </script>
 
 </html>

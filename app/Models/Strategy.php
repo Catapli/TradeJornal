@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Strategy extends Model
 {
@@ -45,7 +46,8 @@ class Strategy extends Model
         'rules' => 'array', // Convierte JSON a Array automáticamente
     ];
 
-    public function trades()
+    /** @return HasMany<Trade, $this> */
+    public function trades(): HasMany
     {
         return $this->hasMany(Trade::class);
     }

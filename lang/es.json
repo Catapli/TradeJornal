@@ -42,7 +42,7 @@
         "lossers": "Perdedores",
         "acumulative_pnl": "PnL Acumulado",
         "order_active": "Orden / Activo",
-        "lost_history_account": "Estás seguro de que deseas eliminar esta cuenta? Se perderá todo el historial de operaciones.",
+        "lost_history_account": "La cuenta se archiva con todas sus operaciones: desaparece de los paneles, pero no se borra nada y podrás restaurarla cuando quieras.",
         "delete_strategy": "Esta acción no se puede deshacer. Se borrarán todas las estadísticas.",
         "clone_strategy": "Se creará una copia idéntica sin historial de operaciones.",
         "january": "Enero",

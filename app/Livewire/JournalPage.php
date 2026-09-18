@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Actions\Retention\CalculateStreaks;
+use App\Concerns\RequiresProAccess;
 use App\LogActions;
 use App\Models\JournalEntry;
 use App\Models\Trade;
@@ -11,23 +13,27 @@ use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class JournalPage extends Component
 {
+    use RequiresProAccess;
 
-    use WithAiLimits; // <--- 2. Usar el Trait
+    // <--- 2. Usar el Trait
     use LogActions;
+    use WithAiLimits;
 
     #[Url(keep: true)]
     public $date;
+
     public $entry; // El modelo JournalEntry
 
     // --- CAMPOS PRE-MARKET ---
     public $pre_market_mood;
+
     public $pre_market_notes;
+
     public $daily_objectives = []; // Array: [['done' => false, 'text' => '']]
 
     // --- CAMPOS SESIÓN (Compartidos con Dashboard) ---
@@ -35,8 +41,11 @@ class JournalPage extends Component
 
     // --- DATOS SOLO LECTURA ---
     public $dayTrades = [];
+
     public $dayTradesIds = [];
+
     public $dayPnL = 0;
+
     public $mistakesSummary = [];
 
     // Propiedad para controlar qué mes estamos viendo en el mini-calendario
@@ -51,7 +60,7 @@ class JournalPage extends Component
         } catch (\Exception $e) {
             $this->logError($e, 'mount', 'JournalPage', 'Error al montar el componente Journal');
             // Estado mínimo seguro para que Blade no explote
-            $this->dayTrades      = collect();
+            $this->dayTrades = collect();
             $this->daily_objectives = [];
             $this->mistakesSummary = collect();
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));
@@ -69,9 +78,9 @@ class JournalPage extends Component
 
             if ($this->entry) {
                 // CASO A: El día YA existe
-                $this->pre_market_mood  = $this->entry->pre_market_mood;
+                $this->pre_market_mood = $this->entry->pre_market_mood;
                 $this->pre_market_notes = $this->entry->pre_market_notes;
-                $this->content        = $this->entry->content;
+                $this->content = $this->entry->content;
 
                 $dbObjs = $this->entry->daily_objectives;
                 $this->daily_objectives = is_string($dbObjs)
@@ -81,18 +90,18 @@ class JournalPage extends Component
                 // CASO B: Día nuevo — cargamos plantilla
                 $this->entry = new JournalEntry([
                     'user_id' => Auth::id(),
-                    'date'    => $this->date,
+                    'date' => $this->date,
                 ]);
-                $this->pre_market_mood  = null;
+                $this->pre_market_mood = null;
                 $this->pre_market_notes = '';
-                $this->content        = '';
+                $this->content = '';
 
                 $templates = TradingObjective::where('user_id', Auth::id())
                     ->where('is_active', true)
                     ->get();
 
                 $this->daily_objectives = $templates->count() > 0
-                    ? $templates->map(fn($rule) => ['text' => $rule->text, 'done' => false])->toArray()
+                    ? $templates->map(fn ($rule) => ['text' => $rule->text, 'done' => false])->toArray()
                     : [['text' => __('labels.set_tour_rules'), 'done' => false]];
             }
 
@@ -103,9 +112,9 @@ class JournalPage extends Component
                 ->orderBy('exit_time', 'asc')
                 ->get();
 
-            $this->dayTrades    = $trades;
-            $this->dayPnL       = $trades->sum('pnl');
-            $this->dayTradesIds  = $trades->pluck('id')->toArray(); // ← (Mejora 16: evita query duplicada)
+            $this->dayTrades = $trades;
+            $this->dayPnL = $trades->sum('pnl');
+            $this->dayTradesIds = $trades->pluck('id')->toArray(); // ← (Mejora 16: evita query duplicada)
 
             // 4. Resumen de errores
             $this->mistakesSummary = $trades
@@ -116,16 +125,15 @@ class JournalPage extends Component
         } catch (\Exception $e) {
             $this->logError($e, 'loadData', 'JournalPage', "Error cargando datos del día {$this->date}");
             // Retorno seguro: colecciones vacías para que Blade no falle
-            $this->entry           = new JournalEntry();
-            $this->dayTrades       = collect();
-            $this->dayTradesIds     = [];
-            $this->dayPnL          = 0;
+            $this->entry = new JournalEntry;
+            $this->dayTrades = collect();
+            $this->dayTradesIds = [];
+            $this->dayPnL = 0;
             $this->daily_objectives = [];
             $this->mistakesSummary = collect();
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_loading_journal'));
         }
     }
-
 
     /**
      * Abre el detalle de un trade con contexto de paginación
@@ -146,9 +154,6 @@ class JournalPage extends Component
         }
     }
 
-
-
-
     // ✅ DESPUÉS
     public function removeObjective(int $index): void
     {
@@ -160,26 +165,28 @@ class JournalPage extends Component
         }
     }
 
-
     // --- NAVEGACIÓN ---
     public function prevDay()
     {
         return redirect()->route('journal', ['date' => Carbon::parse($this->date)->subDay()->format('Y-m-d')]);
     }
+
     public function nextDay()
     {
         return redirect()->route('journal', ['date' => Carbon::parse($this->date)->addDay()->format('Y-m-d')]);
     }
 
     public $showRulesModal = false; // Controlar el modal
+
     public $newRuleText = ''; // Input para nueva regla
+
     public $userRules = []; // Lista para mostrar en el modal
 
     // ✅ DESPUÉS
     public function openRulesManager(): void
     {
         try {
-            $this->userRules      = TradingObjective::where('user_id', Auth::id())->get();
+            $this->userRules = TradingObjective::where('user_id', Auth::id())->get();
             $this->showRulesModal = true;
         } catch (\Exception $e) {
             $this->logError($e, 'openRulesManager', 'JournalPage', 'Error cargando el gestor de reglas');
@@ -188,24 +195,25 @@ class JournalPage extends Component
         }
     }
 
-
     // ✅ DESPUÉS
     public function addMasterRule(string $text): void
     {
         try {
             $text = trim($text);
 
-            if (empty($text) || mb_strlen($text) > 200) return;
+            if (empty($text) || mb_strlen($text) > 200) {
+                return;
+            }
 
             TradingObjective::create([
-                'user_id'   => Auth::id(),
-                'text'      => $text,
+                'user_id' => Auth::id(),
+                'text' => $text,
                 'is_active' => true,
             ]);
 
             $this->openRulesManager();
 
-            if (! $this->entry->exists) {
+            if (!$this->entry->exists) {
                 $this->loadData();
             }
         } catch (\Exception $e) {
@@ -213,8 +221,6 @@ class JournalPage extends Component
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_saving_rules'));
         }
     }
-
-
 
     // Borrar/Desactivar regla maestra
     // ✅ DESPUÉS
@@ -232,7 +238,6 @@ class JournalPage extends Component
         }
     }
 
-
     // Toggle Activo/Inactivo
     // ✅ DESPUÉS
     public function toggleMasterRule(int $id): void
@@ -242,9 +247,11 @@ class JournalPage extends Component
                 ->where('user_id', Auth::id())
                 ->first();
 
-            if (! $rule) return;
+            if (!$rule) {
+                return;
+            }
 
-            $rule->is_active = ! $rule->is_active;
+            $rule->is_active = !$rule->is_active;
             $rule->save();
 
             $this->openRulesManager();
@@ -253,7 +260,6 @@ class JournalPage extends Component
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_toggling_rule'));
         }
     }
-
 
     public function calculateDiscipline()
     {
@@ -300,7 +306,7 @@ class JournalPage extends Component
         foreach ($this->dayTrades as $trade) {
             foreach ($trade->mistakes as $mistake) {
                 // Si tienes columna 'weight' en la tabla mistakes, úsala. Si no, resta 1 por defecto.
-                // $weight = $mistake->weight ?? 1; 
+                // $weight = $mistake->weight ?? 1;
 
                 // Por simplificar ahora: Cada error resta 1 punto de disciplina
                 $totalPenalty += 1;
@@ -341,18 +347,21 @@ class JournalPage extends Component
                     // Clave de búsqueda — identifica el registro único
                     [
                         'user_id' => Auth::id(),
-                        'date'    => $this->date,
+                        'date' => $this->date,
                     ],
                     // Valores a crear/actualizar
                     [
-                        'pre_market_mood'  => $this->pre_market_mood,
+                        'pre_market_mood' => $this->pre_market_mood,
                         'pre_market_notes' => $this->pre_market_notes,
                         'daily_objectives' => $this->daily_objectives,
-                        'content'          => $this->content,
+                        'content' => $this->content,
                         'discipline_score' => $calculatedScore,
                     ]
                 );
             });
+
+            // El día pasa a contar para la racha en cuanto se guarda.
+            CalculateStreaks::forget((int) Auth::id());
 
             $this->insertLog(
                 action: 'save',
@@ -368,15 +377,13 @@ class JournalPage extends Component
         }
     }
 
-
     public function showAlert($type, $message)
     {
         $this->dispatch('show-alert', [
             'type' => $type,
-            'message' => $message
+            'message' => $message,
         ]);
     }
-
 
     // ✅ DESPUÉS
     public function prevMonth(): void
@@ -397,14 +404,13 @@ class JournalPage extends Component
         }
     }
 
-
     // Propiedad Computada del Calendario (Optimizada)
     // ✅ DESPUÉS
     public function getMiniCalendarProperty(): array
     {
         try {
             $start = $this->calendarRef->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY);
-            $end   = $this->calendarRef->copy()->endOfMonth()->endOfWeek(Carbon::MONDAY);
+            $end = $this->calendarRef->copy()->endOfMonth()->endOfWeek(Carbon::MONDAY);
 
             $entries = JournalEntry::where('user_id', Auth::id())
                 ->whereBetween('date', [$start, $end])
@@ -413,20 +419,20 @@ class JournalPage extends Component
                 ->toArray();
 
             // Normalizar fechas a string Y-m-d para comparación segura
-            $entries = array_map(fn($d) => substr($d, 0, 10), $entries);
+            $entries = array_map(fn ($d) => substr($d, 0, 10), $entries);
 
             $days = [];
             $curr = $start->copy();
 
             while ($curr <= $end) {
                 $dateStr = $curr->format('Y-m-d');
-                $days[]  = [
-                    'date'            => $dateStr,
-                    'day'             => $curr->day,
+                $days[] = [
+                    'date' => $dateStr,
+                    'day' => $curr->day,
                     'is_current_month' => $curr->month === $this->calendarRef->month,
-                    'is_today'        => $curr->isToday(),
-                    'is_selected'     => $dateStr === $this->date,
-                    'has_entry'       => in_array($dateStr, $entries),
+                    'is_today' => $curr->isToday(),
+                    'is_selected' => $dateStr === $this->date,
+                    'has_entry' => in_array($dateStr, $entries),
                 ];
                 $curr->addDay();
             }
@@ -434,17 +440,17 @@ class JournalPage extends Component
             return $days;
         } catch (\Exception $e) {
             $this->logError($e, 'getMiniCalendar', 'JournalPage', 'Error generando mini-calendario');
+
             return []; // Blade itera sobre array vacío — sin crash
         }
     }
-
 
     // MÉTODO NUEVO: Cambiar día sin recarga
     // ✅ DESPUÉS
     public function selectDate(string $date): void
     {
         try {
-            $this->date        = $date;
+            $this->date = $date;
             $this->calendarRef = Carbon::parse($date);
             $this->loadData();
             $this->dispatch('editor-content-updated', $this->content ?? '');
@@ -454,8 +460,6 @@ class JournalPage extends Component
         }
     }
 
-
-
     // Añade esto en JournalPage.php
     // Asegúrate de importar: use Illuminate\Support\Facades\Http; use Illuminate\Support\Facades\Log;
 
@@ -464,6 +468,7 @@ class JournalPage extends Component
         // 1. Validar si hay datos mínimos
         if (count($this->dayTrades) === 0 && empty($this->pre_market_mood)) {
             $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.empty_operations_ai_draft')]);
+
             return;
         }
 
@@ -472,6 +477,7 @@ class JournalPage extends Component
         // ----------------------------------------------------
         if (!$this->checkAiLimit()) {
             $this->dispatch('show-alert', __('labels.limit_ai_reached'));
+
             return; // Detener ejecución
         }
 
@@ -495,10 +501,10 @@ class JournalPage extends Component
         // 3. Preparar Resumen de Trades (Trade Breakdown)
         $tradesContext = collect($this->dayTrades)->map(function ($t) {
             // Aseguramos que 'Mistakes' y 'Clean Execution' estén traducidos
-            $mistakesList = $t->mistakes->pluck('name')->join(', ');
+            $mistakesList = $t->mistakes->map(fn ($m) => $m->display_name)->join(', ');
 
             $errorStr = $mistakesList
-                ? "(" . __('ai.labels.mistakes') . ": $mistakesList)"
+                ? '(' . __('ai.labels.mistakes') . ": $mistakesList)"
                 : __('ai.labels.clean_execution');
 
             // Profit/Loss traducido
@@ -511,7 +517,7 @@ class JournalPage extends Component
         // Inyectamos las dos partes: datos generales (:context) y lista de trades (:trades)
         $prompt = __('ai.draft_prompt', [
             'context' => $dataContext,
-            'trades' => $tradesContext
+            'trades' => $tradesContext,
         ]);
 
         // 4. Llamada a Groq (sin caché: el borrador es creativo y se puede regenerar)
@@ -552,7 +558,6 @@ class JournalPage extends Component
             $this->dispatch('show-alert', type: 'error', message: __('labels.error_conect_IA'));
         }
     }
-
 
     public function render()
     {

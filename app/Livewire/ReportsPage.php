@@ -2,23 +2,33 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\Attributes\Computed;
-use App\Models\Trade;
-use App\Models\Account;
-use App\Services\TradingAnalysisService;
-use Illuminate\Support\Facades\Auth;
+use App\Actions\Export\BuildMonthlyReport;
+use App\Actions\Mistakes\CalculateMistakeCost;
+use App\Concerns\RequiresProAccess;
 use App\LogActions;
+use App\Models\Account;
+use App\Models\Trade;
+use App\Services\Export\MonthlyReportPdf;
+use App\Services\TradingAnalysisService;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
+use Livewire\Component;
 
 class ReportsPage extends Component
 {
     use LogActions;
+    use RequiresProAccess;
 
     // ============================================
     // PROPIEDADES PÚBLICAS (SOLO ESTADO)
     // ============================================
 
     public $accountId = 'all';
+
+    /** Mes del informe mensual, en formato `YYYY-MM` (Fase 5 · P10). */
+    public $reportMonth = '';
 
     public $scenarios = [
         'only_longs' => false,
@@ -28,11 +38,19 @@ class ReportsPage extends Component
         'exclude_days' => [],
         'fixed_sl' => null,
         'fixed_tp' => null,
+        // Ids de errores cuyas operaciones se quitan de la curva simulada (P2).
+        'exclude_mistakes' => [],
     ];
 
     // ============================================
     // LIFECYCLE HOOKS
     // ============================================
+
+    /** El informe arranca en el último mes con operaciones, no en uno vacío. */
+    public function mount(): void
+    {
+        $this->syncReportMonth();
+    }
 
     public function updatedAccountId($value)
     {
@@ -53,18 +71,35 @@ class ReportsPage extends Component
 
                 $this->dispatch('show-alert', [
                     'type' => 'error',
-                    'message' => __('labels.account_not_found_lab')
+                    'message' => __('labels.account_not_found_lab'),
                 ]);
 
                 return;
             }
         }
 
+        // Cada cuenta tiene sus propios meses con actividad: dejar el anterior
+        // seleccionado ofrecería un mes que en esta cuenta está vacío.
+        unset($this->reportMonths);
+        $this->syncReportMonth();
+
         $this->insertLog(
             action: 'Cambio de cuenta en Laboratorio',
             form: 'ReportsPage',
             description: "Cambió a cuenta: {$value}"
         );
+    }
+
+    /** Deja `reportMonth` en un mes que exista; si no hay ninguno, en el actual. */
+    private function syncReportMonth(): void
+    {
+        $meses = array_column($this->reportMonths, 'value');
+
+        if (in_array($this->reportMonth, $meses, true)) {
+            return;
+        }
+
+        $this->reportMonth = $meses[0] ?? CarbonImmutable::now(Auth::user()?->preferredTimezone())->format('Y-m');
     }
 
     public function updatedScenarios($value, $key)
@@ -82,9 +117,9 @@ class ReportsPage extends Component
 
     /**
      * Obtiene los trades del usuario con seguridad y EAGER LOADING COMPLETO
-     * 
+     *
      * ⚡ OPTIMIZACIÓN: Se cargan todas las relaciones necesarias en UNA sola query
-     * 
+     *
      * @return \Illuminate\Support\Collection
      */
     private function getTrades()
@@ -108,7 +143,7 @@ class ReportsPage extends Component
 
                     $this->dispatch('show-alert', [
                         'type' => 'error',
-                        'message' => __('labels.unexpected_error')
+                        'message' => __('labels.unexpected_error'),
                     ]);
                 }
             }
@@ -145,6 +180,9 @@ class ReportsPage extends Component
                 'mae_price',
                 'mfe_price',
                 'notes',
+                // Sin esta columna el Laboratorio daba una cobertura distinta a
+                // la de la portada sobre exactamente las mismas operaciones.
+                'mistakes_reviewed_at',
             ]);
 
             if ($this->accountId !== 'all') {
@@ -162,7 +200,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_data')
+                'message' => __('labels.error_loading_data'),
             ]);
 
             return collect();
@@ -171,7 +209,7 @@ class ReportsPage extends Component
 
     /**
      * Helper para obtener el balance actual con seguridad
-     * 
+     *
      * @return float
      */
     private function getCurrentBalance()
@@ -204,7 +242,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'warning',
-                'message' => __('labels.error_obtaining_balance')
+                'message' => __('labels.error_obtaining_balance'),
             ]);
 
             return 10000;
@@ -213,7 +251,7 @@ class ReportsPage extends Component
 
     /**
      * Helper para verificar si hay escenarios activos
-     * 
+     *
      * @return bool
      */
     private function hasActiveScenarios()
@@ -221,11 +259,12 @@ class ReportsPage extends Component
         return in_array(true, [
             $this->scenarios['only_longs'],
             $this->scenarios['only_shorts'],
-            $this->scenarios['remove_worst']
+            $this->scenarios['remove_worst'],
         ]) || !empty($this->scenarios['max_daily_trades'])
             || !empty($this->scenarios['fixed_sl'])
             || !empty($this->scenarios['fixed_tp'])
-            || !empty($this->scenarios['exclude_days']);
+            || !empty($this->scenarios['exclude_days'])
+            || !empty($this->scenarios['exclude_mistakes']);
     }
 
     // ============================================
@@ -257,7 +296,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_curve')
+                'message' => __('labels.error_generating_curve'),
             ]);
 
             return [];
@@ -283,7 +322,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_calculating_stats')
+                'message' => __('labels.error_calculating_stats'),
             ]);
 
             return null;
@@ -309,7 +348,7 @@ class ReportsPage extends Component
             if ($simTrades->count() < 5) {
                 $this->dispatch('show-alert', [
                     'type' => 'warning',
-                    'message' => __('labels.only_x_trades_before_filters', ['count' => $$simTrades->count()])
+                    'message' => __('labels.only_x_trades_before_filters', ['count' => $simTrades->count()]),
                 ]);
             }
 
@@ -319,7 +358,7 @@ class ReportsPage extends Component
 
             return [
                 'curve' => $service->calculateEquityCurve($simTrades),
-                'stats' => $stats
+                'stats' => $stats,
             ];
         } catch (\Exception $e) {
             $this->logError(
@@ -331,7 +370,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_calculating_sim')
+                'message' => __('labels.error_calculating_sim'),
             ]);
 
             return ['curve' => [], 'stats' => null];
@@ -357,7 +396,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_analyze_by_hour')
+                'message' => __('labels.error_generating_analyze_by_hour'),
             ]);
 
             return [];
@@ -383,7 +422,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_analyze_by_sesion')
+                'message' => __('labels.error_generating_analyze_by_sesion'),
             ]);
 
             return [];
@@ -405,7 +444,7 @@ class ReportsPage extends Component
             if ($tradesWithMAE->isEmpty()) {
                 $this->dispatch('show-alert', [
                     'type' => 'info',
-                    'message' => __('labels.trades_no_mfe_mae')
+                    'message' => __('labels.trades_no_mfe_mae'),
                 ]);
 
                 return [];
@@ -422,7 +461,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generate_efficiency_analisis')
+                'message' => __('labels.error_generate_efficiency_analisis'),
             ]);
 
             return [];
@@ -448,7 +487,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_histograma')
+                'message' => __('labels.error_generating_histograma'),
             ]);
 
             return [];
@@ -465,7 +504,7 @@ class ReportsPage extends Component
                     'Rentabilidad' => 0,
                     'Ratio R:R' => 0,
                     'Consistencia' => 0,
-                    'Experiencia' => 0
+                    'Experiencia' => 0,
                 ];
             }
 
@@ -477,7 +516,7 @@ class ReportsPage extends Component
                     'Rentabilidad' => 0,
                     'Ratio R:R' => 0,
                     'Consistencia' => 0,
-                    'Experiencia' => 0
+                    'Experiencia' => 0,
                 ];
             }
 
@@ -492,7 +531,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_profile_trader')
+                'message' => __('labels.error_generating_profile_trader'),
             ]);
 
             return [
@@ -500,7 +539,7 @@ class ReportsPage extends Component
                 'Rentabilidad' => 0,
                 'Ratio R:R' => 0,
                 'Consistencia' => 0,
-                'Experiencia' => 0
+                'Experiencia' => 0,
             ];
         }
     }
@@ -526,7 +565,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_calculating_risk')
+                'message' => __('labels.error_calculating_risk'),
             ]);
 
             return null;
@@ -552,11 +591,30 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_generating_errors')
+                'message' => __('labels.error_generating_errors'),
             ]);
 
             return [];
         }
+    }
+
+    /**
+     * Coste de los errores sobre las operaciones que se están mirando (P2).
+     *
+     * Comparte acción con el dashboard para que las dos pantallas no puedan
+     * discrepar sobre el mismo periodo.
+     */
+    #[Computed]
+    public function mistakeCost(): array
+    {
+        return app(CalculateMistakeCost::class)->fromTrades($this->allTrades);
+    }
+
+    /** Al repasar una operación desde la cola, el coste y la curva cambian. */
+    #[On('mistakes-reviewed')]
+    public function refreshAfterReview(): void
+    {
+        unset($this->allTrades, $this->mistakeCost, $this->mistakesData, $this->simulatedData);
     }
 
     #[Computed]
@@ -574,11 +632,113 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_list_accounts')
+                'message' => __('labels.error_loading_list_accounts'),
             ]);
 
             return collect();
         }
+    }
+
+    // ============================================
+    // INFORME MENSUAL (P10)
+    // ============================================
+
+    /**
+     * Los meses que de verdad tienen operaciones, del más reciente al más viejo.
+     *
+     * Ofrecer un calendario abierto sería ofrecer doscientos meses vacíos; así el
+     * desplegable solo enseña meses de los que hay algo que contar.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    #[Computed]
+    public function reportMonths(): array
+    {
+        try {
+            return Trade::query()
+                ->forUser(Auth::id())
+                ->when($this->accountId !== 'all', fn ($q) => $q->where('account_id', $this->accountId))
+                ->whereNotNull('exit_time')
+                ->selectRaw("to_char(exit_time, 'YYYY-MM') as ym")
+                ->distinct()
+                ->orderByDesc('ym')
+                ->limit(24)
+                ->pluck('ym')
+                ->map(fn (string $ym): array => [
+                    'value' => $ym,
+                    'label' => ucfirst(CarbonImmutable::parse($ym . '-01')->translatedFormat('F Y')),
+                ])
+                ->all();
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Meses disponibles para informe', 'ReportsPage');
+
+            return [];
+        }
+    }
+
+    /**
+     * El informe mensual en PDF.
+     *
+     * Se genera dentro de esta misma petición: no hay worker garantizado en
+     * producción y un informe encolado que no llega es peor que uno que tarda.
+     * El muro PRO no se comprueba aquí porque `RequiresProAccess` ya corta toda
+     * acción de este componente para un usuario gratuito.
+     */
+    public function downloadMonthlyReport(BuildMonthlyReport $builder, MonthlyReportPdf $pdf)
+    {
+        try {
+            $mes = $this->resolveReportMonth();
+
+            $cuenta = $this->accountId !== 'all'
+                ? Account::where('id', $this->accountId)->where('user_id', Auth::id())->first()
+                : null;
+
+            // Cuenta pedida que no es suya: se cae a "todas" en vez de fallar,
+            // igual que hace el resto del componente.
+            if ($this->accountId !== 'all' && $cuenta === null) {
+                $this->accountId = 'all';
+            }
+
+            $informe = $builder->execute(Auth::user(), $mes, $cuenta);
+
+            if (!$informe['has_activity']) {
+                $this->dispatch('show-alert', [
+                    'type' => 'error',
+                    'message' => __('export.pdf.empty', ['month' => $informe['month']['label']]),
+                ]);
+
+                return null;
+            }
+
+            $this->insertLog(
+                action: 'Descarga de informe mensual',
+                form: 'ReportsPage',
+                description: "Mes: {$informe['month']['start']}. Cuenta: {$this->accountId}"
+            );
+
+            return $pdf->download($informe);
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Informe mensual PDF', 'ReportsPage');
+
+            $this->dispatch('show-alert', [
+                'type' => 'error',
+                'message' => __('labels.unexpected_error'),
+            ]);
+
+            return null;
+        }
+    }
+
+    /** El mes elegido, o el mes en curso si viene vacío o con basura. */
+    private function resolveReportMonth(): CarbonImmutable
+    {
+        $tz = Auth::user()->preferredTimezone();
+
+        if (!is_string($this->reportMonth) || !preg_match('/^\d{4}-\d{2}$/', $this->reportMonth)) {
+            return CarbonImmutable::now($tz)->startOfMonth();
+        }
+
+        return CarbonImmutable::parse($this->reportMonth . '-01', $tz)->startOfMonth();
     }
 
     // ============================================
@@ -605,7 +765,7 @@ class ReportsPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.critic_error_loading_page')
+                'message' => __('labels.critic_error_loading_page'),
             ]);
 
             return view('livewire.reports-page');

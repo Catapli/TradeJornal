@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Support\Collection;
 
 class TradingAnalysisService
 {
@@ -16,13 +16,15 @@ class TradingAnalysisService
      */
     public function calculateEquityCurve(Collection $trades)
     {
-        if ($trades->isEmpty()) return [];
+        if ($trades->isEmpty()) {
+            return [];
+        }
 
         $trades = $trades->sortBy('exit_time');
 
         // Agrupar PnL por día
-        $dailyPnL = $trades->groupBy(fn($t) => $t->exit_time->format('Y-m-d'))
-            ->map(fn($dayTrades) => $dayTrades->sum('pnl'));
+        $dailyPnL = $trades->groupBy(fn ($t) => $t->exit_time->format('Y-m-d'))
+            ->map(fn ($dayTrades) => $dayTrades->sum('pnl'));
 
         $startDate = $trades->first()->exit_time->startOfDay();
         $endDate = Carbon::today()->endOfDay();
@@ -39,7 +41,7 @@ class TradingAnalysisService
             }
             $curve[] = [
                 'x' => $date->timestamp * 1000,
-                'y' => round($runningBalance, 2)
+                'y' => round($runningBalance, 2),
             ];
         }
 
@@ -52,18 +54,20 @@ class TradingAnalysisService
     public function calculateSystemHealth(Collection $trades)
     {
         $count = $trades->count();
-        if ($count < 5) return null;
+        if ($count < 5) {
+            return null;
+        }
 
         $pnls = $trades->pluck('pnl');
-        $wins = $pnls->filter(fn($p) => $p > 0);
-        $losses = $pnls->filter(fn($p) => $p <= 0);
+        $wins = $pnls->filter(fn ($p) => $p > 0);
+        $losses = $pnls->filter(fn ($p) => $p <= 0);
 
         $winRate = $count > 0 ? ($wins->count() / $count) * 100 : 0;
         $expectancy = $pnls->avg() ?? 0;
 
         // Desviación Estándar para SQN
         $mean = $pnls->avg();
-        $variance = $pnls->map(fn($val) => pow($val - $mean, 2))->avg();
+        $variance = $pnls->map(fn ($val) => pow($val - $mean, 2))->avg();
         $stdDev = sqrt($variance);
 
         $sqn = ($stdDev > 0) ? ($expectancy / $stdDev) * sqrt($count) : 0;
@@ -73,7 +77,9 @@ class TradingAnalysisService
             'win_rate' => round($winRate, 2),
             'total_trades' => $count,
             'expectancy' => round($expectancy, 2),
-            'profit_factor' => ($losses->sum() != 0) ? round(abs($wins->sum() / $losses->sum()), 2) : 0
+            // Sin pérdidas el profit factor es infinito, no cero: devolver 0 lo pintaba
+            // como el peor sistema posible. null = indefinido, que es la verdad.
+            'profit_factor' => ($losses->sum() != 0) ? round(abs($wins->sum() / $losses->sum()), 2) : null,
         ];
     }
 
@@ -90,15 +96,26 @@ class TradingAnalysisService
         // --- FILTROS DE EXCLUSIÓN ---
 
         if (!empty($scenarios['no_fridays'])) {
-            $simulated = $simulated->reject(fn($t) => $t->entry_time->dayOfWeek === 5);
+            $simulated = $simulated->reject(fn ($t) => $t->entry_time->dayOfWeek === 5);
         }
 
         if (!empty($scenarios['only_longs'])) {
-            $simulated = $simulated->filter(fn($t) => in_array(strtolower($t->direction), ['long', 'buy']));
+            $simulated = $simulated->filter(fn ($t) => in_array(strtolower($t->direction), ['long', 'buy']));
         }
 
         if (!empty($scenarios['only_shorts'])) {
-            $simulated = $simulated->filter(fn($t) => in_array(strtolower($t->direction), ['short', 'sell']));
+            $simulated = $simulated->filter(fn ($t) => in_array(strtolower($t->direction), ['short', 'sell']));
+        }
+
+        // «¿Y si no hubiera cometido este error?» — el escenario que convierte el
+        // coste de la portada en una curva que se puede mirar. Se comparan ids
+        // como enteros porque del navegador llegan como texto.
+        if (!empty($scenarios['exclude_mistakes'])) {
+            $excluded = array_map('intval', (array) $scenarios['exclude_mistakes']);
+
+            $simulated = $simulated->reject(
+                fn ($t) => $t->mistakes->contains(fn ($m) => in_array((int) $m->id, $excluded, true))
+            );
         }
 
         if (!empty($scenarios['remove_worst'])) {
@@ -108,8 +125,8 @@ class TradingAnalysisService
 
         if (!empty($scenarios['max_daily_trades']) && is_numeric($scenarios['max_daily_trades'])) {
             $limit = (int) $scenarios['max_daily_trades'];
-            $allowedIds = $simulated->groupBy(fn($t) => $t->entry_time->format('Y-m-d'))
-                ->flatMap(fn($dayTrades) => $dayTrades->sortBy('entry_time')->take($limit))
+            $allowedIds = $simulated->groupBy(fn ($t) => $t->entry_time->format('Y-m-d'))
+                ->flatMap(fn ($dayTrades) => $dayTrades->sortBy('entry_time')->take($limit))
                 ->pluck('id');
             $simulated = $simulated->whereIn('id', $allowedIds);
         }
@@ -118,7 +135,9 @@ class TradingAnalysisService
 
         if (!empty($scenarios['fixed_sl']) || !empty($scenarios['fixed_tp'])) {
             $simulated = $simulated->map(function ($t) use ($scenarios) {
-                if ($t->mae_price === null || $t->mfe_price === null) return $t;
+                if ($t->mae_price === null || $t->mfe_price === null) {
+                    return $t;
+                }
 
                 $pipSize = $t->entry_price > 50 ? 0.01 : 0.0001;
                 if (str_contains(strtolower($t->ticket ?? ''), 'xau') || str_contains(strtolower($t->ticket ?? ''), 'gold')) {
@@ -160,11 +179,11 @@ class TradingAnalysisService
                 if ($hitSL) {
                     $t->pnl = -1 * ($slDist * $valuePerPoint);
                     $t->exit_price = $simSlPrice;
-                    $t->notes .= " [Sim: Hit Fixed SL]";
+                    $t->notes .= ' [Sim: Hit Fixed SL]';
                 } elseif ($hitTP) {
                     $t->pnl = $tpDist * $valuePerPoint;
                     $t->exit_price = $simTpPrice;
-                    $t->notes .= " [Sim: Hit Fixed TP]";
+                    $t->notes .= ' [Sim: Hit Fixed TP]';
                 }
 
                 return $t;
@@ -184,10 +203,15 @@ class TradingAnalysisService
         }
 
         $hour = $time->hour;
-        if ($hour >= 0 && $hour < 8) $session = 'Asia';
-        elseif ($hour >= 8 && $hour < 13) $session = 'Londres';
-        elseif ($hour >= 13 && $hour < 22) $session = 'Nueva York';
-        else $session = 'Cierre';
+        if ($hour >= 0 && $hour < 8) {
+            $session = 'Asia';
+        } elseif ($hour >= 8 && $hour < 13) {
+            $session = 'Londres';
+        } elseif ($hour >= 13 && $hour < 22) {
+            $session = 'Nueva York';
+        } else {
+            $session = 'Cierre';
+        }
 
         $this->sessionCache[$cacheKey] = $session;
 
@@ -199,19 +223,23 @@ class TradingAnalysisService
      */
     public function analyzeByHour(Collection $trades)
     {
-        if ($trades->isEmpty()) return [];
+        if ($trades->isEmpty()) {
+            return [];
+        }
 
         $data = [];
-        for ($i = 0; $i < 24; $i++) $data[$i] = 0;
+        for ($i = 0; $i < 24; $i++) {
+            $data[$i] = 0;
+        }
 
         foreach ($trades as $trade) {
             $h = $trade->entry_time->hour;
             $data[$h] += $trade->pnl;
         }
 
-        return collect($data)->map(fn($pnl, $hour) => [
+        return collect($data)->map(fn ($pnl, $hour) => [
             'hour' => sprintf('%02d:00', $hour),
-            'pnl' => round($pnl, 2)
+            'pnl' => round($pnl, 2),
         ])->values()->toArray();
     }
 
@@ -220,18 +248,22 @@ class TradingAnalysisService
      */
     public function analyzeBySession(Collection $trades)
     {
-        if ($trades->isEmpty()) return [];
+        if ($trades->isEmpty()) {
+            return [];
+        }
 
         $sessions = ['Asia' => 0, 'Londres' => 0, 'Nueva York' => 0, 'Cierre' => 0];
 
         foreach ($trades as $trade) {
             $sess = $this->getTradingSession($trade->entry_time);
-            if (isset($sessions[$sess])) $sessions[$sess] += $trade->pnl;
+            if (isset($sessions[$sess])) {
+                $sessions[$sess] += $trade->pnl;
+            }
         }
 
-        return collect($sessions)->map(fn($pnl, $name) => [
+        return collect($sessions)->map(fn ($pnl, $name) => [
             'session' => $name,
-            'pnl' => round($pnl, 2)
+            'pnl' => round($pnl, 2),
         ])->values()->toArray();
     }
 
@@ -240,13 +272,15 @@ class TradingAnalysisService
      */
     public function analyzeDurationScatter(Collection $trades)
     {
-        if ($trades->isEmpty()) return [];
+        if ($trades->isEmpty()) {
+            return [];
+        }
 
         return $trades->map(function ($t) {
             return [
                 'x' => $t->duration_minutes,
                 'y' => (float) $t->pnl,
-                'ticket' => $t->ticket
+                'ticket' => $t->ticket,
             ];
         })->values()->toArray();
     }
@@ -256,12 +290,16 @@ class TradingAnalysisService
      */
     public function analyzeDistribution(Collection $trades)
     {
-        if ($trades->isEmpty()) return [];
+        if ($trades->isEmpty()) {
+            return [];
+        }
 
         $min = $trades->min('pnl');
         $max = $trades->max('pnl');
 
-        if ($min == $max) return [];
+        if ($min == $max) {
+            return [];
+        }
 
         $step = ($max - $min) / 15;
         $categories = [];
@@ -270,11 +308,14 @@ class TradingAnalysisService
         for ($i = 0; $i < 15; $i++) {
             $low = $min + ($i * $step);
             $high = $low + $step;
+            $isLast = $i === 14;
 
             $categories[] = number_format($low, 0) . ' a ' . number_format($high, 0);
 
-            $count = $trades->filter(function ($t) use ($low, $high) {
-                return $t->pnl >= $low && $t->pnl < $high;
+            // El último tramo cierra por arriba: con `< $high` el mejor trade de todos
+            // caía fuera del histograma y nunca se contaba.
+            $count = $trades->filter(function ($t) use ($low, $high, $isLast) {
+                return $t->pnl >= $low && ($isLast ? $t->pnl <= $high : $t->pnl < $high);
             })->count();
 
             $data[] = $count;
@@ -292,7 +333,9 @@ class TradingAnalysisService
             return $t->exit_time && $t->mae_price !== null && $t->mfe_price !== null && $t->exit_price != $t->entry_price;
         })->sortByDesc('exit_time')->take(15)->reverse();
 
-        if ($dataset->isEmpty()) return [];
+        if ($dataset->isEmpty()) {
+            return [];
+        }
 
         $tickets = [];
         $maeData = [];
@@ -327,7 +370,7 @@ class TradingAnalysisService
                 ['name' => 'Max Drawdown (MAE)', 'data' => array_values($maeData)],
                 ['name' => 'Realized P&L', 'data' => array_values($pnlData)],
                 ['name' => 'Max Potential (MFE)', 'data' => array_values($mfeData)],
-            ]
+            ],
         ];
     }
 
@@ -337,7 +380,9 @@ class TradingAnalysisService
     public function analyzeTraderProfile(Collection $trades)
     {
         $count = $trades->count();
-        if ($count < 5) return null;
+        if ($count < 5) {
+            return null;
+        }
 
         $wins = $trades->where('pnl', '>', 0);
         $losses = $trades->where('pnl', '<=', 0);
@@ -348,10 +393,13 @@ class TradingAnalysisService
         $pf = $grossLoss > 0 ? $grossProfit / $grossLoss : ($grossProfit > 0 ? 3 : 0);
         $pfScore = min(100, ($pf / 3) * 100);
 
+        // Sin pérdidas no hay ratio que calcular. El `?? 1` de antes fingía una
+        // pérdida media de 1 $ y el payoff salía disparado (lo tapaba el min(100)).
         $avgWin = $wins->avg('pnl') ?? 0;
-        $avgLoss = abs($losses->avg('pnl') ?? 1);
-        $payoff = $avgLoss > 0 ? $avgWin / $avgLoss : 0;
-        $payoffScore = min(100, ($payoff / 2.5) * 100);
+        $avgLoss = $losses->isEmpty() ? null : abs($losses->avg('pnl'));
+        $payoffScore = ($avgLoss === null || $avgLoss <= 0)
+            ? ($avgWin > 0 ? 100 : 0)
+            : min(100, (($avgWin / $avgLoss) / 2.5) * 100);
 
         $sqnData = $this->calculateSystemHealth($trades);
         $sqn = $sqnData['sqn'] ?? 0;
@@ -362,12 +410,14 @@ class TradingAnalysisService
 
         $activityScore = min(100, ($count / 50) * 100);
 
+        // Puntuaciones de radar: enteros 0-100. round() devuelve float, que obligaba
+        // a comparar con tolerancia en cualquier consumidor.
         return [
-            'Winrate' => round($winrate),
-            'Rentabilidad' => round($pfScore),
-            'Ratio R:R' => round($payoffScore),
-            'Consistencia' => round($consistencyScore),
-            'Experiencia' => round($activityScore)
+            'Winrate' => (int) round($winrate),
+            'Rentabilidad' => (int) round($pfScore),
+            'Ratio R:R' => (int) round($payoffScore),
+            'Consistencia' => (int) round($consistencyScore),
+            'Experiencia' => (int) round($activityScore),
         ];
     }
 
@@ -378,7 +428,9 @@ class TradingAnalysisService
     public function analyzeRiskOfRuin(Collection $trades, float $currentBalance)
     {
         $count = $trades->count();
-        if ($count < 10) return null;
+        if ($count < 10) {
+            return null;
+        }
 
         $wins = $trades->where('pnl', '>', 0);
         $losses = $trades->where('pnl', '<=', 0);
@@ -386,8 +438,21 @@ class TradingAnalysisService
         $winRate = $wins->count() / $count;
         $lossRate = 1 - $winRate;
 
+        // Sin ninguna operación perdedora la fórmula no tiene pérdida media que usar.
+        // El `?? 1` de antes asumía 1 $ de pérdida media, lo que disparaba el payoff
+        // y devolvía un 24,57% de riesgo de ruina a un trader con el 100% de aciertos.
+        if ($losses->isEmpty()) {
+            return [
+                'win_rate' => 100.0,
+                'payoff' => null,
+                'risk_of_ruin' => 0.0,
+                'streak_prob' => ['3' => 0.0, '5' => 0.0, '8' => 0.0, '10' => 0.0],
+                'edge' => null,
+            ];
+        }
+
         $avgWin = $wins->avg('pnl') ?? 0;
-        $avgLoss = abs($losses->avg('pnl') ?? 1);
+        $avgLoss = abs($losses->avg('pnl'));
         $payoffRatio = $avgLoss > 0 ? $avgWin / $avgLoss : 0;
 
         $streakProb = [
@@ -398,14 +463,16 @@ class TradingAnalysisService
         ];
 
         $avgRiskPerTrade = $avgLoss;
-        if ($avgRiskPerTrade <= 0) $avgRiskPerTrade = $currentBalance * 0.01;
+        if ($avgRiskPerTrade <= 0) {
+            $avgRiskPerTrade = $currentBalance * 0.01;
+        }
 
         $units = $currentBalance / $avgRiskPerTrade;
 
         $edge = ($winRate * $payoffRatio) - $lossRate;
 
         if ($edge <= 0) {
-            $riskOfRuin = 100;
+            $riskOfRuin = 100.0;
         } else {
             // ⚡ FIX CRÍTICO: Eliminado el "/ 2" que no tenía sentido matemático
             // Ahora usamos capping inteligente para evitar exponentes gigantes
@@ -414,11 +481,12 @@ class TradingAnalysisService
         }
 
         return [
-            'win_rate' => round($winRate * 100, 1),
-            'payoff' => round($payoffRatio, 2),
-            'risk_of_ruin' => min(100, max(0, round($riskOfRuin, 2))), // Asegurar rango 0-100
-            'streak_prob' => array_map(fn($v) => round($v, 1), $streakProb),
-            'edge' => round($edge, 3)
+            'win_rate' => (float) round($winRate * 100, 1),
+            'payoff' => (float) round($payoffRatio, 2),
+            // (float) explicito: min/max devolvian int cuando el valor caia justo en el tope.
+            'risk_of_ruin' => (float) min(100, max(0, round($riskOfRuin, 2))),
+            'streak_prob' => array_map(fn ($v) => round($v, 1), $streakProb),
+            'edge' => (float) round($edge, 3),
         ];
     }
 
@@ -433,14 +501,14 @@ class TradingAnalysisService
 
         foreach ($trades as $trade) {
             foreach ($trade->mistakes as $mistake) {
-                $name = $mistake->name;
+                $name = $mistake->display_name;
 
                 if (!isset($stats[$name])) {
                     $stats[$name] = [
                         'name' => $name,
                         'count' => 0,
                         'total_loss' => 0,
-                        'color' => $mistake->color ?? '#EF4444'
+                        'color' => $mistake->color_hex,
                     ];
                 }
 

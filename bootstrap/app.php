@@ -1,13 +1,14 @@
 <?php
 
+use App\Http\Middleware\DemoGuard;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\TrustProxies;           // <-- añade esto
-use Illuminate\Support\Facades\URL;              // <-- si vas a usar forceScheme
-use Illuminate\Support\Str;                      // <-- opcional para comprobar cabeceras
+// <-- añade esto
+// <-- si vas a usar forceScheme
+// <-- opcional para comprobar cabeceras
 use Illuminate\Http\Request;                     // <-- si quisieras usar constantes de headers
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,6 +30,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             SetLocale::class,
+            // Deja la sesión de la demo pública en solo lectura. Va después de
+            // StartSession porque necesita leer la marca de sesión.
+            DemoGuard::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -43,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->withInput($request->except('password'))
                     ->withErrors(['session' => 'Tu sesión ha expirado. Por favor, inténtalo de nuevo.']);
             }
+
             return $response;
         });
     })->create();

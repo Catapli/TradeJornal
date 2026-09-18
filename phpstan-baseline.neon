@@ -1,0 +1,799 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Using nullsafe property access "\?\-\>symbol" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Accounts/CalculateAccountStatistics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$direction\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entry_price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$exit_price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$followed_rules\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pnl_r\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$screenshot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$session\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$setup_rating\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$stop_loss\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$trade_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Actions/Backtesting/CalculateStrategyMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$avg_loss\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$avg_win\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$best_trade\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$day_index\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$gross_loss\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$gross_profit\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$hour\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total_pnl\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$total_pnl_perc\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$winning_trades\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$worst_trade\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Dashboard/CalculateDashboardMetrics.php
+
+		-
+			message: '#^Parameter \#1 \$trades of method App\\Actions\\Export\\BuildMonthlyReport\:\:calendar\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Trade\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Export/BuildMonthlyReport.php
+
+		-
+			message: '#^Parameter \#1 \$trades of method App\\Actions\\Mistakes\\CalculateMistakeCost\:\:fromTrades\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Trade\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Export/BuildMonthlyReport.php
+
+		-
+			message: '#^Parameter \#2 \$trades of method App\\Actions\\Export\\BuildMonthlyReport\:\:currency\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Trade\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Export/BuildMonthlyReport.php
+
+		-
+			message: '#^Parameter \#3 \$trades of method App\\Actions\\Rules\\CheckRulesCompliance\:\:execute\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Trade\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Export/BuildMonthlyReport.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Export/BuildMonthlyReport.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$symbol\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 2
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\LazyCollection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:each\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: mixed, Closure\(App\\Models\\Trade\)\: void given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>symbol" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Export/ExportTradesCsv.php
+
+		-
+			message: '#^Parameter \#1 \$trades of method App\\Actions\\Mistakes\\CalculateMistakeCost\:\:fromTrades\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Trade\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Mistakes/CalculateMistakeCost.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Carbon\\Carbon and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Actions/Mistakes/CalculateMistakeCost.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>symbol" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Retention/BuildWeeklySummary.php
+
+		-
+			message: '#^Method App\\Actions\\Retention\\CalculateStreaks\:\:journalDays\(\) should return array\<string, true\> but returns array\<string, bool\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Retention/CalculateStreaks.php
+
+		-
+			message: '#^Method App\\Actions\\Retention\\CalculateStreaks\:\:severeMistakeDays\(\) should return array\<string, true\> but returns array\<string, bool\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Retention/CalculateStreaks.php
+
+		-
+			message: '#^Method App\\Actions\\Retention\\CalculateStreaks\:\:tradedDays\(\) should return array\<string, true\> but returns array\<string, bool\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Retention/CalculateStreaks.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 3
+			path: app/Actions/Rules/CheckRulesCompliance.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Carbon\\Carbon and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Rules/DetectFindings.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Carbon\\Carbon and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: app/Actions/Rules/DetectFindings.php
+
+		-
+			message: '#^Method App\\Actions\\Strategy\\RecalculateStrategyStats\:\:calculateMaxDrawdown\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Actions/Strategy/RecalculateStrategyStats.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>pnl" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Actions/Strategy/RecalculateStrategyStats.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Actions/Strategy/RecalculateStrategyStats.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>wins" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Strategy/RecalculateStrategyStats.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Trades/BuildTradeAuditContext.php
+
+		-
+			message: '#^Cannot call method greaterThanOrEqualTo\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Console/Commands/SendWeeklySummaries.php
+
+		-
+			message: '#^Call to an undefined method Laravel\\Socialite\\Contracts\\Provider\:\:redirectUrl\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/SocialiteController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, array\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/TradeChartController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/TradeChartController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/IsAdmin.php
+
+		-
+			message: '#^Call to an undefined static method Livewire\\Livewire\:\:getInstance\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: app/Listeners/SyncAccountListener.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\AccountPage\:\:\$accounts\.$#'
+			identifier: property.notFound
+			count: 12
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\AccountPage\:\:\$selectedAccount\.$#'
+			identifier: property.notFound
+			count: 10
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Account\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Account\>\:\:\$tradingPlan\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$program\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$program_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$propFirm\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$size\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$step_count\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Relation ''programs'' is not found in App\\Models\\PropFirm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Relation ''tradingPlan'' is not found in App\\Models\\Account model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/AccountPage.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Log model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/Admin/Logs.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ProgramLevel\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ProgramLevel\>\:\:\$objectives\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Admin/PropFirmsManager.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Admin/PropFirmsManager.php
+
+		-
+			message: '#^Relation ''objectives'' is not found in App\\Models\\ProgramLevel model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/Admin/PropFirmsManager.php
+
+		-
+			message: '#^Relation ''programs'' is not found in App\\Models\\PropFirm model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/Admin/PropFirmsManager.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/AiDailyTip.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\DashboardPage\:\:\$dayTrades\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/DashboardPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\DashboardPage\:\:\$recentTrades\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/DashboardPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Account\:\:\$login\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/DashboardPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\FindingsPanel\:\:\$findings\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Livewire/FindingsPanel.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\FindingsPanel\:\:\$rules\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/FindingsPanel.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\ImportTradesPage\:\:\$accounts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/ImportTradesPage.php
+
+		-
+			message: '#^Call to function is_string\(\) with array\|null will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Livewire/JournalPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Strategy\:\:\$chart_data\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Strategy\:\:\$image_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Strategy\:\:\$stats_winrate\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 2
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 4
+			path: app/Livewire/PlaybookPage.php
+
+		-
+			message: '#^Offset ''done'' on array\{text\: string, done\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Livewire/PreMarketRitual.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>daily_objectives" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/PreMarketRitual.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>pre_market_notes" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/PreMarketRitual.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\ReportsPage\:\:\$allTrades\.$#'
+			identifier: property.notFound
+			count: 23
+			path: app/Livewire/ReportsPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\ReportsPage\:\:\$reportMonths\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/ReportsPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TradingSession\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\TradingSession\:\:\$trades\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Relation ''account'' is not found in App\\Models\\TradingSession model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Relation ''strategy'' is not found in App\\Models\\TradingSession model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>max_daily_trades" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>symbol" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/SessionHistory.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Account\:\:\$tradingPlan\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$symbol\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Trade\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Relation ''tradingPlan'' is not found in App\\Models\\Account model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>symbol" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Livewire/SessionPage.php
+
+		-
+			message: '#^Access to an undefined property Laravel\\Cashier\\Checkout\:\:\$url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/Settings/Subscription.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\TradeDetailModal\:\:\$trade\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Livewire/TradeDetailModal.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$unreadNotifications\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/TradeToast.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\TradesPage\:\:\$trades\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/TradesPage.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 2
+			path: app/Livewire/TradesPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\WeeklyReviewPage\:\:\$review\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Livewire/WeeklyReviewPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\WeeklyReviewPage\:\:\$summary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Livewire/WeeklyReviewPage.php
+
+		-
+			message: '#^Access to an undefined property App\\Livewire\\WeeklyReviewPage\:\:\$trades\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Livewire/WeeklyReviewPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>answers" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/WeeklyReviewPage.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>takeaway" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Livewire/WeeklyReviewPage.php
+
+		-
+			message: '#^Match arm comparison between ''abandoned'' and ''abandoned'' is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: app/Models/Account.php
+
+		-
+			message: '#^Method App\\Models\\Account\:\:getObjectivesProgressAttribute\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, array\{type\: string, label\: \(array\|string\), target_value\: int, current_value\: mixed, status\: string, unit\: string, is_hard_rule\: bool\}\|array\{type\: string, label\: string, target_value\: float, current_value\: float\|int, status\: string, unit\: string, currency\: string, is_hard_rule\: bool\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/Account.php
+
+		-
+			message: '#^Cannot call method isFuture\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc tag @var above a method has no effect\.$#'
+			identifier: varTag.misplaced
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc type array\<int, string\> of property App\\Models\\User\:\:\$fillable is not covariant with PHPDoc type list\<string\> of overridden property Illuminate\\Database\\Eloquent\\Model\:\:\$fillable\.$#'
+			identifier: property.phpDocType
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc type array\<int, string\> of property App\\Models\\User\:\:\$hidden is not covariant with PHPDoc type list\<string\> of overridden property Illuminate\\Database\\Eloquent\\Model\:\:\$hidden\.$#'
+			identifier: property.phpDocType
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^The @use tag of class App\\Models\\User describes Illuminate\\Database\\Eloquent\\Factories\\HasFactory but the class uses Laravel\\Jetstream\\HasTeams\.$#'
+			identifier: generics.wrongParent
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-empty\-list\<string\|null\> and array\{\} will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Import/TradeFileReader.php
+
+		-
+			message: '#^Comparison operation "\>" between int\<5, max\> and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: app/Services/TradingAnalysisService.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<float\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 3
+			path: app/Services/TradingAnalysisService.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<non\-falsy\-string\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Services/TradingAnalysisService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Account\:\:\$trades\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Account\:\:\$tradingPlan\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Method App\\Services\\TradingRulesService\:\:getPnlStatus\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Method App\\Services\\TradingRulesService\:\:isMarketOpen\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Relation ''trades'' is not found in App\\Models\\Account model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Relation ''tradingPlan'' is not found in App\\Models\\Account model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/TradingRulesService.php
+
+		-
+			message: '#^Parameter \#1 \$view of function view expects view\-string\|null, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/View/Components/ModalTemplate.php

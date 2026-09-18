@@ -29,8 +29,44 @@
             </div>
 
             {{-- ESTADO DE SUSCRIPCIÓN --}}
-            <div class="mr-2 hidden items-center md:flex">
-                @if (Auth::user()->subscribed('default'))
+            @php
+                $navUser = Auth::user();
+                $navTrialDays = $navUser->trialDaysLeft();
+                $navTrialEnding = $navTrialDays > 0 && $navTrialDays <= (int) config('billing.trial_warning_days');
+            @endphp
+
+            <div class="mr-2 hidden items-center gap-2 md:flex">
+
+                {{-- RACHAS: la disciplina solo se cuida si se ve. --}}
+                <x-streak-badges />
+
+                {{-- CRÉDITOS DE IA: un límite que se entiende se percibe como valor;
+                     uno invisible, como tacañería el día que se acaba. --}}
+                @php($navCredits = $navUser->aiCreditsLeft())
+                <span @class([
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold',
+                    'border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300' => $navCredits > 0,
+                    'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400' => $navCredits === 0,
+                ])
+                      title="{{ __('labels.ai_credits_tooltip', ['limit' => $navUser->aiDailyLimit()]) }}">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span class="tabular-nums">{{ $navCredits }}/{{ $navUser->aiDailyLimit() }}</span>
+                </span>
+
+                @if ($navUser->onProTrial())
+                    {{-- PRUEBA EN CURSO: se avisa desde el principio y con más
+                         urgencia en los últimos días, para que nadie la pierda
+                         sin enterarse. --}}
+                    <a @class([
+                        'flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold transition-all hover:shadow-md',
+                        'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300' => ! $navTrialEnding,
+                        'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300' => $navTrialEnding,
+                    ])
+                       href="{{ route('pricing') }}">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                        <span>{{ trans_choice('labels.trial_days_left', $navTrialDays, ['days' => $navTrialDays]) }}</span>
+                    </a>
+                @elseif ($navUser->hasProAccess())
                     {{-- USUARIO PRO (Badge elegante) --}}
                     <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm">
                         <i class="fa-solid fa-crown text-emerald-500"></i>
@@ -78,59 +114,8 @@
                     </button>
                 </div>
 
-                {{-- SELECTOR DE IDIOMA (Estilo Clean) --}}
-                <div class="relative"
-                     x-data="{
-                         open: false,
-                         current: '{{ app()->getLocale() }}',
-                         languages: {
-                             'es': { name: 'Español', code: 'es' },
-                             'en': { name: 'English', code: 'gb' },
-                         },
-                         select(lang) {
-                             this.current = lang;
-                             this.open = false;
-                             $dispatch('change_lang', { locale: lang });
-                         }
-                     }"
-                     @click.outside="open = false">
-
-                    <!-- BOTÓN TRIGGER (Blanco con borde suave) -->
-                    <button class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            @click="open = !open"
-                            type="button">
-                        <img class="h-3 w-4 rounded-[1px] object-cover shadow-sm"
-                             :src="`https://flagcdn.com/24x18/${languages[current].code}.png`"
-                             alt="flag">
-                        <span class="hidden md:inline"
-                              x-text="languages[current].name"></span>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 dark:text-gray-500 transition-transform duration-200"
-                           :class="open ? 'rotate-180' : ''"></i>
-                    </button>
-
-                    <!-- LISTA DESPLEGABLE (Blanca limpia) -->
-                    <div class="absolute right-0 z-50 mt-2 w-40 origin-top-right rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none"
-                         x-show="open"
-                         x-transition:enter="transition ease-out duration-100"
-                         x-transition:enter-start="opacity-0 scale-95"
-                         x-transition:enter-end="opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="opacity-100 scale-100"
-                         x-transition:leave-end="opacity-0 scale-95"
-                         style="display: none;">
-
-                        <template x-for="(lang, key) in languages"
-                                  :key="key">
-                            <button class="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-indigo-600"
-                                    @click="select(key)"
-                                    :class="current === key ? 'bg-indigo-50 text-indigo-700 font-semibold' : ''">
-                                <img class="h-3 w-4 rounded-[1px] shadow-sm"
-                                     :src="`https://flagcdn.com/24x18/${lang.code}.png`">
-                                <span x-text="lang.name"></span>
-                            </button>
-                        </template>
-                    </div>
-                </div>
+                {{-- SELECTOR DE IDIOMA --}}
+                <x-language-selector />
 
                 {{-- PERFIL DE USUARIO (Estilo Clean) --}}
                 <x-dropdown align="right"

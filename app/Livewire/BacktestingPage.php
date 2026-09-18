@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Concerns\RequiresProAccess;
 use App\Actions\Backtesting\CalculateStrategyMetrics;
 use App\Models\BacktestStrategy;
 use App\Models\BacktestTrade;
@@ -18,9 +19,11 @@ use Livewire\WithPagination;
 #[Title('Backtesting')]
 class BacktestingPage extends Component
 {
+    use RequiresProAccess;
+
+    use WithAiLimits;
     use WithFileUploads;
     use WithPagination;
-    use WithAiLimits;
 
     protected StorageService $storage;
 
@@ -30,44 +33,67 @@ class BacktestingPage extends Component
     }
 
     // ── Estrategia form ─────────────────────────────────────────
-    public string $name        = '';
-    public string $symbol      = '';
-    public string $timeframe   = 'H1';
-    public string $direction   = 'both';
+    public string $name = '';
+
+    public string $symbol = '';
+
+    public string $timeframe = 'H1';
+
+    public string $direction = 'both';
+
     public string $description = '';
-    public array  $rules       = [];
-    public string $newRule     = '';
-    public ?int   $editingId   = null;
+
+    public array $rules = [];
+
+    public string $newRule = '';
+
+    public ?int $editingId = null;
 
     public bool $showArchived = false;
 
     // ── Trade form ───────────────────────────────────────────────
-    public string $trade_date     = '';
-    public string $direction_t    = 'long';
-    public string $entry_price    = '';
-    public string $exit_price     = '';
-    public string $stop_loss      = '';
-    public string $session        = '';
-    public int    $setup_rating   = 3;
-    public bool   $followed_rules = true;
-    public array  $confluences    = [];
-    public string $newConfluence  = '';
-    public string $notes          = '';
-    public ?int   $editingTradeId = null;
-    public $screenshot            = null;
+    public string $trade_date = '';
+
+    public string $direction_t = 'long';
+
+    public string $entry_price = '';
+
+    public string $exit_price = '';
+
+    public string $stop_loss = '';
+
+    public string $session = '';
+
+    public int $setup_rating = 3;
+
+    public bool $followed_rules = true;
+
+    public array $confluences = [];
+
+    public string $newConfluence = '';
+
+    public string $notes = '';
+
+    public ?int $editingTradeId = null;
+
+    public $screenshot = null;
 
     // ── Navegación ───────────────────────────────────────────────
     public ?int $selectedStrategyId = null;
 
     // ── Filtros log ──────────────────────────────────────────────
     public string $filterOutcome = '';
+
     public string $filterSession = '';
-    public string $sortBy        = 'trade_date';
-    public string $sortDir       = 'desc';
+
+    public string $sortBy = 'trade_date';
+
+    public string $sortDir = 'desc';
 
     // ── Analytics ────────────────────────────────────────────────
-    public array $metrics       = [];
-    public bool  $metricsLoaded = false;
+    public array $metrics = [];
+
+    public bool $metricsLoaded = false;
 
     // ─────────────────────────────────────────────────────────────
     // RENDER
@@ -75,11 +101,11 @@ class BacktestingPage extends Component
 
     public function render()
     {
-        $strategies         = collect();
+        $strategies = collect();
         $archivedStrategies = collect();
-        $archivedCount      = 0;
-        $selectedStrategy   = null;
-        $trades             = collect();
+        $archivedCount = 0;
+        $selectedStrategy = null;
+        $trades = collect();
 
         if ($this->selectedStrategyId) {
             // Vista detalle: el listado está oculto, no hace falta calcularlo
@@ -87,10 +113,10 @@ class BacktestingPage extends Component
                 ->findOrFail($this->selectedStrategyId);
 
             $trades = $selectedStrategy->trades()
-                ->when($this->filterOutcome === 'win',  fn($q) => $q->where('pnl_r', '>', 0))
-                ->when($this->filterOutcome === 'loss', fn($q) => $q->where('pnl_r', '<', 0))
-                ->when($this->filterOutcome === 'be',   fn($q) => $q->whereBetween('pnl_r', [-0.01, 0.01]))
-                ->when($this->filterSession,            fn($q) => $q->where('session', $this->filterSession))
+                ->when($this->filterOutcome === 'win', fn ($q) => $q->where('pnl_r', '>', 0))
+                ->when($this->filterOutcome === 'loss', fn ($q) => $q->where('pnl_r', '<', 0))
+                ->when($this->filterOutcome === 'be', fn ($q) => $q->whereBetween('pnl_r', [-0.01, 0.01]))
+                ->when($this->filterSession, fn ($q) => $q->where('session', $this->filterSession))
                 ->orderBy($this->sortBy, $this->sortDir)
                 ->orderBy('id', $this->sortDir)
                 ->paginate(25)
@@ -98,13 +124,14 @@ class BacktestingPage extends Component
                     $trade->screenshot_url = $trade->screenshot
                         ? $this->storage->temporaryUrl($trade->screenshot)
                         : null;
+
                     return $trade;
                 });
         } else {
             $strategies = BacktestStrategy::where('user_id', Auth::id())
                 ->where('status', 'active')
                 ->withCount('trades')
-                ->withCount(['trades as winning_trades_count' => fn($q) => $q->where('pnl_r', '>', 0)])
+                ->withCount(['trades as winning_trades_count' => fn ($q) => $q->where('pnl_r', '>', 0)])
                 ->withSum('trades', 'pnl_r')
                 ->orderByDesc('updated_at')
                 ->get();
@@ -124,7 +151,6 @@ class BacktestingPage extends Component
 
         return view('livewire.backtesting-page', compact('strategies', 'archivedStrategies', 'archivedCount', 'selectedStrategy', 'trades'));
     }
-
 
     // Método nuevo
     public function unarchive(int $id): void
@@ -156,13 +182,13 @@ class BacktestingPage extends Component
     {
         $strategy = BacktestStrategy::where('user_id', Auth::id())->findOrFail($id);
 
-        $this->editingId   = $strategy->id;
-        $this->name        = $strategy->name;
-        $this->symbol      = $strategy->symbol;
-        $this->timeframe   = $strategy->timeframe;
-        $this->direction   = $strategy->direction;
+        $this->editingId = $strategy->id;
+        $this->name = $strategy->name;
+        $this->symbol = $strategy->symbol;
+        $this->timeframe = $strategy->timeframe;
+        $this->direction = $strategy->direction;
         $this->description = $strategy->description ?? '';
-        $this->rules       = $strategy->rules ?? [];
+        $this->rules = $strategy->rules ?? [];
 
         $this->dispatch('strategy-ready');
     }
@@ -171,21 +197,21 @@ class BacktestingPage extends Component
     {
         // Antes: validateOnly('name,symbol,...') — cadena inválida que no validaba nada
         $this->validate([
-            'name'        => 'required|string|max:100',
-            'symbol'      => 'required|string|max:20',
-            'timeframe'   => 'required|string|max:10',
-            'direction'   => 'required|in:long,short,both',
+            'name' => 'required|string|max:100',
+            'symbol' => 'required|string|max:20',
+            'timeframe' => 'required|string|max:10',
+            'direction' => 'required|in:long,short,both',
             'description' => 'nullable|string|max:500',
         ]);
 
         $data = [
-            'user_id'     => Auth::id(),
-            'name'        => $this->name,
-            'symbol'      => strtoupper($this->symbol),
-            'timeframe'   => $this->timeframe,
-            'direction'   => $this->direction,
+            'user_id' => Auth::id(),
+            'name' => $this->name,
+            'symbol' => strtoupper($this->symbol),
+            'timeframe' => $this->timeframe,
+            'direction' => $this->direction,
             'description' => $this->description ?: null,
-            'rules'       => $this->rules,
+            'rules' => $this->rules,
         ];
 
         if ($this->editingId) {
@@ -224,14 +250,14 @@ class BacktestingPage extends Component
 
     public function resetForm(): void
     {
-        $this->editingId   = null;
-        $this->name        = '';
-        $this->symbol      = '';
-        $this->timeframe   = 'H1';
-        $this->direction   = 'both';
+        $this->editingId = null;
+        $this->name = '';
+        $this->symbol = '';
+        $this->timeframe = 'H1';
+        $this->direction = 'both';
         $this->description = '';
-        $this->rules       = [];
-        $this->newRule     = '';
+        $this->rules = [];
+        $this->newRule = '';
         $this->resetErrorBag();
     }
 
@@ -242,9 +268,9 @@ class BacktestingPage extends Component
     public function selectStrategy(int $id): void
     {
         $this->selectedStrategyId = $id;
-        $this->filterOutcome      = '';
-        $this->filterSession      = '';
-        $this->metricsLoaded      = false;
+        $this->filterOutcome = '';
+        $this->filterSession = '';
+        $this->metricsLoaded = false;
         $this->resetPage();
         $this->resetTradeForm();
         $this->dispatch('strategy-selected');
@@ -263,10 +289,10 @@ class BacktestingPage extends Component
     public function backToList(): void
     {
         $this->selectedStrategyId = null;
-        $this->filterOutcome      = '';
-        $this->filterSession      = '';
-        $this->sortBy             = 'trade_date';
-        $this->sortDir            = 'desc';
+        $this->filterOutcome = '';
+        $this->filterSession = '';
+        $this->sortBy = 'trade_date';
+        $this->sortDir = 'desc';
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -280,17 +306,17 @@ class BacktestingPage extends Component
                 ->where('user_id', Auth::id())
                 ->findOrFail($tradeId);
 
-            $this->editingTradeId  = $tradeId;
-            $this->trade_date      = $trade->trade_date->format('Y-m-d');
-            $this->direction_t     = $trade->direction;
-            $this->entry_price     = (string) $trade->entry_price;
-            $this->exit_price      = (string) $trade->exit_price;
-            $this->stop_loss       = (string) ($trade->stop_loss ?? '');
-            $this->session         = $trade->session ?? '';
-            $this->setup_rating    = $trade->setup_rating ?? 3;
-            $this->followed_rules  = $trade->followed_rules;
-            $this->confluences     = $trade->confluences ?? [];
-            $this->notes           = $trade->notes ?? '';
+            $this->editingTradeId = $tradeId;
+            $this->trade_date = $trade->trade_date->format('Y-m-d');
+            $this->direction_t = $trade->direction;
+            $this->entry_price = (string) $trade->entry_price;
+            $this->exit_price = (string) $trade->exit_price;
+            $this->stop_loss = (string) ($trade->stop_loss ?? '');
+            $this->session = $trade->session ?? '';
+            $this->setup_rating = $trade->setup_rating ?? 3;
+            $this->followed_rules = $trade->followed_rules;
+            $this->confluences = $trade->confluences ?? [];
+            $this->notes = $trade->notes ?? '';
             $this->reset('screenshot');
 
             $this->dispatch(
@@ -308,17 +334,17 @@ class BacktestingPage extends Component
     public function saveTrade(): void
     {
         $this->validate([
-            'trade_date'     => 'required|date',
-            'direction_t'    => 'required|in:long,short',
-            'entry_price'    => 'required|numeric|min:0',
-            'exit_price'     => 'required|numeric|min:0',
-            'stop_loss'      => 'nullable|numeric|min:0',
-            'session'        => 'nullable|in:london,new_york,asia,other',
-            'setup_rating'   => 'nullable|integer|min:1|max:5',
+            'trade_date' => 'required|date',
+            'direction_t' => 'required|in:long,short',
+            'entry_price' => 'required|numeric|min:0',
+            'exit_price' => 'required|numeric|min:0',
+            'stop_loss' => 'nullable|numeric|min:0',
+            'session' => 'nullable|in:london,new_york,asia,other',
+            'setup_rating' => 'nullable|integer|min:1|max:5',
             'followed_rules' => 'boolean',
-            'confluences'    => 'nullable|array',
-            'notes'          => 'nullable|string|max:1000',
-            'screenshot'     => 'nullable|image|max:10240',
+            'confluences' => 'nullable|array',
+            'notes' => 'nullable|string|max:1000',
+            'screenshot' => 'nullable|image|max:10240',
         ]);
 
         $pnlR = $this->calculateR();
@@ -335,8 +361,8 @@ class BacktestingPage extends Component
                 if ($existing->screenshot) {
                     $this->storage->delete($existing->screenshot);
                 }
-                $ext            = $this->screenshot->getClientOriginalExtension() ?: 'png';
-                $path           = 'users/' . Auth::id() . '/backtesting/' . $this->selectedStrategyId . '/' . $this->editingTradeId . '.' . $ext;
+                $ext = $this->screenshot->getClientOriginalExtension() ?: 'png';
+                $path = 'users/' . Auth::id() . '/backtesting/' . $this->selectedStrategyId . '/' . $this->editingTradeId . '.' . $ext;
                 $this->storage->putFile($path, $this->screenshot->readStream());
                 $screenshotPath = $path;
             } else {
@@ -344,8 +370,8 @@ class BacktestingPage extends Component
             }
         } else {
             if ($this->screenshot) {
-                $ext            = $this->screenshot->getClientOriginalExtension() ?: 'png';
-                $path           = 'users/' . Auth::id() . '/backtesting/' . $this->selectedStrategyId . '/' . now()->timestamp . '.' . $ext;
+                $ext = $this->screenshot->getClientOriginalExtension() ?: 'png';
+                $path = 'users/' . Auth::id() . '/backtesting/' . $this->selectedStrategyId . '/' . now()->timestamp . '.' . $ext;
                 $this->storage->putFile($path, $this->screenshot->readStream());
                 $screenshotPath = $path;
             }
@@ -353,19 +379,19 @@ class BacktestingPage extends Component
 
         $data = [
             'backtest_strategy_id' => $this->selectedStrategyId,
-            'user_id'              => Auth::id(),
-            'trade_date'           => $this->trade_date,
-            'direction'            => $this->direction_t,
-            'entry_price'          => $this->entry_price,
-            'exit_price'           => $this->exit_price,
-            'stop_loss'            => $this->stop_loss ?: null,
-            'pnl_r'                => $pnlR,
-            'session'              => $this->session ?: null,
-            'setup_rating'         => $this->setup_rating ?: null,
-            'followed_rules'       => $this->followed_rules,
-            'confluences'          => $this->confluences ?: null,
-            'notes'                => $this->notes ?: null,
-            'screenshot'           => $screenshotPath,
+            'user_id' => Auth::id(),
+            'trade_date' => $this->trade_date,
+            'direction' => $this->direction_t,
+            'entry_price' => $this->entry_price,
+            'exit_price' => $this->exit_price,
+            'stop_loss' => $this->stop_loss ?: null,
+            'pnl_r' => $pnlR,
+            'session' => $this->session ?: null,
+            'setup_rating' => $this->setup_rating ?: null,
+            'followed_rules' => $this->followed_rules,
+            'confluences' => $this->confluences ?: null,
+            'notes' => $this->notes ?: null,
+            'screenshot' => $screenshotPath,
         ];
 
         if ($this->editingTradeId) {
@@ -429,7 +455,9 @@ class BacktestingPage extends Component
 
     public function loadAnalytics(): void
     {
-        if (!$this->selectedStrategyId) return;
+        if (!$this->selectedStrategyId) {
+            return;
+        }
 
         $full = $this->getFullMetrics();
 
@@ -465,14 +493,14 @@ class BacktestingPage extends Component
      */
     public function analyzeStrategyWithAi(AiService $ai): void
     {
-        if (!$this->selectedStrategyId) return;
-
-        if (!$ai->isConfigured()) {
-            $this->dispatch('notify', type: 'error', message: __('labels.gemini_api_key_missing'));
+        if (!$this->selectedStrategyId) {
             return;
         }
 
-        if (!$this->checkAiLimit()) return;
+        // La API key ya la valida AiService::complete(): un solo sitio para todos.
+        if (!$this->checkAiLimit()) {
+            return;
+        }
 
         $strategy = BacktestStrategy::where('user_id', Auth::id())
             ->findOrFail($this->selectedStrategyId);
@@ -481,6 +509,7 @@ class BacktestingPage extends Component
 
         if (($metrics['total_trades'] ?? 0) < 5) {
             $this->dispatch('notify', type: 'warning', message: __('labels.need_min_5_trades'));
+
             return;
         }
 
@@ -508,22 +537,28 @@ class BacktestingPage extends Component
 
     private function buildAiContext(BacktestStrategy $strategy, array $m): string
     {
-        $dd  = $m['max_drawdown'];
-        $ri  = $m['rules_impact'];
+        $dd = $m['max_drawdown'];
+        $ri = $m['rules_impact'];
         $eff = $m['trader_efficiency'];
 
         $lines = [
-            "Estrategia: {$strategy->name} | {$strategy->symbol} {$strategy->timeframe} | Dirección: {$strategy->direction}",
-            'Reglas del setup: ' . (empty($strategy->rules) ? 'sin definir' : implode(' / ', $strategy->rules)),
+            __('ai.labels.bt_strategy') . ": {$strategy->name} | {$strategy->symbol} {$strategy->timeframe} | "
+                . __('ai.labels.bt_direction') . ": {$strategy->direction}",
+            __('ai.labels.bt_rules') . ': '
+                . (empty($strategy->rules) ? __('ai.labels.bt_undefined') : implode(' / ', $strategy->rules)),
             "Trades: {$m['total_trades']} | Win rate: {$m['win_rate']}% | Profit factor: {$m['profit_factor']}",
-            "Avg win: {$m['avg_win']}R | Avg loss: {$m['avg_loss']}R | Expectancy: {$m['expectancy']}R | PnL total: {$m['total_pnl']}R",
-            "Max drawdown: {$dd['amount']}R ({$dd['percent']}%) | SQN: {$m['sqn']} | Rachas: {$m['max_consecutive_wins']}W / {$m['max_consecutive_losses']}L",
-            'Con reglas seguidas: ' . json_encode($ri['followed']) . ' | Sin seguir reglas: ' . json_encode($ri['not_followed']),
-            'Por sesión (labels/pnl/wr/counts): ' . json_encode($m['pnl_by_session']),
-            'Por día de la semana: ' . json_encode($m['daily_winrate']),
-            'Por calidad de setup (1-5): ' . json_encode($m['rating_impact']),
-            'Top confluencias: ' . json_encode(array_slice($m['confluence_analysis'], 0, 5)),
-            "Disciplina: {$eff['rules_followed_pct']}% reglas seguidas | {$eff['high_quality_pct']}% setups A+",
+            "Avg win: {$m['avg_win']}R | Avg loss: {$m['avg_loss']}R | Expectancy: {$m['expectancy']}R | "
+                . __('ai.labels.bt_total_pnl') . ": {$m['total_pnl']}R",
+            "Max drawdown: {$dd['amount']}R ({$dd['percent']}%) | SQN: {$m['sqn']} | "
+                . __('ai.labels.bt_streaks') . ": {$m['max_consecutive_wins']}W / {$m['max_consecutive_losses']}L",
+            __('ai.labels.bt_rules_followed') . ': ' . json_encode($ri['followed'])
+                . ' | ' . __('ai.labels.bt_rules_broken') . ': ' . json_encode($ri['not_followed']),
+            __('ai.labels.bt_by_session') . ': ' . json_encode($m['pnl_by_session']),
+            __('ai.labels.bt_by_weekday') . ': ' . json_encode($m['daily_winrate']),
+            __('ai.labels.bt_by_rating') . ': ' . json_encode($m['rating_impact']),
+            __('ai.labels.bt_top_confluences') . ': ' . json_encode(array_slice($m['confluence_analysis'], 0, 5)),
+            __('ai.labels.bt_discipline') . ": {$eff['rules_followed_pct']}% " . __('ai.labels.bt_rules_kept')
+                . " | {$eff['high_quality_pct']}% " . __('ai.labels.bt_aplus'),
         ];
 
         return implode("\n", $lines);
@@ -536,11 +571,13 @@ class BacktestingPage extends Component
     public function addRuleToStrategy(): void
     {
         $rule = trim($this->newRule);
-        if ($rule === '' || !$this->selectedStrategyId) return;
+        if ($rule === '' || !$this->selectedStrategyId) {
+            return;
+        }
 
         $strategy = BacktestStrategy::where('user_id', Auth::id())->findOrFail($this->selectedStrategyId);
-        $rules    = $strategy->rules ?? [];
-        $rules[]  = $rule;
+        $rules = $strategy->rules ?? [];
+        $rules[] = $rule;
         $strategy->update(['rules' => $rules]);
 
         $this->newRule = '';
@@ -550,10 +587,12 @@ class BacktestingPage extends Component
     public function updateRule(int $index, string $value): void
     {
         $value = trim($value);
-        if ($value === '' || !$this->selectedStrategyId) return;
+        if ($value === '' || !$this->selectedStrategyId) {
+            return;
+        }
 
-        $strategy      = BacktestStrategy::where('user_id', Auth::id())->findOrFail($this->selectedStrategyId);
-        $rules         = $strategy->rules ?? [];
+        $strategy = BacktestStrategy::where('user_id', Auth::id())->findOrFail($this->selectedStrategyId);
+        $rules = $strategy->rules ?? [];
         $rules[$index] = $value;
         $strategy->update(['rules' => array_values($rules)]);
     }
@@ -561,7 +600,7 @@ class BacktestingPage extends Component
     public function removeRuleFromStrategy(int $index): void
     {
         $strategy = BacktestStrategy::where('user_id', Auth::id())->findOrFail($this->selectedStrategyId);
-        $rules    = $strategy->rules ?? [];
+        $rules = $strategy->rules ?? [];
         array_splice($rules, $index, 1);
         $strategy->update(['rules' => array_values($rules)]);
 
@@ -571,10 +610,12 @@ class BacktestingPage extends Component
     public function moveRule(int $index, string $direction): void
     {
         $strategy = BacktestStrategy::where('user_id', Auth::id())->findOrFail($this->selectedStrategyId);
-        $rules    = $strategy->rules ?? [];
+        $rules = $strategy->rules ?? [];
 
         $swap = $direction === 'up' ? $index - 1 : $index + 1;
-        if (!isset($rules[$swap])) return;
+        if (!isset($rules[$swap])) {
+            return;
+        }
 
         [$rules[$index], $rules[$swap]] = [$rules[$swap], $rules[$index]];
         $strategy->update(['rules' => array_values($rules)]);
@@ -586,13 +627,19 @@ class BacktestingPage extends Component
 
     private function calculateR(): ?float
     {
-        if (!$this->stop_loss || !$this->entry_price || !$this->exit_price) return null;
+        if (!$this->stop_loss || !$this->entry_price || !$this->exit_price) {
+            return null;
+        }
 
         $risk = abs((float) $this->entry_price - (float) $this->stop_loss);
-        if ($risk == 0) return null;
+        if ($risk == 0) {
+            return null;
+        }
 
         $reward = (float) $this->exit_price - (float) $this->entry_price;
-        if ($this->direction_t === 'short') $reward = -$reward;
+        if ($this->direction_t === 'short') {
+            $reward = -$reward;
+        }
 
         return round($reward / $risk, 4);
     }
@@ -600,17 +647,17 @@ class BacktestingPage extends Component
     private function resetTradeForm(): void
     {
         $this->editingTradeId = null;
-        $this->trade_date     = now()->format('Y-m-d');
-        $this->direction_t    = 'long';
-        $this->entry_price    = '';
-        $this->exit_price     = '';
-        $this->stop_loss      = '';
-        $this->session        = '';
-        $this->setup_rating   = 3;
+        $this->trade_date = now()->format('Y-m-d');
+        $this->direction_t = 'long';
+        $this->entry_price = '';
+        $this->exit_price = '';
+        $this->stop_loss = '';
+        $this->session = '';
+        $this->setup_rating = 3;
         $this->followed_rules = true;
-        $this->confluences    = [];
-        $this->newConfluence  = '';
-        $this->notes          = '';
+        $this->confluences = [];
+        $this->newConfluence = '';
+        $this->notes = '';
         $this->reset('screenshot');
         $this->resetErrorBag();
     }

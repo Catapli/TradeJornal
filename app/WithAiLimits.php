@@ -1,35 +1,54 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App;
 
 use App\Models\AiUsage;
+use App\Support\Demo;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Cupo diario de análisis con IA para los componentes Livewire.
+ *
+ * El cálculo vive en el modelo `User` (`aiDailyLimit()` y `aiCreditsLeft()`),
+ * porque el contador de la barra de navegación también lo necesita y tener dos
+ * copias de la misma cuenta acabaría dando cifras distintas en cada sitio.
+ * Aquí queda lo propio del componente: avisar y consumir.
+ */
 trait WithAiLimits
 {
     /**
-     * Comprueba si el usuario puede hacer peticiones.
-     * Devuelve true si puede, false si ha llegado al límite.
+     * ¿Puede hacer una petición más hoy? Avisa por su cuenta si no.
      */
-    public function checkAiLimit()
+    public function checkAiLimit(): bool
     {
+        // La demo no gasta llamadas de pago: los análisis que se ven en ella
+        // vienen precocinados en DemoSeeder, guardados en trades.ai_analysis.
+        if (Demo::active()) {
+            $this->dispatch('notify', __('landing.demo.blocked'));
+
+            return false;
+        }
+
         if ($this->getAiCreditsLeft() > 0) {
             return true;
         }
 
-        $hours = (int) ceil(now()->diffInMinutes(now()->endOfDay()) / 60);
-        $limit = $this->aiDailyLimit();
-
-        $this->dispatch('notify', "⚠️ Has alcanzado tu límite diario de $limit análisis. Se reinicia en $hours horas.");
+        $this->dispatch('notify', __('labels.limit_ai_reached_detail', [
+            'limit' => $this->aiDailyLimit(),
+            'hours' => (int) ceil(now()->diffInMinutes(now()->endOfDay()) / 60),
+        ]));
 
         return false;
     }
 
     /**
-     * Consume un crédito. Llamar a esto SOLO si la petición a la IA fue exitosa.
+     * Consume un crédito. Llamar SOLO si la petición a la IA salió bien.
+     *
      * Persistido en BD: sobrevive a limpiezas de caché y permite métricas de uso.
      */
-    public function consumeAiCredit()
+    public function consumeAiCredit(): void
     {
         $usage = AiUsage::firstOrCreate(
             ['user_id' => Auth::id(), 'date' => today()->toDateString()],
@@ -39,27 +58,15 @@ trait WithAiLimits
         $usage->increment('count');
     }
 
-    /**
-     * Créditos restantes del día (para mostrar en la vista).
-     */
-    public function getAiCreditsLeft()
+    /** Créditos que le quedan hoy (público: las vistas lo pintan). */
+    public function getAiCreditsLeft(): int
     {
-        $used = AiUsage::where('user_id', Auth::id())
-            ->where('date', today()->toDateString())
-            ->value('count') ?? 0;
-
-        return max(0, $this->aiDailyLimit() - $used);
+        return Auth::user()?->aiCreditsLeft() ?? 0;
     }
 
-    /**
-     * Límite diario según el plan del usuario (free vs suscripción activa).
-     * Público para mostrar el total real en las vistas (antes hardcodeado a 10).
-     */
+    /** Total diario según su plan (público: las vistas muestran «x de y»). */
     public function aiDailyLimit(): int
     {
-        $user = Auth::user();
-        $isPro = $user && $user->subscribed('default');
-
-        return (int) config($isPro ? 'services.groq.daily_limit_pro' : 'services.groq.daily_limit_free');
+        return Auth::user()?->aiDailyLimit() ?? 0;
     }
 }

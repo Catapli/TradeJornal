@@ -2,25 +2,26 @@
 
 namespace App\Livewire;
 
-use App\Jobs\RecalculateStrategyStatsJob;
-use Livewire\Component;
-use Livewire\WithPagination;
-use App\Models\Trade;
+use App\Actions\Export\ExportTradesCsv;
+use App\Concerns\AuthorizesOwnership;
+use App\LogActions;
 use App\Models\Account;
-use App\Models\Strategy;
 use App\Models\Mistake;
+use App\Models\Strategy;
+use App\Models\Trade;
 use App\Models\TradeAsset;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\On;
-use App\LogActions; // <-- IMPORTANTE: Tu Trait
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component; // <-- IMPORTANTE: Tu Trait
+use Livewire\WithPagination;
 
 class TradesPage extends Component
 {
+    // <-- Uso del Trait
+    use AuthorizesOwnership;
+    use LogActions;
     use WithPagination;
-    use LogActions; // <-- Uso del Trait
 
     // --- BÚSQUEDA Y FILTROS ---
     public $search = '';
@@ -37,13 +38,16 @@ class TradesPage extends Component
 
     // --- SELECCIÓN Y EDICIÓN MASIVA ---
     public $selectedTrades = [];
+
     public $selectAll = false;
 
     public $bulkStrategyId = '';
+
     public $bulkMistakes = [];
 
     // --- ESTADO DEL FORMULARIO CRUD ---
     public $isEditMode = false;
+
     public $editingTradeId = null;
 
     public $form = [
@@ -89,14 +93,51 @@ class TradesPage extends Component
     {
         $this->resetPage();
     }
+
     public function updatedFilters()
     {
         $this->resetPage();
     }
+
     public function resetFilters()
     {
         $this->reset('filters');
         $this->resetPage();
+    }
+
+    /**
+     * Las operaciones que hay en pantalla, en un CSV (Fase 5 · P10).
+     *
+     * Reutiliza `getTradesQuery()` en vez de recomponer los filtros: es la única
+     * forma de garantizar que el fichero y la tabla dicen lo mismo. Es gratuito a
+     * propósito —los datos son del usuario— y funciona en la demo, que solo lee.
+     */
+    public function exportCsv(ExportTradesCsv $csv)
+    {
+        try {
+            $query = $this->getTradesQuery();
+
+            // Descargar un fichero con solo la cabecera parece un error del
+            // programa; decirlo antes es más barato que explicarlo después.
+            if (!$query->clone()->exists()) {
+                $this->dispatch('error', __('export.csv.empty'));
+
+                return null;
+            }
+
+            $this->insertLog(
+                action: 'Exportación CSV de operaciones',
+                form: self::COMPONENT_FORM,
+                description: 'Filtros: ' . json_encode($this->filters)
+            );
+
+            return $csv->response($query, $csv->filename());
+        } catch (\Throwable $e) {
+            $this->logError($e, 'Export Trades CSV', self::COMPONENT_FORM);
+            $this->dispatch('error', __('labels.unexpected_error'));
+
+            return null;
+        }
     }
 
     // --- LÓGICA CRUD ---
@@ -138,7 +179,7 @@ class TradesPage extends Component
                 'pnl',
                 'notes',
                 'mae_price',
-                'mfe_price'
+                'mfe_price',
             ]);
 
             $this->form['entry_time'] = $trade->entry_time ? \Carbon\Carbon::parse($trade->entry_time)->format('Y-m-d\TH:i') : '';
@@ -183,9 +224,7 @@ class TradesPage extends Component
             $data['pnl_percentage'] = ($this->form['pnl'] / $balance) * 100;
 
             if ($this->isEditMode) {
-                $trade = Trade::findOrFail($this->editingTradeId);
-
-                $this->authorize('update', $trade);
+                $trade = $this->findOwned(Trade::class, $this->editingTradeId, 'update');
 
                 $trade->update($data);
 
@@ -238,7 +277,7 @@ class TradesPage extends Component
             if ($value) {
                 // Usamos la property con try-catch interno, pero aquí accedemos a la query cruda para eficiencia
                 // si falla getTradesProperty, esto fallaría, así que lo protegemos
-                $this->selectedTrades = $this->trades->pluck('id')->map(fn($id) => (string)$id)->toArray();
+                $this->selectedTrades = $this->trades->pluck('id')->map(fn ($id) => (string) $id)->toArray();
             } else {
                 $this->selectedTrades = [];
             }
@@ -251,57 +290,56 @@ class TradesPage extends Component
     /**
      * Query base reutilizable con todos los filtros activos.
      * Sin relaciones, sin paginación, lista para componer.
-     *
      */
-
     private function getTradesQuery()
     {
         return Trade::query()
             ->forUser()
             ->when(
                 $this->search,
-                fn($q) =>
-                $q->where(
-                    fn($sub) =>
-                    $sub->where('ticket', 'like', '%' . $this->search . '%')
+                fn ($q) => $q->where(
+                    fn ($sub) => $sub->where('ticket', 'like', '%' . $this->search . '%')
                         ->orWhereHas(
                             'tradeAsset',
-                            fn($a) =>
-                            $a->where('name', 'like', '%' . $this->search . '%')
+                            fn ($a) => $a->where('name', 'like', '%' . $this->search . '%')
                         )
                 )
             )
             ->when(
                 $this->filters['account_id'] ?? null,
-                fn($q) => $q->where('account_id', $this->filters['account_id'])
+                fn ($q) => $q->where('account_id', $this->filters['account_id'])
             )
             ->when(
                 $this->filters['strategy_id'] ?? null,
-                fn($q) => $q->where('strategy_id', $this->filters['strategy_id'])
+                fn ($q) => $q->where('strategy_id', $this->filters['strategy_id'])
             )
             ->when(
                 $this->filters['mistake_id'] ?? null,
-                fn($q) => $q->whereHas(
+                fn ($q) => $q->whereHas(
                     'mistakes',
-                    fn($m) => $m->where('mistakes.id', $this->filters['mistake_id'])
+                    fn ($m) => $m->where('mistakes.id', $this->filters['mistake_id'])
                 )
             )
             ->when(
                 $this->filters['direction'] ?? null,
-                fn($q) => $q->where('direction', $this->filters['direction'])
+                fn ($q) => $q->where('direction', $this->filters['direction'])
             )
             ->when(
                 $this->filters['date_from'] ?? null,
-                fn($q) => $q->whereDate('entry_time', '>=', $this->filters['date_from'])
+                fn ($q) => $q->whereDate('entry_time', '>=', $this->filters['date_from'])
             )
             ->when(
                 $this->filters['date_to'] ?? null,
-                fn($q) => $q->whereDate('entry_time', '<=', $this->filters['date_to'])
+                fn ($q) => $q->whereDate('entry_time', '<=', $this->filters['date_to'])
             )
             ->when($this->filters['result'] ?? null, function ($q) {
                 $res = $this->filters['result'];
-                if ($res === 'win')  $q->where('pnl', '>', 0);
-                if ($res === 'loss') $q->where('pnl', '<', 0);
+                if ($res === 'win') {
+                    $q->where('pnl', '>', 0);
+                }
+                if ($res === 'loss') {
+                    $q->where('pnl', '<', 0);
+                }
             })
             ->orderBy('exit_time', 'desc');
     }
@@ -315,15 +353,29 @@ class TradesPage extends Component
                 ->paginate(20);
         } catch (\Throwable $e) {
             $this->logError($e, 'Get Trades Query', self::COMPONENT_FORM);
+
             return new LengthAwarePaginator([], 0, 20);
         }
     }
 
+    /**
+     * ¿El usuario tiene alguna operación, con filtros o sin ellos?
+     *
+     * Distingue las dos tablas vacías, que piden mensajes opuestos: «todavía no
+     * has metido nada» pide un importador, y «no hay nada con estos filtros»
+     * pide quitarlos.
+     */
+    public function getHasAnyTradesProperty(): bool
+    {
+        return Trade::whereHas('account', fn ($q) => $q->where('user_id', Auth::id()))->exists();
+    }
 
     // --- EJECUCIÓN MASIVA ---
     public function executeBulkUpdate()
     {
-        if (empty($this->selectedTrades)) return;
+        if (empty($this->selectedTrades)) {
+            return;
+        }
 
         try {
             $count = count($this->selectedTrades);
@@ -378,16 +430,17 @@ class TradesPage extends Component
             $this->dispatch('close-bulk-modal');
             $this->dispatch('notify', __('labels.update_operations_ok'));
         } catch (\Throwable $e) {
-            $this->logError($e, 'Bulk Update', self::COMPONENT_FORM, "Selected IDs: " . json_encode($this->selectedTrades));
+            $this->logError($e, 'Bulk Update', self::COMPONENT_FORM, 'Selected IDs: ' . json_encode($this->selectedTrades));
             $this->dispatch('error', __('labels.update_operations_error'));
         }
     }
 
-
     // --- ACCIÓN DE BORRADO MASIVO ---
     public function executeBulkDelete()
     {
-        if (empty($this->selectedTrades)) return;
+        if (empty($this->selectedTrades)) {
+            return;
+        }
 
         try {
             $count = count($this->selectedTrades);
@@ -405,9 +458,9 @@ class TradesPage extends Component
 
             // Feedback UI
             $this->dispatch('close-bulk-delete-modal'); // Cierra modal en JS
-            $this->dispatch('notify', $count .  __('labels.delete_operations_ok'));
+            $this->dispatch('notify', $count . __('labels.delete_operations_ok'));
         } catch (\Throwable $e) {
-            $this->logError($e, 'Bulk Delete', self::COMPONENT_FORM, "IDs: " . json_encode($this->selectedTrades));
+            $this->logError($e, 'Bulk Delete', self::COMPONENT_FORM, 'IDs: ' . json_encode($this->selectedTrades));
             $this->dispatch('error', __('labels.delete_operations_error'));
         }
     }
@@ -421,6 +474,7 @@ class TradesPage extends Component
         try {
             if ($tradeId <= 0) {
                 $this->dispatch('notify', __('labels.invalid_trade_id'));
+
                 return;
             }
 
@@ -430,12 +484,13 @@ class TradesPage extends Component
                 ->orderBy('exit_time', 'desc')
                 ->paginate(20)           // Misma paginación que la tabla
                 ->pluck('id')
-                ->map(fn($id) => (int) $id)
+                ->map(fn ($id) => (int) $id)
                 ->toArray();
 
             // Seguridad: el trade solicitado debe estar en el contexto visible
             if (!in_array($tradeId, $contextIds, strict: true)) {
                 $this->dispatch('notify', __('labels.trade_not_in_list'));
+
                 return;
             }
 
@@ -450,14 +505,14 @@ class TradesPage extends Component
         }
     }
 
-
     public function render()
     {
         try {
-            $mistakes = Mistake::where('user_id', Auth::id())
-                ->orWhereNull('user_id')
-                ->orderBy('name')
-                ->get();
+            // Ordenamos por el nombre visible (traducido), no por la columna cruda.
+            $mistakes = Mistake::forUser(Auth::id())
+                ->get()
+                ->sortBy(fn (Mistake $m) => mb_strtolower($m->display_name))
+                ->values();
 
             $assets = TradeAsset::orderBy('symbol')->get();
 

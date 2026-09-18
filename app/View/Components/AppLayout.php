@@ -27,7 +27,14 @@ class AppLayout extends Component
             'layouts.app',
             [
                 'translations' => $translations,
-                // 'is_admin' => $user->is_admin
+                // Destinos de los atajos de teclado, resueltos aquí porque la
+                // directiva @json parte su argumento por comas y un array literal
+                // en la vista no compila.
+                'shortcutRoutes' => [
+                    'dashboard' => route('dashboard'),
+                    'trades' => route('trades'),
+                    'import' => route('trades.import'),
+                ],
             ]
         );
     }

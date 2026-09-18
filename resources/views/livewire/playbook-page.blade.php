@@ -332,11 +332,19 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('menu.resume_playbook') }}</p>
         </div>
 
-        {{-- ✅ ALPINE: Abrir modal sin round-trip --}}
-        <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
-                @click="openCreateModal()">
-            <i class="fa-solid fa-plus"></i> {{ __('labels.new_setup') }}
-        </button>
+        <div class="flex items-center gap-3">
+            {{-- Backtesting salió del carril: es donde se prueban estas mismas
+                 estrategias, así que se entra desde ellas. --}}
+            <x-page-link :href="route('backtesting')"
+                         icon="fa-solid fa-database"
+                         :label="__('menu.go_backtesting')" />
+
+            {{-- ✅ ALPINE: Abrir modal sin round-trip --}}
+            <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
+                    @click="openCreateModal()">
+                <i class="fa-solid fa-plus"></i> {{ __('labels.new_setup') }}
+            </button>
+        </div>
     </div>
 
     {{-- TOOLBAR: Búsqueda y Filtros --}}

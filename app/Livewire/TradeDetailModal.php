@@ -2,15 +2,13 @@
 
 namespace App\Livewire;
 
+use App\Actions\Trades\BuildTradeAuditContext;
 use App\LogActions;
-use App\WithAiLimits;
 use App\Models\Trade;
 use App\Services\AiService;
 use App\Services\StorageService;
-use Carbon\Carbon;
+use App\WithAiLimits;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -18,28 +16,38 @@ use Livewire\WithFileUploads;
 
 class TradeDetailModal extends Component
 {
-    use WithFileUploads;
-    use WithAiLimits;
     use LogActions;
+    use WithAiLimits;
+    use WithFileUploads;
 
     // ── PAYLOAD LIVEWIRE (lo que viaja en cada request) ──────────────────────
     // ANTES: selectedTrade = Eloquent Model completo → ~50-100KB por request
     // AHORA: selectedTradeId = integer               → ~4 bytes por request
     // El modelo se rehidrata vía #[Computed] sin tocar el snapshot.
 
-    #[Locked] public ?int    $selectedTradeId   = null;
-    #[Locked] public ?int    $prevTradeId       = null;
-    #[Locked] public ?int    $nextTradeId       = null;
-    #[Locked] public array   $contextTradeIds   = [];
-    #[Locked] public ?string $currentScreenshot = null;
+    #[Locked]
+    public ?int $selectedTradeId = null;
+
+    #[Locked]
+    public ?int $prevTradeId = null;
+
+    #[Locked]
+    public ?int $nextTradeId = null;
+
+    #[Locked]
+    public array $contextTradeIds = [];
+
+    #[Locked]
+    public ?string $currentScreenshot = null;
 
     // Propiedades que el usuario sí puede mutar desde el frontend
-    public string $notes              = '';
-    public mixed  $uploadedScreenshot = null;
-    public bool   $isAnalyzingTrade   = false;
+    public string $notes = '';
+
+    public mixed $uploadedScreenshot = null;
+
+    public bool $isAnalyzingTrade = false;
 
     protected StorageService $storage;
-
 
     // ─────────────────────────────────────────────────────────────────────────
     // COMPUTED PROPERTIES
@@ -55,7 +63,9 @@ class TradeDetailModal extends Component
     #[Computed]
     public function trade(): ?Trade
     {
-        if (!$this->selectedTradeId) return null;
+        if (!$this->selectedTradeId) {
+            return null;
+        }
 
         return Trade::with(['account', 'tradeAsset', 'mistakes'])
             ->forUser()
@@ -65,10 +75,12 @@ class TradeDetailModal extends Component
     #[Computed]
     public function screenshotUrl(): ?string
     {
-        if (!$this->currentScreenshot) return null;
+        if (!$this->currentScreenshot) {
+            return null;
+        }
+
         return $this->storage->temporaryUrl($this->currentScreenshot, 30);
     }
-
 
     public function boot(StorageService $storage): void
     {
@@ -86,7 +98,6 @@ class TradeDetailModal extends Component
         return $this->getAiCreditsLeft();
     }
 
-
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODOS PÚBLICOS
     // ─────────────────────────────────────────────────────────────────────────
@@ -96,13 +107,13 @@ class TradeDetailModal extends Component
         try {
             // Reseteamos a primitivos. Al poner selectedTradeId = null,
             // Livewire invalida automáticamente el computed cache de trade().
-            $this->selectedTradeId  = null;
-            $this->prevTradeId      = null;
-            $this->nextTradeId      = null;
+            $this->selectedTradeId = null;
+            $this->prevTradeId = null;
+            $this->nextTradeId = null;
             $this->isAnalyzingTrade = false;
-            $this->notes            = '';
+            $this->notes = '';
             $this->uploadedScreenshot = null;
-            $this->contextTradeIds  = $contextIds;
+            $this->contextTradeIds = $contextIds;
 
             $this->loadTrade($tradeId);
         } catch (\Throwable $e) {
@@ -115,7 +126,9 @@ class TradeDetailModal extends Component
     public function goToPrev(): void
     {
         try {
-            if ($this->prevTradeId) $this->loadTrade($this->prevTradeId);
+            if ($this->prevTradeId) {
+                $this->loadTrade($this->prevTradeId);
+            }
         } catch (\Throwable $e) {
             $this->logError($e, 'goToPrev', 'TradeDetailModal', "Prev ID: {$this->prevTradeId}");
         } finally {
@@ -126,7 +139,9 @@ class TradeDetailModal extends Component
     public function goToNext(): void
     {
         try {
-            if ($this->nextTradeId) $this->loadTrade($this->nextTradeId);
+            if ($this->nextTradeId) {
+                $this->loadTrade($this->nextTradeId);
+            }
         } catch (\Throwable $e) {
             $this->logError($e, 'goToNext', 'TradeDetailModal', "Next ID: {$this->nextTradeId}");
         } finally {
@@ -141,12 +156,13 @@ class TradeDetailModal extends Component
     public function saveNotes(string $notes = ''): void
     {
         try {
-            if (!$this->selectedTradeId) return;
-
+            if (!$this->selectedTradeId) {
+                return;
+            }
 
             // Sincronizamos $this->notes por consistencia interna del componente
             $this->notes = $notes;
-            // whereKey es semánticamente más claro que where('id', ...) 
+            // whereKey es semánticamente más claro que where('id', ...)
             // y evita cargar el modelo con relaciones solo para un update de un campo.
             Trade::whereKey($this->selectedTradeId)->update(['notes' => $this->notes]);
 
@@ -170,7 +186,9 @@ class TradeDetailModal extends Component
         try {
             $this->validate(['uploadedScreenshot' => 'required|image|max:10240']);
 
-            if (!$this->selectedTradeId) return;
+            if (!$this->selectedTradeId) {
+                return;
+            }
 
             $mimeType = $this->uploadedScreenshot->getMimeType();
 
@@ -181,8 +199,8 @@ class TradeDetailModal extends Component
 
             // Guardar nuevo en R2 con path estandarizado
             $trade = $this->trade;
-            $ext   = $this->uploadedScreenshot->getClientOriginalExtension() ?: 'png';
-            $path  = $this->storage->tradeScreenshotPath(Auth::id(), $trade->ticket, $ext);
+            $ext = $this->uploadedScreenshot->getClientOriginalExtension() ?: 'png';
+            $path = $this->storage->tradeScreenshotPath(Auth::id(), $trade->ticket, $ext);
             $this->storage->putFile($path, $this->uploadedScreenshot->readStream());
 
             Trade::whereKey($this->selectedTradeId)->update(['screenshot' => $path]);
@@ -199,38 +217,31 @@ class TradeDetailModal extends Component
         }
     }
 
-
     /**
      * Mejora 6: config() en lugar de env().
      * Mejora 7: mime_content_type() para la imagen ya almacenada en disco.
      * Mejora 12: accede al computed $this->trade; invalida cache post-update.
      */
-    public function analyzeIndividualTrade(AiService $ai): void
+    public function analyzeIndividualTrade(AiService $ai, BuildTradeAuditContext $context): void
     {
-        if (!$this->selectedTradeId) return;
-        if (!$this->checkAiLimit()) return;
+        if (!$this->selectedTradeId) {
+            return;
+        }
+        if (!$this->checkAiLimit()) {
+            return;
+        }
 
         $this->isAnalyzingTrade = true;
 
         try {
-            // Una sola query cacheada en este request. Si ya se llamó antes, 
+            // Una sola query cacheada en este request. Si ya se llamó antes,
             // Livewire devuelve el resultado en memoria sin re-query.
             $trade = $this->trade;
-            if (!$trade) return;
+            if (!$trade) {
+                return;
+            }
 
-            $futureAnalysis = $this->analyzePostTradeContext($trade);
-
-            $contextoDatos = implode("\n", [
-                __('ai.labels.asset')      . ": {$trade->tradeAsset->name}",
-                __('ai.labels.type')       . ': ' . strtoupper($trade->direction),
-                __('ai.labels.entry')      . ": {$trade->entry_price} | " . __('ai.labels.exit') . ": {$trade->exit_price}",
-                __('ai.labels.result')     . ": {$trade->pnl} (Lots: {$trade->size})",
-                __('ai.labels.duration')   . ": {$trade->duration_minutes} min",
-                __('ai.labels.efficiency') . ": MAE: {$trade->mae_price} | MFE: {$trade->mfe_price}",
-                __('ai.labels.future')     . ": {$futureAnalysis}",
-            ]);
-
-            $prompt = __('ai.audit_prompt', ['context' => $contextoDatos]);
+            $prompt = __('ai.audit_prompt', ['context' => $context->execute($trade)]);
 
             // Cacheada por trade: mismos datos no repiten llamada ni consumen crédito
             $result = $ai->complete(
@@ -256,7 +267,7 @@ class TradeDetailModal extends Component
             }
         } catch (\Throwable $e) {
             $this->logError($e, 'analyzeIndividualTrade', 'TradeDetailModal', "Trade ID: {$this->selectedTradeId}");
-            $this->dispatch('notify', __('labels.ai_error_generic'));
+            $this->dispatch('notify', __('ai.errors.connection'));
         } finally {
             $this->isAnalyzingTrade = false;
         }
@@ -281,7 +292,6 @@ class TradeDetailModal extends Component
         unset($this->aiCreditsLeft);
     }
 
-
     // ─────────────────────────────────────────────────────────────────────────
     // MÉTODOS PRIVADOS
     // ─────────────────────────────────────────────────────────────────────────
@@ -297,12 +307,13 @@ class TradeDetailModal extends Component
         if (!$trade) {
             // Trade no existe o no pertenece al usuario (scope de seguridad en computed)
             $this->selectedTradeId = null;
+
             return;
         }
 
         // Extraer primitivos al estado de Livewire.
         // Solo strings/nulls simples → payload mínimo.
-        $this->notes             = $trade->notes ?? '';
+        $this->notes = $trade->notes ?? '';
         $this->currentScreenshot = $trade->screenshot;
 
         // Trade como parámetro explícito: evita re-acceder al computed innecesariamente
@@ -313,14 +324,16 @@ class TradeDetailModal extends Component
             ? route('trades.chart-data', $trade->id)
             : null;
 
-        Log::info('🔗 Chart URL generada: ' . ($chartUrl ?? 'NULL'));
-        Log::info('📁 Chart path en BD: ' . ($trade->chart_data_path ?? 'NULL'));
+        // MAE y MFE viajan con el resto: el reproductor los sitúa en la vela que
+        // los tocó, y sin ellos las dos líneas más útiles del gráfico no salen.
         $this->dispatch(
             'trade-selected',
             path: $chartUrl,
             entry: $trade->entry_price,
             exit: $trade->exit_price,
-            direction: $trade->direction
+            direction: $trade->direction,
+            mae: $trade->mae_price,
+            mfe: $trade->mfe_price
         );
     }
 
@@ -338,6 +351,7 @@ class TradeDetailModal extends Component
             if ($currentIndex !== false) {
                 $this->prevTradeId = $this->contextTradeIds[$currentIndex + 1] ?? null;
                 $this->nextTradeId = $this->contextTradeIds[$currentIndex - 1] ?? null;
+
                 return;
             }
         }
@@ -345,16 +359,16 @@ class TradeDetailModal extends Component
         // Opción B: Fallback SQL (cubierto por índice compuesto [exit_time, id])
         $currentDate = $trade->exit_time->format('Y-m-d');
 
-        $baseQuery = fn() => Trade::forUser()
+        $baseQuery = fn () => Trade::forUser()
             ->whereDate('exit_time', $currentDate)
             ->select('id');
 
         $prev = $baseQuery()
             ->where(
-                fn($q) => $q
+                fn ($q) => $q
                     ->where('exit_time', '<', $trade->exit_time)
                     ->orWhere(
-                        fn($q2) => $q2
+                        fn ($q2) => $q2
                             ->where('exit_time', $trade->exit_time)
                             ->where('id', '<', $currentId)
                     )
@@ -364,10 +378,10 @@ class TradeDetailModal extends Component
 
         $next = $baseQuery()
             ->where(
-                fn($q) => $q
+                fn ($q) => $q
                     ->where('exit_time', '>', $trade->exit_time)
                     ->orWhere(
-                        fn($q2) => $q2
+                        fn ($q2) => $q2
                             ->where('exit_time', $trade->exit_time)
                             ->where('id', '>', $currentId)
                     )
@@ -377,48 +391,6 @@ class TradeDetailModal extends Component
 
         $this->prevTradeId = $prev?->id;
         $this->nextTradeId = $next?->id;
-    }
-
-    private function analyzePostTradeContext(Trade $trade): string
-    {
-        if (!$trade->chart_data_path) {
-            return __('labels.no_data_market');
-        }
-
-        $chartData = $this->storage->getJson($trade->chart_data_path);
-
-        if (!$chartData) return __('labels.no_data_market');
-        $candles   = $chartData['timeframes']['5m'] ?? ($chartData['timeframes']['1m'] ?? []);
-
-        if (empty($candles)) return __('labels.data_candles_not_enough');
-
-        $exitTimestamp         = Carbon::parse($trade->exit_time)->timestamp;
-        $entryPrice            = (float) $trade->entry_price;
-        $isLong                = in_array(strtoupper($trade->direction), ['LONG', 'BUY']);
-        $maxFavorableAfterExit = 0;
-        $foundExit             = false;
-        $candlesChecked        = 0;
-
-        foreach ($candles as $candle) {
-            if ($candle['time'] < $exitTimestamp) continue;
-
-            $foundExit = true;
-            $candlesChecked++;
-
-            $delta = $isLong ? ($candle['high'] - $entryPrice) : ($entryPrice - $candle['low']);
-            if ($delta > $maxFavorableAfterExit) $maxFavorableAfterExit = $delta;
-            if ($candlesChecked >= 30) break;
-        }
-
-        if (!$foundExit) return __('labels.not_data_close');
-
-        $originalMfe = abs(($trade->mfe_price ?? 0) - $entryPrice);
-        $threshold   = $originalMfe > 0 ? ($originalMfe * 1.5) : ($entryPrice * 0.0005);
-        $pointsMoved = number_format($maxFavorableAfterExit, 5);
-
-        return $maxFavorableAfterExit > $threshold
-            ? __('labels.liquidity_sweep', ['pointsMoved' => $pointsMoved])
-            : __('labels.no_good_movement');
     }
 
     public function render()

@@ -341,8 +341,9 @@
                                             @if ($trade->mistakes->count() > 0)
                                                 <div class="flex flex-wrap gap-1">
                                                     @foreach ($trade->mistakes as $mistake)
-                                                        <span class="inline-flex items-center rounded border border-rose-100 bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
-                                                            <i class="fa-solid fa-bug mr-1 opacity-50"></i> {{ $mistake->name }}
+                                                        <span class="inline-flex items-center rounded border border-rose-100 bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400"
+                                                              title="{{ $mistake->display_description }}">
+                                                            <i class="fa-solid fa-bug mr-1 opacity-50"></i> {{ $mistake->display_name }}
                                                         </span>
                                                     @endforeach
                                                 </div>

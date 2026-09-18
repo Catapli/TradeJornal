@@ -39,9 +39,6 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT', env('GOOGLE_CALLBACK_REDIRECTS'))
     ],
-    'firebase' => [
-        'key_path' => public_path(env('FIREBASE_CREDENTIALS'))
-    ],
     'stripe' => [
         'monthly' => env('STRIPE_PRICE_MONTHLY'),
         'yearly' => env('STRIPE_PRICE_YEARLY'),

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Concerns\RequiresProAccess;
 use App\Enums\NoteMood;
 use App\Enums\SessionMood;
 use App\Enums\TradeMood;
@@ -10,6 +11,7 @@ use App\Models\Account;
 use App\Models\SessionNote;
 use App\Models\Strategy;
 use App\Models\Trade;
+use App\Models\TradingRule;
 use App\Models\TradingSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +20,20 @@ use Livewire\Component;
 
 class SessionPage extends Component
 {
-    use LogActions; // ✅ CRASH PROTECTION ACTIVADO
+    use LogActions;
+    use RequiresProAccess; // ✅ CRASH PROTECTION ACTIVADO
 
     // ==========================================
     // 📦 PROPIEDADES PÚBLICAS
     // ==========================================
     public $sessionId;
+
     public $accounts = [];
+
     public $strategies = [];
+
     public $restoredSessionData = null;
+
     public $moodConfig = [];
 
     // ==========================================
@@ -38,8 +45,8 @@ class SessionPage extends Component
             // ✅ QUERIES DIRECTAS (PostgreSQL es rápido con eager loading)
             $this->moodConfig = [
                 'session' => SessionMood::toOptions(),
-                'note'    => NoteMood::toOptions(),
-                'trade'   => TradeMood::toOptions(),
+                'note' => NoteMood::toOptions(),
+                'trade' => TradeMood::toOptions(),
             ];
             $this->accounts = $this->loadAccounts();
             $this->strategies = $this->loadStrategies();
@@ -49,8 +56,8 @@ class SessionPage extends Component
 
             $this->moodConfig = [
                 'session' => SessionMood::toOptions(),
-                'note'    => NoteMood::toOptions(),
-                'trade'   => TradeMood::toOptions(),
+                'note' => NoteMood::toOptions(),
+                'trade' => TradeMood::toOptions(),
             ];
         } catch (\Exception $e) {
             $this->logError($e, 'mount', 'SessionPage', 'Error al cargar datos iniciales');
@@ -62,7 +69,7 @@ class SessionPage extends Component
 
             $this->dispatch('show-alert', [
                 'message' => __('labels.error_loading_conf'),
-                'type' => 'error'
+                'type' => 'error',
             ]);
         }
     }
@@ -88,6 +95,7 @@ class SessionPage extends Component
             // ✅ VALIDACIÓN: Si fetchUpdates falla, no restaurar
             if (!$data) {
                 $this->sessionId = null;
+
                 return;
             }
 
@@ -141,8 +149,9 @@ class SessionPage extends Component
             if ($existingSession) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.yet_active_session'),
-                    'type' => 'warning'
+                    'type' => 'warning',
                 ]);
+
                 return null;
             }
 
@@ -156,8 +165,9 @@ class SessionPage extends Component
             if (!$account) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.not_valid_account'),
-                    'type' => 'error'
+                    'type' => 'error',
                 ]);
+
                 return null;
             }
 
@@ -165,8 +175,9 @@ class SessionPage extends Component
             if ($account->current_balance <= 0) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.balance_not_zero'),
-                    'type' => 'error'
+                    'type' => 'error',
                 ]);
+
                 return null;
             }
 
@@ -179,8 +190,9 @@ class SessionPage extends Component
                 if (!$strategyExists) {
                     $this->dispatch('show-alert', [
                         'message' => __('labels.strategy_not_valid'),
-                        'type' => 'error'
+                        'type' => 'error',
                     ]);
+
                     return null;
                 }
             }
@@ -197,7 +209,7 @@ class SessionPage extends Component
                 'start_mood' => $mood,
                 'pre_session_notes' => $notes,
                 'status' => 'active',
-                'checklist_state' => []
+                'checklist_state' => [],
             ]);
 
             $this->sessionId = $session->id;
@@ -213,15 +225,16 @@ class SessionPage extends Component
 
             return [
                 'id' => $this->sessionId,
-                'start_balance' => (float) $account->current_balance
+                'start_balance' => (float) $account->current_balance,
             ];
         } catch (\Exception $e) {
             DB::rollBack();
             $this->logError($e, 'startSession', 'SessionPage', 'Error al iniciar sesión de trading');
             $this->dispatch('show-alert', [
                 'message' => __('labels.error_loging'),
-                'type' => 'error'
+                'type' => 'error',
             ]);
+
             return null;
         }
     }
@@ -272,6 +285,7 @@ class SessionPage extends Component
 
             if (!$session) {
                 $this->sessionId = null;
+
                 return $this->getEmptyMetrics();
             }
 
@@ -284,13 +298,13 @@ class SessionPage extends Component
                 'exit_time',
                 'mood',
                 'trading_session_id',
-                'strategy_id'
+                'strategy_id',
             ])
                 ->where('account_id', $session->account_id)
                 ->where('exit_time', '>=', $session->start_time)
                 ->with([
                     'tradeAsset:id,symbol', // Solo columnas necesarias
-                    'strategy:id,name,color' // Para futura expansión
+                    'strategy:id,name,color', // Para futura expansión
                 ])
                 ->orderBy('exit_time', 'desc')
                 ->get();
@@ -319,10 +333,11 @@ class SessionPage extends Component
             return [
                 'trades' => $formattedTrades,
                 'notes' => $notes,
-                'metrics' => $metrics
+                'metrics' => $metrics,
             ];
         } catch (\Exception $e) {
             $this->logError($e, 'fetchUpdates', 'SessionPage', 'Error al obtener actualizaciones');
+
             return $this->getEmptyMetrics();
         }
     }
@@ -344,7 +359,7 @@ class SessionPage extends Component
                 ->whereNull('trading_session_id') // ✅ Doble check para race conditions
                 ->update([
                     'trading_session_id' => $sessionId,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
             if ($updated > 0) {
@@ -358,7 +373,6 @@ class SessionPage extends Component
             $this->logError($e, 'syncOrphanTrades', 'SessionPage', 'Error al vincular trades huérfanos');
         }
     }
-
 
     /**
      * ✅ NUEVO: Carga notas de forma optimizada
@@ -376,12 +390,13 @@ class SessionPage extends Component
                         'id' => $n->id,
                         'note' => $n->note,
                         'mood' => $n->mood,
-                        'time' => $n->created_at->format('H:i')
+                        'time' => $n->created_at->format('H:i'),
                     ];
                 })
                 ->toArray();
         } catch (\Exception $e) {
             $this->logError($e, 'loadSessionNotes', 'SessionPage', 'Error al cargar notas');
+
             return [];
         }
     }
@@ -399,11 +414,12 @@ class SessionPage extends Component
         $winCount = $trades->where('pnl', '>', 0)->count();
         $startBal = max($startBalance, 1);
         $pnlPercent = ($totalPnL / $startBal) * 100;
+
         return [
             'count' => $totalCount,
             'pnl' => round($totalPnL, 2),
             'pnl_percent' => round($pnlPercent, 2),
-            'winrate' => round(($winCount / $totalCount) * 100, 0)
+            'winrate' => round(($winCount / $totalCount) * 100, 0),
         ];
     }
 
@@ -412,25 +428,40 @@ class SessionPage extends Component
      */
     private function loadAccounts(): array
     {
+        // Una sola consulta para todas las cuentas: las reglas globales valen para
+        // todas y filtrarlas cuenta a cuenta serían N consultas por sesión.
+        $misReglas = TradingRule::where('user_id', Auth::id())->active()->get(['account_id', 'text', 'kind', 'config']);
+
         return Account::select([
             'id',
             'name',
             'current_balance',
             'currency',
-            'status'
+            'status',
         ])
             ->where('user_id', Auth::id())
             ->where('status', 'active')
             ->with([
-                'tradingPlan:id,account_id,max_daily_loss_percent,daily_profit_target_percent,max_daily_trades,start_time,end_time'
+                'tradingPlan:id,account_id,max_daily_loss_percent,daily_profit_target_percent,max_daily_trades,start_time,end_time',
             ])
             ->get()
-            ->map(function ($acc) {
+            ->map(function ($acc) use ($misReglas) {
                 return [
                     'id' => $acc->id,
                     'name' => $acc->name,
                     'balance' => (float) $acc->current_balance,
                     'currency' => $acc->currency,
+                    // Reglas adoptadas desde el Laboratorio (P7): las de esta
+                    // cuenta y las globales. Se suman al checklist de la estrategia.
+                    'rules' => $misReglas
+                        ->filter(fn ($r): bool => $r->account_id === null || $r->account_id === $acc->id)
+                        ->map(fn ($r): array => [
+                            'text' => $r->text,
+                            'kind' => $r->kind,
+                            'config' => $r->config ?? [],
+                        ])
+                        ->values()
+                        ->all(),
                     'limits' => $acc->tradingPlan ? [
                         'max_loss_pct' => (float) $acc->tradingPlan->max_daily_loss_percent,
                         'target_pct' => (float) $acc->tradingPlan->daily_profit_target_percent,
@@ -441,7 +472,7 @@ class SessionPage extends Component
                         'end_time' => $acc->tradingPlan->end_time
                             ? \Carbon\Carbon::parse($acc->tradingPlan->end_time)->format('H:i')
                             : null,
-                    ] : null
+                    ] : null,
                 ];
             })
             ->toArray();
@@ -462,12 +493,11 @@ class SessionPage extends Component
                     'id' => $s->id,
                     'name' => $s->name,
                     'rules' => $s->rules ?? [],
-                    'color' => $s->color ?? '#4F46E5' // ✅ Para futura UI
+                    'color' => $s->color ?? '#4F46E5', // ✅ Para futura UI
                 ];
             })
             ->toArray();
     }
-
 
     /**
      * ✅ NUEVO: Estructura vacía segura
@@ -481,8 +511,8 @@ class SessionPage extends Component
                 'count' => 0,
                 'pnl' => 0,
                 'pnl_percent' => 0,
-                'winrate' => 0
-            ]
+                'winrate' => 0,
+            ],
         ];
     }
 
@@ -495,8 +525,9 @@ class SessionPage extends Component
             if (!$this->sessionId) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.not_active_sesion'),
-                    'type' => 'warning'
+                    'type' => 'warning',
                 ]);
+
                 return;
             }
 
@@ -510,8 +541,9 @@ class SessionPage extends Component
             if (strlen($note) > 1000) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.note_large'),
-                    'type' => 'warning'
+                    'type' => 'warning',
                 ]);
+
                 return;
             }
 
@@ -527,24 +559,26 @@ class SessionPage extends Component
             if (!$sessionExists) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.session_not_valid'),
-                    'type' => 'error'
+                    'type' => 'error',
                 ]);
+
                 return;
             }
 
             SessionNote::create([
                 'trading_session_id' => $this->sessionId,
                 'note' => $note,
-                'mood' => $mood
+                'mood' => $mood,
             ]);
         } catch (\Exception $e) {
             $this->logError($e, 'addNote', 'SessionPage', 'Error al guardar nota');
             $this->dispatch('show-alert', [
                 'message' => __('labels.error_saving_note'),
-                'type' => 'error'
+                'type' => 'error',
             ]);
         }
     }
+
     /**
      * ✅ MEJORADO: Validación de mood con enum estricto
      */
@@ -554,6 +588,7 @@ class SessionPage extends Component
             // ✅ VALIDACIÓN: Mood válido
             if (!TradeMood::tryFrom($mood)) {
                 $this->insertLog('validation_fail', 'SessionPage', "Trade mood inválido rechazado: {$mood}");
+
                 return;
             }
 
@@ -594,20 +629,21 @@ class SessionPage extends Component
             if (!$session) {
                 $this->dispatch('show-alert', [
                     'message' => __('labels.session_not_found'),
-                    'type' => 'error'
+                    'type' => 'error',
                 ]);
+
                 return route('journal');
             }
 
             // ✅ VALIDACIÓN 2: No cerrar dos veces
             if ($session->status === 'closed') {
                 $this->insertLog('duplicate_close', 'SessionPage', "Intento de cerrar sesión #{$session->id} ya cerrada");
+
                 return route('journal');
             }
 
             // ✅ VALIDACIÓN 3: Mood válido
             $endMood = SessionMood::tryFrom($endMood)?->value ?? SessionMood::Neutral->value;
-
 
             // ✅ VALIDACIÓN 4: Métricas válidas
             if (!is_array($metrics) || !isset($metrics['count'], $metrics['pnl'], $metrics['pnl_percent'])) {
@@ -640,8 +676,8 @@ class SessionPage extends Component
                 'total_trades' => $metrics['count'] ?? 0,
                 'session_pnl' => $metrics['pnl'] ?? 0,
                 'session_pnl_percent' => $metrics['pnl_percent'] ?? 0,
-                'post_session_notes'    => $postSessionNotes ?: null, // ✅ NUEVO
-                'status' => 'closed'
+                'post_session_notes' => $postSessionNotes ?: null, // ✅ NUEVO
+                'status' => 'closed',
             ]);
 
             DB::commit();
@@ -662,8 +698,9 @@ class SessionPage extends Component
             $this->logError($e, 'closeSession', 'SessionPage', 'Error al cerrar sesión');
             $this->dispatch('show-alert', [
                 'message' => __('labels.error_closing_sesion'),
-                'type' => 'error'
+                'type' => 'error',
             ]);
+
             return route('journal');
         }
     }

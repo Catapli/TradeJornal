@@ -152,7 +152,7 @@
                 </div>
             </div>
 
-            @if (Auth::user()->subscribed('default'))
+            @if (Auth::user()->hasProAccess())
                 {{-- 3. SINCRONIZACIÓN (Colapsable) --}}
                 <div class="space-y-4 rounded-xl border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-5 dark:border-gray-700 dark:from-emerald-500/10 dark:to-gray-800"
                      x-data="{ showSyncOptions: false }">
@@ -354,6 +354,12 @@
                 </div>
             </div>
         </div>
+
+        {{-- La página de conexión salió del carril: es configuración que se toca
+             una vez, y su sitio natural es junto a las cuentas que sincroniza. --}}
+        <x-page-link :href="route('sync.settings')"
+                     icon="fa-solid fa-plug"
+                     :label="__('menu.go_sync')" />
     </div>
 
 
@@ -427,10 +433,12 @@
                             {{ __('labels.edit_account') }}
                         </button>
 
+                        {{-- «Eliminar» archiva: el texto del aviso se compone aquí, en el
+                             servidor, porque el helper de Alpine no sustituye :count. --}}
                         <button class="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
-                                @click="confirmDeleteAccount({{ $this->selectedAccount->id }})">
-                            <i class="fa-solid fa-trash text-red-400"></i>
-                            {{ __('labels.delete_account') }}
+                                @click="confirmArchiveAccount({{ $this->selectedAccount->id }}, @js(__('labels.lost_history_account', ['count' => $this->selectedAccount->trades_count])), @js(__('labels.archive_account')))">
+                            <i class="fa-solid fa-box-archive text-amber-400"></i>
+                            {{ __('labels.archive_account') }}
                         </button>
 
                         <button class="rounded-lg bg-gray-100 p-2 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
@@ -931,14 +939,16 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="py-12 text-center text-gray-400 dark:text-gray-500"
-                                    colspan="5">
-                                    <div class="flex flex-col items-center">
-                                        <div class="mb-3 rounded-full bg-gray-50 p-4 dark:bg-gray-700">
-                                            <i class="fa-solid fa-scroll text-2xl text-gray-300 dark:text-gray-600"></i>
-                                        </div>
-                                        <p>{{ __('labels.not_history') }}</p>
-                                    </div>
+                                <td colspan="5">
+                                    <x-empty-state compact
+                                                   icon="fa-scroll"
+                                                   :title="__('labels.empty_history_title')"
+                                                   :text="__('labels.empty_history_text')">
+                                        <a class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700"
+                                           href="{{ route('trades.import') }}">
+                                            <i class="fa-solid fa-file-import mr-1"></i>{{ __('import.menu') }}
+                                        </a>
+                                    </x-empty-state>
                                 </td>
                             </tr>
                         @endforelse
@@ -952,6 +962,71 @@
             </div>
         </div>
 
+        {{-- ────────────────────────────────────────────────────────────────
+             CUENTAS ARCHIVADAS
+             Solo aparece si hay alguna: es una salida de emergencia, no una
+             sección permanente que estorbe a quien nunca ha archivado nada.
+        ──────────────────────────────────────────────────────────────── --}}
+        @if ($this->archivedAccounts->isNotEmpty())
+            <div class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                 x-data="{ open: false }">
+                <button class="flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        type="button"
+                        @click="open = !open">
+                    <span class="flex items-center gap-3">
+                        <i class="fa-solid fa-box-archive text-amber-500"></i>
+                        <span>
+                            <span class="block text-sm font-bold text-gray-900 dark:text-gray-100">
+                                {{ __('labels.archived_accounts') }} ({{ $this->archivedAccounts->count() }})
+                            </span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">
+                                {{ __('labels.archived_accounts_hint') }}
+                            </span>
+                        </span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform"
+                       :class="open && 'rotate-180'"></i>
+                </button>
 
+                <div class="border-t border-gray-100 dark:border-gray-700"
+                     x-cloak
+                     x-show="open"
+                     x-collapse>
+                    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($this->archivedAccounts as $archived)
+                            <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-4"
+                                wire:key="archived-{{ $archived->id }}">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">
+                                        {{ $archived->name }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ __('labels.archived_trades_count', ['count' => $archived->trades_count]) }}
+                                        ·
+                                        {{ __('labels.archived_on', ['date' => $archived->deleted_at?->format('d/m/Y')]) }}
+                                    </p>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <button class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+                                            type="button"
+                                            wire:click="restoreAccount({{ $archived->id }})"
+                                            wire:loading.attr="disabled">
+                                        <i class="fa-solid fa-rotate-left mr-1"></i>{{ __('labels.restore_account') }}
+                                    </button>
+
+                                    {{-- El borrado real: segundo paso deliberado y con el número delante. --}}
+                                    <button class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                                            type="button"
+                                            @click="confirmDeleteAccountPermanently({{ $archived->id }}, @js(__('labels.delete_permanently_warning', ['count' => $archived->trades_count])), @js(__('labels.delete_account_permanently')))">
+                                        <i class="fa-solid fa-trash mr-1"></i>{{ __('labels.delete_account_permanently') }}
+                                    </button>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
 
     </div>

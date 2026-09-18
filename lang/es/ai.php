@@ -3,6 +3,17 @@
 declare(strict_types=1);
 
 return [
+    // Rol system: los modelos pequeños respetan las reglas duras mucho mejor aquí
+    // que enterradas al final de un prompt largo de usuario.
+    'system' => 'Eres un auditor de trading profesional, estricto y objetivo. '
+        . 'Trabajas SOLO con los datos que te dan: nunca recibes imágenes ni gráficos, '
+        . 'así que jamás menciones capturas ni lamentes su ausencia. '
+        . 'Las métricas que recibes YA vienen calculadas: cítalas literalmente y no rehagas '
+        . 'ninguna operación aritmética con precios, pips ni ratios. '
+        . 'Si un dato no está, dilo en una frase y no especules. '
+        . 'No escribas introducciones, saludos ni frases dramáticas: empieza directamente por el primer punto '
+        . 'y respeta al pie de la letra el formato de respuesta que se te pida. Responde SIEMPRE en español.',
+
     'audit_prompt' => "
         Realiza una auditoría técnica y psicológica de esta operación de trading.
         Sé estricto, objetivo y profesional.
@@ -11,14 +22,24 @@ return [
         :context
         
         INSTRUCCIONES DE ANÁLISIS (Usa estos criterios):
-        1. ANÁLISIS DE ESTRUCTURA (Visual):
-           - Si hay imagen: ¿La entrada respeta Soportes/Resistencias, Order Blocks o Tendencia?
-           - ¿Fue una entrada precisa ('Sniper') o persecución del precio (FOMO)?
+        1. ANÁLISIS DE ESTRUCTURA (Datos del gráfico previos a la entrada):
+           - Posición en el rango: un LONG cerca del 0% compra soporte; cerca del 100% persigue el techo. Al revés para SHORT.
+           - Distancia a los extremos: ¿tenía recorrido hasta el extremo opuesto o entró sin espacio?
+           - Lado de la EMA: ¿la entrada va a favor o en contra de la tendencia?
+           - Ratio de la vela de entrada: >1.5 indica entrada sobre un impulso ya extendido (FOMO); ≈1 indica entrada tranquila ('Sniper').
+           - Si el bloque de estructura dice que no hay datos, indícalo en una frase y NO especules sobre el gráfico.
         2. EFICIENCIA DE EJECUCIÓN (Datos MAE/MFE):
            - MAE vs PnL: ¿Soportó mucho drawdown para ganar poco? (Riesgo/Beneficio invertido).
            - MFE vs Salida: ¿Dejó mucho dinero en la mesa por miedo (cierre prematuro)?
         3. PSICOLOGÍA IMPLÍCITA:
            - Basado en duración y resultado: ¿Planificado o Impulsivo?
+
+        REGLAS DE DATOS (OBLIGATORIO):
+        - NO recibes ninguna imagen. No menciones capturas ni lamentes su ausencia: analiza con los datos de estructura.
+        - Las métricas de estructura y eficiencia YA vienen calculadas. Cítalas literalmente.
+        - Si el bloque PERFIL DEL TRADER trae errores recurrentes o un objetivo del mes, relaciona ESTA operación con ellos en una sola frase dentro del veredicto. Si dice que no hay historial suficiente, no lo menciones.
+        - NO recalcules pips, NO restes precios, NO conviertas puntos ni derives el R:R por tu cuenta.
+        - El PnL está en dólares; los precios de entrada/salida NO son comparables con él.
 
         REGLAS DE FORMATO:
         - NO escribas introducciones, saludos ni frases dramáticas.
@@ -57,7 +78,7 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
 - **🏆 Nota del Día:** [0/10] (Basado en la disciplina, no solo en el dinero ganado).
 ',
 
-    'draft_prompt' => "
+    'draft_prompt' => '
         Actúa como un coach de trading profesional y redactor. Escribe la entrada del diario de hoy en PRIMERA PERSONA (como si fueras yo).
         
         MIS DATOS DE HOY:
@@ -81,7 +102,7 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
         - Usa <ul><li>...</li></ul> para listas.
         - NO uses Markdown. Solo HTML limpio.
         - NO incluyas ```html al principio ni al final.
-    ",
+    ',
     'daily_tip' => "
                 Actúa como un Psico-Trading Coach experto. Analiza estos trades buscando patrones destructivos.
             
@@ -136,8 +157,45 @@ FORMATO DE RESPUESTA REQUERIDO (Usa estos iconos):
         'exit' => 'Salida',
         'result' => 'Resultado',
         'duration' => 'Duración',
+        'structure' => 'Estructura previa a la entrada',
+        'prior_range' => 'Rango de las :count velas previas',
+        'entry_position' => 'Posición de la entrada en el rango (0%=mínimo, 100%=máximo)',
+        'distance_to_low' => 'Distancia al mínimo del rango',
+        'distance_to_high' => 'Distancia al máximo del rango',
+        'ema_context' => 'EMA en la entrada: :value (precio :side)',
+        'above' => 'por encima',
+        'below' => 'por debajo',
+        'entry_candle' => 'Vela previa a la entrada: :range vs media :avg (ratio :ratio)',
         'efficiency' => 'Eficiencia',
+        'mae' => 'MAE (drawdown máximo latente)',
+        'mfe' => 'MFE (máximo a favor latente)',
+        'captured' => 'Recorrido capturado',
+        'exit_efficiency' => 'Eficiencia de salida',
+        'real_rr' => 'R:R real',
+        'no_latent_risk' => 'sin riesgo latente',
+        'bt_strategy' => 'Estrategia',
+        'bt_direction' => 'Dirección',
+        'bt_rules' => 'Reglas del setup',
+        'bt_undefined' => 'sin definir',
+        'bt_total_pnl' => 'PnL total',
+        'bt_streaks' => 'Rachas',
+        'bt_rules_followed' => 'Con reglas seguidas',
+        'bt_rules_broken' => 'Sin seguir reglas',
+        'bt_by_session' => 'Por sesión (labels/pnl/wr/counts)',
+        'bt_by_weekday' => 'Por día de la semana',
+        'bt_by_rating' => 'Por calidad de setup (1-5)',
+        'bt_top_confluences' => 'Top confluencias',
+        'bt_discipline' => 'Disciplina',
+        'bt_rules_kept' => 'reglas seguidas',
+        'bt_aplus' => 'setups A+',
         'future' => 'ANÁLISIS POST-CIERRE',
+        'profile' => 'PERFIL DEL TRADER (últimos meses)',
+        'profile_none' => 'sin historial suficiente',
+        'profile_mistake' => ':name (:count veces, :trend)',
+        'profile_goal' => 'Objetivo de este mes: bajar de :baseline a :target con «:name». Lleva :so_far.',
+        'trend_down' => 'a mejor',
+        'trend_up' => 'a peor',
+        'trend_flat' => 'igual',
         'mood' => 'Estado de ánimo inicial',
         'total_result' => 'Resultado total',
         'total_ops' => 'Total operaciones',

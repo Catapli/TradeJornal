@@ -3,15 +3,37 @@
 <div class="relative col-span-12"
      x-data="{
          open: false,
+         applying: false,
          selected: @entangle($attributes->wire('model')),
      
+         /**
+          * Aplicar el filtro va al servidor, y hasta ahora no se notaba: el
+          * desplegable se cerraba y los números cambiaban cuando les tocaba, sin
+          * que nada dijera que se estaba recalculando. `$refresh()` devuelve una
+          * promesa, así que el aviso dura exactamente lo que dura la petición.
+          */
+         async apply() {
+             // El guard también evita la petición duplicada que había: pulsar
+             // Aplicar cerraba el desplegable, y el watcher de abajo mandaba un
+             // segundo $refresh() por su cuenta.
+             if (this.applying) return;
+     
+             this.applying = true;
+             this.open = false;
+     
+             try {
+                 await this.$wire.$refresh();
+             } finally {
+                 this.applying = false;
+             }
+         },
+     
          init() {
-             // 👇 ESTO ES LO NUEVO:
-             // Vigilamos cuando el menú se cierra
+             // Cerrar el desplegable (por el botón o pulsando fuera) aplica lo
+             // seleccionado. Con el guard de apply(), la de Aplicar no se duplica.
              this.$watch('open', value => {
                  if (value === false) {
-                     // Cuando se cierra, forzamos la actualización al padre
-                     this.$wire.$refresh();
+                     this.apply();
                  }
              });
          },
@@ -70,7 +92,15 @@
 
         <div class="relative flex w-full min-w-52 items-center rounded-e-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-inner dark:border-neutral-700 dark:bg-neutral-900 dark:text-gray-300">
             <span x-text="label"
+                  x-show="!applying"
                   :class="selected.length === 0 ? 'text-gray-400 pr-5' : 'text-gray-800 dark:text-gray-100 font-semibold pr-5'"></span>
+
+            {{-- Con el desplegable cerrado, el aviso tiene que quedarse en el propio
+                 selector: es donde está mirando quien acaba de pulsar Aplicar. --}}
+            <span class="flex items-center gap-2 pr-5 font-semibold text-indigo-600 dark:text-indigo-400"
+                  x-show="applying">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>{{ __('labels.updating_data') }}
+            </span>
             <div class="absolute right-4 top-1/2 -translate-y-1/2 transition-transform duration-200"
                  :class="open ? 'rotate-180' : ''">
                 <i class="fa-solid fa-chevron-down text-xs text-gray-400 dark:text-gray-500"></i>
@@ -115,8 +145,15 @@
                            @change="toggle({{ $option['id'] }})">
 
                     <div class="flex flex-col">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <span class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                             {{ $option['name'] }}
+                            {{-- El badge solo viaja en las opciones que lo necesitan (una
+                                 cuenta quemada o archivada): si no, la lista se llena de ruido. --}}
+                            @if (!empty($option['badge']))
+                                <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                                    {{ $option['badge'] }}
+                                </span>
+                            @endif
                         </span>
                         @if (isset($option['subtext']))
                             <span class="text-xs text-gray-400 dark:text-gray-500">{{ $option['subtext'] }}</span>
@@ -133,10 +170,14 @@
 
             {{-- BOTÓN APLICAR FIJO AL FINAL --}}
             <div class="sticky bottom-0 border-t border-gray-100 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
-                <button class="w-full rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                <button class="w-full rounded-lg bg-blue-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-60"
                         type="button"
-                        @click="open = false; $wire.$refresh()">
-                    {{ __('labels.apply_filters') }}
+                        :disabled="applying"
+                        @click="apply()">
+                    <span x-show="!applying">{{ __('labels.apply_filters') }}</span>
+                    <span x-show="applying">
+                        <i class="fa-solid fa-circle-notch fa-spin mr-1"></i>{{ __('labels.applying_filters') }}
+                    </span>
                 </button>
             </div>
         </div>

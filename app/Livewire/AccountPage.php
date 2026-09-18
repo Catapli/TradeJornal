@@ -2,14 +2,18 @@
 
 namespace App\Livewire;
 
-use App\LogActions;
-use App\MoneyHelper;
+use App\Actions\Accounts\CalculateAccountStatistics;
+use App\Actions\Accounts\GenerateBalanceChartData;
+use App\Concerns\AuthorizesOwnership;
 use App\Livewire\Forms\AccountForm;
+use App\LogActions;
 use App\Models\Account;
 use App\Models\ProgramLevel;
 use App\Models\PropFirm;
 use App\Models\Trade;
+use App\MoneyHelper;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -17,69 +21,95 @@ use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-use App\Actions\Accounts\CalculateAccountStatistics;
-use App\Actions\Accounts\GenerateBalanceChartData;
-
 class AccountPage extends Component
 {
-
-    use WithPagination;
+    use AuthorizesOwnership;
     use LogActions;
+    use WithPagination;
 
     // ? Estado de selección: ÚNICA propiedad persistida en el snapshot de Livewire.
     //   accounts / selectedAccount / propFirmsData son computed (no viajan en el payload).
     public $showCreateModal = false;
+
     public $showEditModal = false;
+
     public $selectedAccountId;
 
     // ? Datos para el gráfico de balance
     public $balanceChartData = [
         'labels' => [],
-        'datasets' => []
+        'datasets' => [],
     ];
+
     // ? Estadisticas de cuenta
     public $totalPnl = 0; // PNL total de la cuenta
+
     public $winRate = 0; // % de trades ganadores
+
     public $totalTrades; // Total de trades
+
     public $firstTradeDate; // Fecha del primer trade
+
     public $avgDurationMinutes = 0;
+
     public $avgDurationFormatted = '0h 0m';
+
     public $maxWin = 0;      // Ganancia Máxima
+
     public $maxLoss = 0;     // Pérdida Máxima
+
     public $topAsset = 'N/A'; // Símbolo más operado
+
     public $tradingDays = 0; // Días de trading activos
+
     public $avgWinTrade = 0;    // €127.50
+
     public $avgLossTrade = 0;   // €55.20
+
     public $arr = 0;
+
     public $accountAgeDays = 0;
+
     public $accountAgeFormatted = '0 días';
+
     public $initialBalance = 0;
+
     public $totalProfitLoss = 0;
+
     public $profitPercentage = 0;
 
     public $profitFactor = 0;    // 2.15
+
     public $grossProfit = 0;     // €12,450
+
     public $grossLoss = 0;       // €5,780
 
     public $lastSyncedAccountId;
+
     public $syncStartTime = null; // 👇 Nueva propiedad para guardar cuándo empezamos
+
     public $selectedTimeframe = 'all'; // ← NUEVO
+
     public AccountForm $form;
 
     public $editingAccountId = null;
 
     // Campos del plan
     public $rules_max_loss_percent;
+
     public $rules_profit_target_percent;
+
     public $rules_max_trades;
+
     public $rules_start_time;
+
     public $rules_end_time;
 
     public $currency;
 
     public $lastKnownSync = null;
-    public $syncCheckEnabled = true; // Por si quieres desactivarlo
 
+    public $syncCheckEnabled = true; // Por si quieres desactivarlo
 
     /**
      * Cuentas activas (no quemadas) del usuario. Computed: se resuelve por
@@ -90,6 +120,9 @@ class AccountPage extends Component
     {
         return Account::where('user_id', Auth::id())
             ->where('status', '!=', 'burned')
+            // El aviso de archivado dice cuántas operaciones se apartan: sin el
+            // número, «se archiva el histórico» no significa nada.
+            ->withCount('trades')
             ->orderBy('name')
             ->get();
     }
@@ -144,6 +177,7 @@ class AccountPage extends Component
     {
         try {
             $account = Account::with('tradingPlan')->findOrFail($accountId);
+            $this->authorize('view', $account);
             $plan = $account->tradingPlan;
             $this->editingAccountId = $accountId;
             $this->rules_max_loss_percent = $plan?->max_daily_loss_percent;
@@ -154,16 +188,19 @@ class AccountPage extends Component
 
             // Alpine abre el modal (no Livewire)
             $this->dispatch('open-rules-modal');
+        } catch (AuthorizationException $e) {
+            // Un fallo de permisos no es un error de la aplicacion: que suba y
+            // responda 403 en vez de acabar en el log como si algo se hubiera roto.
+            throw $e;
         } catch (Exception $e) {
             $this->logError($e, 'openRules', 'AccountPage', "Error abriendo reglas para cuenta {$accountId}");
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_rules')
+                'message' => __('labels.error_loading_rules'),
             ]);
         }
     }
-
 
     /**
      * Guarda las reglas en BD y dispara evento de éxito
@@ -172,7 +209,9 @@ class AccountPage extends Component
     public function saveRules()
     {
         try {
-            $account = Account::findOrFail($this->editingAccountId);
+            // `editingAccountId` es una propiedad pública: la manda el cliente, así que
+            // sin findOwned se podían reescribir los límites de riesgo de cualquier cuenta.
+            $account = $this->findOwned(Account::class, $this->editingAccountId, 'update');
 
             $data = [
                 'max_daily_loss_percent' => $this->rules_max_loss_percent === '' ? null : $this->rules_max_loss_percent,
@@ -180,7 +219,7 @@ class AccountPage extends Component
                 'max_daily_trades' => $this->rules_max_trades === '' ? null : $this->rules_max_trades,
                 'start_time' => $this->rules_start_time === '' ? null : $this->rules_start_time,
                 'end_time' => $this->rules_end_time === '' ? null : $this->rules_end_time,
-                'is_active' => true
+                'is_active' => true,
             ];
 
             $account->tradingPlan()->updateOrCreate([], $data);
@@ -190,25 +229,31 @@ class AccountPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'success',
-                'message' => __('labels.trading_plan_ok')
+                'message' => __('labels.trading_plan_ok'),
             ]);
+        } catch (AuthorizationException $e) {
+            // Un fallo de permisos no es un error de la aplicacion: que suba y
+            // responda 403 en vez de acabar en el log como si algo se hubiera roto.
+            throw $e;
         } catch (Exception $e) {
             $this->logError($e, 'saveRules', 'AccountPage', "Error guardando reglas para cuenta {$this->editingAccountId}");
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_saving_rules')
+                'message' => __('labels.error_saving_rules'),
             ]);
         }
     }
-
 
     // Propiedad Computada para los trades
     public function getHistoryTradesProperty()
     {
         try {
+            // Igual que en checkSyncStatus/openTradeDetail: el id sale del computed
+            // (filtrado por Auth::id()). Con `selectedAccountId` a pelo se podía pintar
+            // la tabla de trades completa de una cuenta ajena.
             return Trade::query()
-                ->where('account_id', $this->selectedAccountId)
+                ->where('account_id', $this->selectedAccount?->id)
                 ->with('tradeAsset') // Carga impaciente para optimizar
                 ->orderBy('exit_time', 'desc') // Orden por fecha de salida
                 ->paginate(10); // Paginación de 15 elementos
@@ -219,12 +264,10 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_trades')
+                'message' => __('labels.error_loading_trades'),
             ]);
         }
     }
-
-
 
     private function changeCurrency()
     {
@@ -238,13 +281,12 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_currency')
+                'message' => __('labels.error_loading_currency'),
             ]);
         }
     }
 
-
-    //* Para modificar el timeframe del grafico
+    // * Para modificar el timeframe del grafico
     public function setTimeframe($timeframe) // ← NUEVO MÉTODO
     {
         try {
@@ -259,7 +301,7 @@ class AccountPage extends Component
             $this->loadBalanceChart();
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_timeframe')
+                'message' => __('labels.error_loading_timeframe'),
             ]);
         }
     }
@@ -283,7 +325,10 @@ class AccountPage extends Component
 
             // Leer last_sync DIRECTAMENTE de la BD (no del modelo serializado,
             // que entre polls no refleja los cambios escritos por el job de sync).
-            $currentSync = Account::where('id', $this->selectedAccountId)->value('last_sync');
+            // Se usa el id del computed, no `selectedAccountId` a pelo: el computed sale
+            // de `accounts`, que ya filtra por Auth::id(). Con la propiedad pública se
+            // podía sondear el `last_sync` de una cuenta ajena.
+            $currentSync = Account::whereKey($this->selectedAccount->id)->value('last_sync');
 
             // Si no hay sincronización registrada, salir
             if (!$currentSync) {
@@ -310,7 +355,7 @@ class AccountPage extends Component
                     // ✅ NOTIFICAR AL USUARIO
                     $this->dispatch('show-alert', [
                         'type' => 'success',
-                        'message' => __('labels.new_operations_detected')
+                        'message' => __('labels.new_operations_detected'),
                     ]);
 
                     Log::info("✅ Datos actualizados para cuenta {$this->selectedAccount->id}");
@@ -319,14 +364,11 @@ class AccountPage extends Component
         } catch (Exception $e) {
             Log::error('checkSyncStatus ERROR:', [
                 'message' => $e->getMessage(),
-                'account_id' => $this->selectedAccount?->id
+                'account_id' => $this->selectedAccount?->id,
             ]);
             // No mostramos error al usuario para no interrumpir la UX
         }
     }
-
-
-
 
     public function changeAccount($accountId)
     {
@@ -346,12 +388,10 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_account')
+                'message' => __('labels.error_loading_account'),
             ]);
         }
     }
-
-
 
     /**
      * Actualiza todos los datos de la cuenta seleccionada
@@ -382,7 +422,7 @@ class AccountPage extends Component
             if (is_null($this->selectedAccount->last_sync)
                 && $this->selectedAccount->current_balance != $theoreticalBalance) {
                 $this->selectedAccount->update([
-                    'current_balance' => $theoreticalBalance
+                    'current_balance' => $theoreticalBalance,
                 ]);
             }
 
@@ -415,7 +455,7 @@ class AccountPage extends Component
 
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_loading_data_account')
+                'message' => __('labels.error_loading_data_account'),
             ]);
         }
     }
@@ -424,7 +464,7 @@ class AccountPage extends Component
     {
 
         try {
-            $action = new CalculateAccountStatistics();
+            $action = new CalculateAccountStatistics;
             $stats = $action->execute($this->selectedAccount, $force);
 
             // Mapear resultados a propiedades públicas
@@ -461,7 +501,7 @@ class AccountPage extends Component
     private function loadBalanceChart(bool $force = false)
     {
         try {
-            $action = new GenerateBalanceChartData();
+            $action = new GenerateBalanceChartData;
             $this->balanceChartData = $action->execute($this->selectedAccount, $this->selectedTimeframe, $force);
         } catch (Exception $e) {
             $this->logError($e, 'loadBalanceChart', 'AccountPage', 'Error generando gráfico de balance');
@@ -470,8 +510,8 @@ class AccountPage extends Component
             $this->balanceChartData = [
                 'categories' => ['Inicio'],
                 'series' => [
-                    ['name' => 'Balance', 'data' => [0]]
-                ]
+                    ['name' => 'Balance', 'data' => [0]],
+                ],
             ];
         }
     }
@@ -480,7 +520,7 @@ class AccountPage extends Component
     {
         $this->dispatch('show-alert', [
             'type' => $type,
-            'message' => $message
+            'message' => $message,
         ]);
     }
 
@@ -489,28 +529,39 @@ class AccountPage extends Component
 
         try {
 
-            // ✅ Validar límite máximo de 3 cuentas por usuario
-            $accountCount = Account::where('user_id', Auth::id())
-                ->where('status', '!=', 'burned')
-                ->count();
+            // Límite de cuentas por plan (config/billing.php). Antes eran 3 a
+            // fuego para todo el mundo, suscriptores incluidos, mientras la página
+            // de precios anunciaba «Cuentas Ilimitadas»: quien pagaba chocaba con
+            // el tope el primer día. El tope es ahora el momento de venta.
+            $user = Auth::user();
 
-            if ($accountCount >= 3) {
+            if (!$user->canCreateAccount()) {
                 $this->dispatch('show-alert', [
                     'type' => 'error',
-                    'message' => __('labels.max_accounts_reached')
+                    'message' => __('labels.max_accounts_reached', ['limit' => $user->accountLimit()]),
                 ]);
+
                 return;
             }
 
             // ✅ Validar mt5_login único (solo si viene informado)
+            //
+            // `mt5_login` es único en toda la tabla y el índice no entiende de
+            // archivadas: sin `withTrashed()` la comprobación pasaría y el
+            // INSERT reventaría contra la BD con un error que no dice nada.
             if ($this->form->loginPlatform) {
-                $exists = Account::where('mt5_login', $this->form->loginPlatform)->exists();
+                $owner = Account::withTrashed()
+                    ->where('mt5_login', $this->form->loginPlatform)
+                    ->first();
 
-                if ($exists) {
+                if ($owner) {
                     $this->dispatch('show-alert', [
                         'type' => 'error',
-                        'message' => __('labels.mt5_login_already_exists')
+                        'message' => $owner->trashed()
+                            ? __('labels.mt5_login_belongs_to_archived')
+                            : __('labels.mt5_login_already_exists'),
                     ]);
+
                     return;
                 }
             }
@@ -520,7 +571,6 @@ class AccountPage extends Component
             // 3. Determinar el Objetivo Inicial (Fase 1 o Directo a Live)
             // Esto depende de si el programa tiene fases o es "Instant Funded"
             $initialPhase = 1; // Por defecto empezamos en Fase 1
-
 
             if ($level->program->step_count === 0) {
                 // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
@@ -563,7 +613,6 @@ class AccountPage extends Component
                 // Fechas
             ]);
 
-
             $this->form->reset();
 
             $this->loadAccounts();
@@ -573,13 +622,13 @@ class AccountPage extends Component
             $this->dispatch('account-created');
             $this->dispatch('timeframe-updated', timeframe: 'all');
         } catch (Exception $e) {
-            $this->logError($e, 'insertAccount', 'AccountPage', "Error al insertar cuenta");
+            $this->logError($e, 'insertAccount', 'AccountPage', 'Error al insertar cuenta');
 
             // Fallback seguro
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_create_account')
+                'message' => __('labels.error_create_account'),
             ]);
         }
     }
@@ -590,6 +639,7 @@ class AccountPage extends Component
         try {
             // 1. Buscamos la cuenta y sus relaciones
             $account = Account::with('programLevel.program.propFirm')->findOrFail($id);
+            $this->authorize('view', $account);
 
             // 2. Rellenamos el Form Object
             $this->form->name = $account->name;
@@ -621,9 +671,13 @@ class AccountPage extends Component
                     'sync' => $this->form->sync,
                     'platform' => $this->form->platformBroker,
                     'login' => $this->form->loginPlatform,
-                    'server' => $this->form->server
-                ]
+                    'server' => $this->form->server,
+                ],
             ]);
+        } catch (AuthorizationException $e) {
+            // Un fallo de permisos no es un error de la aplicacion: que suba y
+            // responda 403 en vez de acabar en el log como si algo se hubiera roto.
+            throw $e;
         } catch (Exception $e) {
             $this->logError($e, 'editAccount', 'AccountPage', "Error al editar cuenta {$id}");
 
@@ -631,7 +685,7 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_edit_account')
+                'message' => __('labels.error_edit_account'),
             ]);
         }
     }
@@ -645,8 +699,15 @@ class AccountPage extends Component
         try {
             // IDs del contexto = página actual de la tabla visible.
             // Solo necesitamos los IDs: seleccionamos 'id' y omitimos el eager loading.
+            // El id sale del computed (ya filtrado por Auth::id()), no de la propiedad
+            // pública, que permitía listar los trades de una cuenta ajena.
+            $account = $this->selectedAccount;
+            if (!$account) {
+                return;
+            }
+
             $contextIds = Trade::query()
-                ->where('account_id', $this->selectedAccountId)
+                ->where('account_id', $account->id)
                 ->orderBy('exit_time', 'desc')
                 ->paginate(10, ['id'], 'page', $this->getPage())
                 ->getCollection()
@@ -664,25 +725,28 @@ class AccountPage extends Component
         }
     }
 
-
     public function updateAccount($id)
     {
 
         try {
             // Lógica de validación y update...
-            $account = Account::find($id);
+            $account = $this->findOwned(Account::class, $id, 'update');
 
             // ✅ Validar mt5_login único excluyendo la propia cuenta
             if ($this->form->loginPlatform) {
-                $exists = Account::where('mt5_login', $this->form->loginPlatform)
+                $owner = Account::withTrashed()
+                    ->where('mt5_login', $this->form->loginPlatform)
                     ->where('id', '!=', $id)
-                    ->exists();
+                    ->first();
 
-                if ($exists) {
+                if ($owner) {
                     $this->dispatch('show-alert', [
                         'type' => 'error',
-                        'message' => __('labels.mt5_login_already_exists')
+                        'message' => $owner->trashed()
+                            ? __('labels.mt5_login_belongs_to_archived')
+                            : __('labels.mt5_login_already_exists'),
                     ]);
+
                     return;
                 }
             }
@@ -690,7 +754,6 @@ class AccountPage extends Component
             $level = ProgramLevel::with('program')->findOrFail($this->form->programLevelID);
 
             $initialPhase = 1; // Por defecto empezamos en Fase 1
-
 
             if ($level->program->step_count === 0) {
                 // Si el programa es de 0 pasos (Instant Funded), empezamos en Fase 0 (Live)
@@ -744,6 +807,10 @@ class AccountPage extends Component
             $this->updateData(force: true);
             $this->dispatch('account-updated', timeframe: 'all');
             $this->dispatch('timeframe-updated', timeframe: 'all');
+        } catch (AuthorizationException $e) {
+            // Un fallo de permisos no es un error de la aplicacion: que suba y
+            // responda 403 en vez de acabar en el log como si algo se hubiera roto.
+            throw $e;
         } catch (Exception $e) {
             $this->logError($e, 'updateAccount', 'AccountPage', "Error al actualizar cuenta {$id}");
 
@@ -751,33 +818,30 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_update_account')
+                'message' => __('labels.error_update_account'),
             ]);
         }
     }
 
+    /**
+     * Archiva la cuenta. No la destruye.
+     *
+     * `trades.account_id` es `cascade`: un `delete()` de verdad se lleva por
+     * delante meses de histórico, y eso es justo lo que el usuario no quiere
+     * perder el día que quema una cuenta. El borrado real existe aparte
+     * (`deleteAccountPermanently`) y hay que pedirlo a propósito.
+     */
     public function deleteAccount($id)
     {
         try {
-            // 1. Seguridad: Verificar que sea del usuario
-            $account = Account::where('id', $id)->where('user_id', Auth::id())->first();
+            $account = $this->findOwned(Account::class, $id, 'delete');
 
-            if (!$account) {
-                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.account_not_found')]);
-                return;
-            }
-
-            // 2. Borrar (Soft Delete si lo tienes configurado, o Delete normal)
             $account->delete();
 
-            // 3. Refrescar datos: recargamos la lista y seleccionamos la primera disponible
-            $this->loadAccounts();
-            $this->selectedAccountId = $this->accounts->first()?->id;
-            $this->changeCurrency();
-
-            $this->updateData(); // Recalcular gráficas con la nueva cuenta seleccionada
-            $this->dispatch('account-updated', timeframe: 'all'); // Recargar tabla y charts
-            $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_deleted')]);
+            $this->afterAccountListChanged();
+            $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_archived')]);
+        } catch (AuthorizationException $e) {
+            throw $e;
         } catch (Exception $e) {
             $this->logError($e, 'deleteAccount', 'AccountPage', "Error al borrar cuenta {$id}");
 
@@ -785,9 +849,93 @@ class AccountPage extends Component
             $this->selectedAccountId = $this->accounts->first()?->id;
             $this->dispatch('show-alert', [
                 'type' => 'error',
-                'message' => __('labels.error_delete_account')
+                'message' => __('labels.error_delete_account'),
             ]);
         }
+    }
+
+    /**
+     * Cuentas archivadas del usuario, con cuántas operaciones guarda cada una.
+     * Es el dato que decide si restaurarla merece la pena, así que va en la
+     * propia lista y no detrás de un clic.
+     */
+    #[Computed]
+    public function archivedAccounts()
+    {
+        return Account::onlyTrashed()
+            ->where('user_id', Auth::id())
+            ->withCount('trades')
+            ->orderByDesc('deleted_at')
+            ->get();
+    }
+
+    /**
+     * Devuelve una cuenta archivada a la circulación, con su histórico intacto.
+     */
+    public function restoreAccount($id)
+    {
+        try {
+            $account = $this->findOwned(Account::class, $id, 'delete', withTrashed: true);
+
+            $account->restore();
+
+            $this->afterAccountListChanged();
+            $this->selectedAccountId = $account->id;
+            $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_restored')]);
+        } catch (AuthorizationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            $this->logError($e, 'restoreAccount', 'AccountPage', "Error al restaurar cuenta {$id}");
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_restore_account')]);
+        }
+    }
+
+    /**
+     * El borrado de verdad, con el cascade de `trades` detrás.
+     *
+     * Solo se puede pedir sobre una cuenta ya archivada: así nadie destruye un
+     * histórico de un clic desde la pantalla principal, hacen falta dos pasos
+     * separados en el tiempo y la confirmación dice cuántas operaciones se van.
+     */
+    public function deleteAccountPermanently($id)
+    {
+        try {
+            $account = $this->findOwned(Account::class, $id, 'delete', withTrashed: true);
+
+            if (!$account->trashed()) {
+                $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.archive_before_deleting')]);
+
+                return;
+            }
+
+            $account->forceDelete();
+
+            $this->afterAccountListChanged();
+            $this->dispatch('show-alert', ['type' => 'success', 'message' => __('labels.account_deleted')]);
+        } catch (AuthorizationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            $this->logError($e, 'deleteAccountPermanently', 'AccountPage', "Error al borrar cuenta {$id}");
+            $this->dispatch('show-alert', ['type' => 'error', 'message' => __('labels.error_delete_account')]);
+        }
+    }
+
+    /**
+     * Lo que hay que rehacer cuando la lista de cuentas cambia: los computed
+     * caducan, la selección puede haberse quedado apuntando a una cuenta que ya
+     * no está y las gráficas hablan de otra cuenta.
+     */
+    private function afterAccountListChanged(): void
+    {
+        $this->loadAccounts();
+        unset($this->archivedAccounts);
+
+        $this->selectedAccountId = $this->accounts->firstWhere('id', $this->selectedAccountId)?->id
+            ?? $this->accounts->first()?->id;
+
+        $this->changeCurrency();
+        $this->updateData();
+        $this->dispatch('account-updated', timeframe: 'all');
     }
 
     public function render()

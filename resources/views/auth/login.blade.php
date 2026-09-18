@@ -11,18 +11,18 @@
                          (brightness-0 invert), igual que el de la columna derecha de
                          aquí abajo — el wordmark completo invertido salía ilegible a
                          este tamaño, el icono sí funciona en blanco. --}}
-                    <img class="h-auto max-h-20 w-auto object-contain dark:hidden"
+                    <img class="h-auto max-h-32 w-auto object-contain dark:hidden"
                          src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
-                    <img class="hidden h-auto max-h-20 w-auto object-contain brightness-0 invert dark:block"
+                    <img class="hidden h-auto max-h-32 w-auto object-contain brightness-0 invert dark:block"
                          src="{{ asset('img/logo_o.webp') }}"
                          alt="TradeForge">
                 </a>
             </div>
 
             <div class="w-full">
-                <h2 class="mt-4 text-3xl font-black text-gray-900 dark:text-gray-100">Bienvenido de nuevo</h2>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Introduce tus credenciales para acceder al dashboard.</p>
+                <h2 class="mt-4 text-3xl font-black text-gray-900 dark:text-gray-100">{{ __('labels.auth_login_title') }}</h2>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('labels.auth_login_subtitle') }}</p>
             </div>
 
             <div class="mt-8">
@@ -44,7 +44,7 @@
                     <!-- Email -->
                     <div>
                         <x-label for="email"
-                                 value="{{ __('Correo Electrónico') }}" />
+                                 value="{{ __('labels.auth_email') }}" />
                         <div class="relative mt-1">
                             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                 <i class="fa-regular fa-envelope text-gray-400 dark:text-gray-500"></i>
@@ -57,7 +57,7 @@
                                      required
                                      autofocus
                                      autocomplete="username"
-                                     placeholder="ejemplo@tradeforge.com" />
+                                     placeholder="{{ __('labels.auth_email_placeholder') }}" />
                         </div>
                     </div>
 
@@ -65,11 +65,11 @@
                     <div>
                         <div class="flex justify-between">
                             <x-label for="password"
-                                     value="{{ __('Contraseña') }}" />
+                                     value="{{ __('labels.auth_password') }}" />
                             @if (Route::has('password.request'))
                                 <a class="text-xs font-medium text-indigo-600 hover:text-indigo-500"
                                    href="{{ route('password.request') }}">
-                                    {{ __('¿Olvidaste tu contraseña?') }}
+                                    {{ __('labels.auth_forgot_password_link') }}
                                 </a>
                             @endif
                         </div>
@@ -101,7 +101,7 @@
                                for="remember_me">
                             <x-checkbox id="remember_me"
                                         name="remember" />
-                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Recuérdame') }}</span>
+                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ __('labels.auth_remember_me') }}</span>
                         </label>
                     </div>
 
@@ -109,7 +109,7 @@
                     <div>
                         <button class="flex w-full justify-center rounded-md border border-transparent bg-gray-900 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                 type="submit">
-                            {{ __('Iniciar Sesión') }}
+                            {{ __('labels.auth_login_button') }}
                         </button>
                     </div>
                 </form>
@@ -120,7 +120,7 @@
                         <div class="w-full border-t border-gray-300 dark:border-gray-700"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="bg-white px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">O continúa con</span>
+                        <span class="bg-white px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">{{ __('labels.auth_continue_with') }}</span>
                     </div>
                 </div>
 
@@ -130,15 +130,15 @@
                     <img class="h-5 w-5"
                          src="https://www.svgrepo.com/show/475656/google-color.svg"
                          alt="Google">
-                    <span>Iniciar con Google</span>
+                    <span>{{ __('labels.auth_login_with_google') }}</span>
                 </a>
 
                 <!-- Footer Registro -->
                 <p class="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-                    ¿No tienes cuenta?
+                    {{ __('labels.auth_no_account') }}
                     <a class="font-bold text-indigo-600 hover:text-indigo-500"
                        href="{{ route('register') }}">
-                        Regístrate gratis
+                        {{ __('labels.auth_register_free') }}
                     </a>
                 </p>
             </div>
@@ -157,8 +157,8 @@
                 <img class="h-52 w-auto brightness-0 invert"
                      src="{{ asset('img/logo_o.webp') }}"
                      alt="">
-                <h2 class="text-4xl font-bold leading-tight">Domina tu psicología,<br>maximiza tu rendimiento.</h2>
-                <p class="mt-4 text-lg text-gray-300 dark:text-gray-600">La herramienta definitiva para traders que buscan consistencia matemática.</p>
+                <h2 class="text-4xl font-bold leading-tight">{{ __('labels.auth_login_claim_title') }}</h2>
+                <p class="mt-4 text-lg text-gray-300 dark:text-gray-600">{{ __('labels.auth_login_claim_subtitle') }}</p>
 
                 <!-- Pequeño testimonial o stats -->
                 {{-- <div class="mt-8 flex items-center gap-4">

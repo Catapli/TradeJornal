@@ -461,14 +461,7 @@ provisionales que un angloparlante nativo mejoraría; las 108 nuevas son traducc
 
 Encontrados por Jordi al probar el flujo manualmente.
 
-1. [x] **`forgot-password.blade.php` sin traducir** — pasaba texto en inglés literal a
-   `__()` (`'Forgot your password? No problem...'`) sin que existiera esa clave en
-   ningún fichero de idioma, así que salía tal cual sin importar el locale. Traducido al
-   español literal, mismo patrón que usan ya `login.blade.php` / `register.blade.php`
-   (cadenas en español directamente como clave de `__()`, sin pasar por `labels.php`).
-   **Nota:** `reset-password`, `confirm-password`, `two-factor-challenge` y `verify-email`
-   tienen el mismo problema — son los stubs de Jetstream sin tocar, en inglés. No se han
-   tocado porque no se pidieron; quedan aquí anotados para cuando toque.
+1. [x] **Área de auth sin traducir** — **CERRADA ENTERA (2026-08-24)**, ver §2.5.f.
 2. [x] **Logo ilegible en modo oscuro** en login/register/forgot-password. El logo de marca
    (`logo_trader_h.webp`, texto en azul marino) se pintaba tal cual sobre el fondo
    `dark:bg-gray-900`, casi sin contraste — en `authentication-card-logo.blade.php` (usado
@@ -501,12 +494,152 @@ Encontrados por Jordi al probar el flujo manualmente.
    toggle independiente (`showPasswordConfirmation`), con el mismo icono/posición que el de
    la contraseña.
 
+### 2.5.f Auth bilingüe — ✅ CERRADO (2026-08-24)
+
+Las 7 pantallas de auth ya resuelven en español **y en inglés**. Antes eran un cajón de
+sastre con tres criterios distintos conviviendo.
+
+**El diagnóstico, que no era el obvio:**
+- `reset-password`, `confirm-password`, `two-factor-challenge` y `verify-email` eran los
+  **stubs de Jetstream sin tocar**: texto en inglés literal como clave de `__()`.
+- `login` y `register` (y `forgot-password` tras el primer arreglo) usaban **texto en
+  español literal** como clave, y además tenían **cadenas a pelo sin `__()` siquiera**
+  ("Bienvenido de nuevo", "O continúa con", los claims de la columna derecha…).
+- En los dos casos el resultado es el mismo: `__()` devuelve la clave cuando no la
+  encuentra, así que **la pantalla salía siempre en el idioma en que estaba escrita**,
+  daba igual el locale.
+- **`lang/es.json` y `lang/en.json` no sirven para esto.** Parecen las traducciones JSON
+  de Laravel, pero tienen estructura **anidada** (`errors.*`, `labels.*`…) y las consume el
+  helper de Alpine, no `__()`. El loader de Laravel espera un mapa plano, así que ninguna
+  clave literal iba a resolver nunca por ahí.
+
+**Lo hecho:** las 7 vistas pasan a `__('labels.auth_*')`, con **46 claves nuevas** añadidas
+a `lang/es/labels.php` y `lang/en/labels.php` (869 → 916 en ambos contando la del
+selector, verificada la paridad:
+0 claves solo en `es`, 0 solo en `en`). Se tradujeron también los textos que ni pasaban
+por `__()`.
+
+Ficheros: `login`, `register`, `forgot-password`, `reset-password`, `confirm-password`,
+`two-factor-challenge`, `verify-email`.
+
+**Verificado con `php artisan tinker`**, no a ojo: un script recorre los blades de
+`resources/views/auth/`, extrae las 46 claves y comprueba que `__()` devuelve algo distinto
+de la propia clave en `es` **y** en `en`. Es la misma metodología de §2.5.d, que ya avisaba
+de que comprobar la existencia en el fichero no basta.
+
+> Queda un `<span>Google</span>` sin traducir en `register` (nombre de marca) y un
+> "Usado por +1,000 traders" dentro de un bloque `{{-- --}}` comentado en `login`.
+
+**Selector de idioma en auth — ✅ AÑADIDO.** El `<livewire:language-manager />` ya estaba
+montado en `layouts/guest.blade.php`, pero **sin disparador visible**: el selector vivía
+solo dentro de `navigation-menu` (layout autenticado), así que en login/registro no había
+forma de cambiar de idioma. Extraído a **`<x-language-selector />`** (nuevo componente, con
+prop `align`) y usado desde los dos sitios en vez de duplicar las 54 líneas: en el nav
+sustituye al bloque inline, y en el layout guest va en un `fixed right-4 top-4 z-50`, así
+sirve para las 7 pantallas sin tocar ninguna. Añadida la clave `auth_change_language` para
+el `aria-label` — 916 claves en cada idioma, paridad verificada.
+
 ### 2.6 Seguridad / operación
 - [ ] `clockwork` y `laravel-debugbar`: verificar que están desactivados en producción.
 - [ ] Rate limiting en los endpoints de IA (`AiService`) además del límite por usuario de `WithAiLimits`.
 - [ ] Revisar permisos `check.permission` en rutas admin (hoy solo middleware `superadmin`).
 - [ ] Revisar `.env.example` vs `config/services.php` tras el cambio a Grok — que no falte ninguna clave documentada.
 - [ ] Política de retención: `app/Models/Log.php` puede crecer sin límite; añadir purga programada.
+
+### 2.6.b Auditoría del 2026-08-24 — IDOR y endurecimiento del sync
+
+Análisis a fondo del proyecto. Lo encontrado y lo arreglado.
+
+#### A. IDOR en `AccountPage` — ✅ ARREGLADO
+
+Los métodos y las propiedades públicas de un componente Livewire los controla el cliente.
+`AccountPage` los usaba para localizar cuentas **sin comprobar de quién eran**. Seis vías:
+
+| Vía | Qué permitía | Arreglo |
+|---|---|---|
+| `saveRules()` | **Reescribir los límites de riesgo** de cualquier cuenta | `authorize('update')` |
+| `updateAccount($id)` | Reescribir cualquier cuenta | `authorize('update')` |
+| `openRules($accountId)` | Leer el trading plan ajeno | `authorize('view')` |
+| `editAccount($id)` | Leer nombre, `mt5_login`, servidor y prop firm ajenos | `authorize('view')` |
+| `getHistoryTradesProperty()` | **Pintar la tabla de trades completa** de una cuenta ajena | id desde el computed |
+| `checkSyncStatus()` / `openTradeDetail()` | Sondear `last_sync` y listar ids de trades ajenos | id desde el computed |
+
+`saveRules` era la peor: alterar el `max_daily_loss` de otro lo deja operando por encima
+del límite real de su prop firm creyéndose dentro.
+
+**Lo llamativo:** `AccountPolicy` y `TradePolicy` ya existían y estaban bien escritas, pero
+en todo el proyecto había **un solo `authorize()`**. El resto de componentes no estaban mal
+—`TradesPage`, `SessionPage` y `TradeDetailModal` filtran con el scope `forUser()`, y
+`TradeDetailModal` además usa `#[Locked]` y anula el id si no es del usuario—; **el agujero
+era solo `AccountPage`**.
+
+Detalle que costó ver: los `authorize()` **no bastaban**. Los cuatro métodos están envueltos
+en `try/catch (Exception)`, y `AuthorizationException` extiende `Exception`, así que el fallo
+de permisos se lo tragaba el catch, se registraba como error de aplicación y devolvía 200.
+Añadido un `catch (AuthorizationException) { throw $e; }` delante en los cuatro.
+
+Cubierto por `tests/Feature/Accounts/AccountPageAuthorizationTest.php` — **8 tests**.
+
+#### B. Bug latente: `funded_date` sin castear — ✅ ARREGLADO
+
+`CalculateAccountStatistics` la trata como Carbon (`->diffInDays()`), pero `Account` no la
+casteaba: en cuanto la cuenta viene de la BD es un **string** y revienta con
+`Call to a member function diffInDays() on string`. No había explotado porque **nada del
+código rellena `funded_date`** (solo la factory), pero la columna existe y el día que se
+use, la página de cuentas y el dashboard fatalean. Añadidos los casts de `funded_date` y
+`end_date`. Lo destapó un test de los del punto A.
+
+#### C. `/api/mt5-sync` endurecido — ✅ HECHO
+
+Es la puerta por la que entran **todos** los datos del proyecto y no tenía ni un test.
+
+| Problema | Estado |
+|---|---|
+| `trades` se validaba solo como `array`; los campos se leían a pelo. Un `direction` fuera del enum reventaba contra la BD y se contabilizaba como "error del trade" | Validación completa de `trades.*` |
+| **N+1**: una consulta de notificaciones **por trade** dentro del bucle | Una sola consulta antes del bucle |
+| **N+1**: `TradeAsset::firstOrCreate` por trade aunque todos operen el mismo par | Resuelto en 2 consultas |
+| **Escritura a R2 síncrona dentro del bucle**: un round trip a Cloudflare por trade, en serie, dentro del request | `StoreTradeChartJob` |
+| 32 llamadas de log, varias por trade | Reducido a resumen + errores |
+| Sin transacción: podía quedar el balance actualizado con los trades a medias | Transacción con **SAVEPOINT por trade** |
+| `updateOrCreate` sobre `(account_id, position_id)` con índice **no único** | Migración de índice único |
+
+Sobre la transacción, que tiene truco: en PostgreSQL un error deja la transacción en estado
+abortado, así que envolver el bucle sin más habría hecho que **un solo trade malo tumbara
+todos los siguientes** con "current transaction is aborted". Cada trade va en un
+`DB::transaction()` anidado, que Laravel traduce a SAVEPOINT: el trade malo se descarta solo
+y el lote continúa, que es la semántica que ya tenía.
+
+**Deuda propia corregida:** el `TradeObserver` de §2.2.c invalidaba la caché por cada trade
+(5 `Cache::forget`), y con `CACHE_STORE=database` eso son **5 DELETE por trade** — 2.500
+consultas extra en un sync de 500. El bucle ahora corre con `Trade::withoutEvents()` y la
+invalidación se hace **una sola vez** al terminar. El observer se queda como está para las
+rutas interactivas, que van de trade en trade.
+
+Cubierto por `tests/Feature/Api/Mt5SyncTest.php` — **13 tests**.
+
+> ⚠️ **La migración `2026_08_24_120000_add_unique_position_per_account_to_trades_table`
+> está SIN EJECUTAR**, igual que se hizo con la del calendario. Antes de crear el índice
+> único borra los duplicados de `(account_id, position_id)` conservando la fila más
+> reciente. Comprobado en la BD de desarrollo: **0 duplicados, 0 filas a borrar**
+> (la tabla está vacía). Lánzala tú con `php artisan migrate`.
+
+#### D. Hallazgos anotados, no tocados
+
+- **`itsgoingd/clockwork` está en `require`, no en `require-dev`** → se instala en
+  producción con `composer install --no-dev`. Mover a `require-dev`.
+- **`CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` = `database`.** Los 22 `Cache::`
+  que se decidió mantener (§2.3) **son consultas contra la misma BD que intentan aliviar**.
+  Redis cambiaría eso de golpe y encaja con la decisión de "optimizar lo que hay".
+- Sigue sin `throttle` en `routes/api.php` (§2.5.b).
+- `User::booted()` sobrescribe siempre el `sync_token` al crear, así que no se puede
+  inyectar uno ni desde un seeder ni desde un test. Es defendible como decisión de
+  seguridad; queda anotado porque obliga a leer el token generado.
+- Índices `idx_trades_direction` (2 valores distintos) e `idx_trades_mae_mfe`: muy poco
+  selectivos, solo cuestan escritura. Candidatos a borrar.
+
+**Lo que está bien, para que conste:** los índices de `trades` están muy bien pensados
+—incluido el `rawIndex` con `EXTRACT` para el heatmap—, el scope `forUser()` está bien
+aplicado en 3 de los 4 componentes y `TradeDetailModal` es el código más sólido del proyecto.
 
 ### 2.7 DX
 - [x] ~~Normalización CRLF~~ — **HECHO (2026-08-24)**, commit `4e3a2ae`. El índice ya

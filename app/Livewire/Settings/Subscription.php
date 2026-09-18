@@ -1,29 +1,46 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Settings;
 
+use App\Support\Demo;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Subscription extends Component
 {
-
-    // 1. Defínelas como strings vacías o nulas al inicio
     public string $monthlyPriceId = '';
+
     public string $yearlyPriceId = '';
 
-    // 2. Asígnales valor en el método mount()
-    public function mount()
+    public function mount(): void
     {
-        $this->monthlyPriceId = env("STRIPE_PRICE_MONTHLY");
-        $this->yearlyPriceId = env("STRIPE_PRICE_YEARLY");
+        // config() en lugar de env(): con la configuración cacheada en producción
+        // env() devuelve null y el checkout se creaba con un price vacío.
+        $this->monthlyPriceId = (string) config('services.stripe.monthly');
+        $this->yearlyPriceId = (string) config('services.stripe.yearly');
     }
 
-    public function subscribe($period)
+    public function subscribe(string $period): ?RedirectResponse
     {
+        // En la demo no se abre un checkout real: crearía un cliente en Stripe
+        // a nombre del usuario compartido de demostración.
+        if (Demo::active()) {
+            $this->dispatch('notify', __('landing.demo.blocked'));
+
+            return null;
+        }
+
         $priceId = $period === 'yearly' ? $this->yearlyPriceId : $this->monthlyPriceId;
 
-        // 1. Crea el Checkout pero NO lo retornes directo
+        if ($priceId === '') {
+            $this->dispatch('notify', __('landing.pricing.unavailable'));
+
+            return null;
+        }
+
         $checkout = Auth::user()
             ->newSubscription('default', $priceId)
             ->allowPromotionCodes()
@@ -32,8 +49,6 @@ class Subscription extends Component
                 'cancel_url' => route('checkout.cancel'),
             ]);
 
-        // 2. Extrae la URL de Stripe (que es lo que nos importa)
-        // Cashier devuelve un objeto Checkout, y este tiene acceso a la URL
         return redirect($checkout->url);
     }
 

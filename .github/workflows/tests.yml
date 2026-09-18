@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pest:
+    runs-on: ubuntu-latest
+
+    # phpunit.xml apunta a pgsql a propósito (las migraciones usan enum y json,
+    # que sqlite trata de otra forma). El CI levanta el mismo motor que producción.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: tradejornal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_pgsql, gd, bcmath, intl, zip
+          coverage: none
+
+      - name: Cachear dependencias de Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Análisis estático
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Formato (Pint)
+        run: ./vendor/bin/pint --test
+        continue-on-error: true   # el código antiguo aún no está formateado
+
+      - name: Ejecutar la suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+        run: php artisan test

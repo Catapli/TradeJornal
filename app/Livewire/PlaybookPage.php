@@ -2,21 +2,22 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\Computed;
-use App\Models\Strategy;
+use App\Concerns\RequiresProAccess;
 use App\LogActions;
+use App\Models\Strategy;
 use App\Services\StorageService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Computed;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class PlaybookPage extends Component
 {
-    use WithFileUploads;
+    use RequiresProAccess;
+
     use LogActions;
+    use WithFileUploads;
 
     protected StorageService $storage;
 
@@ -24,18 +25,25 @@ class PlaybookPage extends Component
     public $photo;
 
     // ── Filtros del listado ─────────────────────────────────────────────────
-    public string $search  = '';
-    public string $sortBy  = 'stats_total_pnl';
+    public string $search = '';
+
+    public string $sortBy = 'stats_total_pnl';
+
     public string $sortDir = 'desc';
 
     // ── Propiedades del formulario (vinculadas al modal) ────────────────────
     // Necesitan vivir en Livewire para que @error() funcione en Blade
-    public string  $formName        = '';
+    public string $formName = '';
+
     public ?string $formDescription = null;
-    public string  $formTimeframe   = '';
-    public string  $formColor       = '#4F46E5';
-    public bool    $formIsmain      = false;
-    public array   $formRules       = [];
+
+    public string $formTimeframe = '';
+
+    public string $formColor = '#4F46E5';
+
+    public bool $formIsmain = false;
+
+    public array $formRules = [];
 
     public function boot(StorageService $storage): void
     {
@@ -49,26 +57,26 @@ class PlaybookPage extends Component
     protected function strategyValidationRules(): array
     {
         return [
-            'photo'           => 'nullable|image|max:2048',
-            'formName'        => 'required|string|max:255',
-            'formTimeframe'   => 'required|string|max:10',
-            'formColor'       => ['required', 'regex:/^#[a-fA-F0-9]{6}$/'],
+            'photo' => 'nullable|image|max:2048',
+            'formName' => 'required|string|max:255',
+            'formTimeframe' => 'required|string|max:10',
+            'formColor' => ['required', 'regex:/^#[a-fA-F0-9]{6}$/'],
             'formDescription' => 'nullable|string|max:1000',
-            'formRules'       => 'nullable|array',
-            'formRules.*'     => 'string|max:500',
+            'formRules' => 'nullable|array',
+            'formRules.*' => 'string|max:500',
         ];
     }
 
     protected function strategyValidationMessages(): array
     {
         return [
-            'formName.required'      => __('labels.name_required_strategy'),
-            'formName.max'           => __('labels.name_too_long'),
+            'formName.required' => __('labels.name_required_strategy'),
+            'formName.max' => __('labels.name_too_long'),
             'formTimeframe.required' => __('labels.timeframe_required'),
-            'formColor.required'     => __('labels.color_required'),
-            'formColor.regex'        => __('labels.color_invalid'),
-            'photo.image'            => __('labels.photo_invalid'),
-            'photo.max'              => __('labels.photo_too_large'),
+            'formColor.required' => __('labels.color_required'),
+            'formColor.regex' => __('labels.color_invalid'),
+            'photo.image' => __('labels.photo_invalid'),
+            'photo.max' => __('labels.photo_too_large'),
         ];
     }
 
@@ -85,12 +93,12 @@ class PlaybookPage extends Component
         try {
             $strategy = Strategy::where('user_id', Auth::id())->findOrFail($strategyId);
 
-            $this->formName        = $strategy->name;
+            $this->formName = $strategy->name;
             $this->formDescription = $strategy->description;
-            $this->formTimeframe   = $strategy->timeframe;
-            $this->formColor       = $strategy->color;
-            $this->formIsmain      = (bool) $strategy->is_main;
-            $this->formRules       = is_array($strategy->rules)
+            $this->formTimeframe = $strategy->timeframe;
+            $this->formColor = $strategy->color;
+            $this->formIsmain = (bool) $strategy->is_main;
+            $this->formRules = is_array($strategy->rules)
                 ? $strategy->rules
                 : (json_decode($strategy->rules, true) ?? []);
 
@@ -106,12 +114,12 @@ class PlaybookPage extends Component
      */
     public function resetStrategyForm(): void
     {
-        $this->formName        = '';
+        $this->formName = '';
         $this->formDescription = null;
-        $this->formTimeframe   = '';
-        $this->formColor       = '#4F46E5';
-        $this->formIsmain      = false;
-        $this->formRules       = [];
+        $this->formTimeframe = '';
+        $this->formColor = '#4F46E5';
+        $this->formIsmain = false;
+        $this->formRules = [];
         $this->reset('photo');
         $this->resetErrorBag();
     }
@@ -125,7 +133,7 @@ class PlaybookPage extends Component
     {
         try {
             return Strategy::where('user_id', Auth::id())
-                ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))
+                ->when($this->search, fn ($q) => $q->where('name', 'like', '%' . $this->search . '%'))
                 ->select([
                     'id',
                     'name',
@@ -152,8 +160,8 @@ class PlaybookPage extends Component
                 ->orderByDesc('is_main')
                 ->when(
                     $this->sortBy === 'stats_winrate',
-                    fn($q) => $q->orderByRaw('(stats_winning_trades / NULLIF(stats_total_trades, 0)) ' . $this->sortDir),
-                    fn($q) => $q->orderBy($this->sortBy, $this->sortDir)
+                    fn ($q) => $q->orderByRaw('(stats_winning_trades / NULLIF(stats_total_trades, 0)) ' . $this->sortDir),
+                    fn ($q) => $q->orderBy($this->sortBy, $this->sortDir)
                 )
                 ->get()
                 ->map(function ($strategy) {
@@ -166,7 +174,7 @@ class PlaybookPage extends Component
                         : null;
 
                     $strategy->chart_data = [
-                        'days'  => is_string($strategy->stats_by_day_of_week)
+                        'days' => is_string($strategy->stats_by_day_of_week)
                             ? json_decode($strategy->stats_by_day_of_week, true)
                             : ($strategy->stats_by_day_of_week ?? []),
                         'hours' => is_string($strategy->stats_by_hour)
@@ -178,6 +186,7 @@ class PlaybookPage extends Component
                 });
         } catch (\Throwable $e) {
             $this->logError($e, 'Read Strategies', 'PlaybookPage', 'Error loading computed strategies');
+
             return collect();
         }
     }
@@ -202,13 +211,13 @@ class PlaybookPage extends Component
                 }
 
                 $strategyData = [
-                    'user_id'     => Auth::id(),
-                    'name'        => $this->formName,
+                    'user_id' => Auth::id(),
+                    'name' => $this->formName,
                     'description' => $this->formDescription,
-                    'timeframe'   => $this->formTimeframe,
-                    'color'       => $this->formColor,
-                    'rules'       => $this->formRules,
-                    'is_main'     => $this->formIsmain,
+                    'timeframe' => $this->formTimeframe,
+                    'color' => $this->formColor,
+                    'rules' => $this->formRules,
+                    'is_main' => $this->formIsmain,
                 ];
 
                 // Crear primero sin imagen para tener el ID
@@ -216,7 +225,7 @@ class PlaybookPage extends Component
 
                 // Ahora que tenemos el ID, guardamos con el path correcto
                 if ($this->photo) {
-                    $ext  = $this->photo->getClientOriginalExtension() ?: 'png';
+                    $ext = $this->photo->getClientOriginalExtension() ?: 'png';
                     $path = $this->storage->strategyScreenshotPath(Auth::id(), $strategy->id, $ext);
                     $this->storage->putFile($path, $this->photo->readStream());
                     $strategy->update(['image_path' => $path]);
@@ -232,13 +241,12 @@ class PlaybookPage extends Component
 
             $this->resetStrategyForm();
             $this->dispatch('strategy-saved');
-            $this->dispatch('show-alert', message: __('labels.strategycreatedok'), type: 'success');
+            $this->dispatch('show-alert', message: __('labels.strategy_created_ok'), type: 'success');
         } catch (\Throwable $e) {
             $this->logError($e, 'Create Strategy', 'PlaybookPage', 'Failed to create strategy');
-            $this->dispatch('show-alert', message: __('labels.errorcreatingstrategy'), type: 'error');
+            $this->dispatch('show-alert', message: __('labels.error_creating_strategy'), type: 'error');
         }
     }
-
 
     // ───────────────────────────────────────────────────────────────────────
     // ACTUALIZAR ESTRATEGIA
@@ -262,24 +270,23 @@ class PlaybookPage extends Component
                 }
 
                 $strategyData = [
-                    'name'        => $this->formName,
+                    'name' => $this->formName,
                     'description' => $this->formDescription,
-                    'timeframe'   => $this->formTimeframe,
-                    'color'       => $this->formColor,
-                    'rules'       => $this->formRules,
-                    'is_main'     => $this->formIsmain,
+                    'timeframe' => $this->formTimeframe,
+                    'color' => $this->formColor,
+                    'rules' => $this->formRules,
+                    'is_main' => $this->formIsmain,
                 ];
 
                 if ($this->photo) {
                     if ($strategy->image_path) {
                         $this->storage->delete($strategy->image_path);
                     }
-                    $ext  = $this->photo->getClientOriginalExtension() ?: 'png';
+                    $ext = $this->photo->getClientOriginalExtension() ?: 'png';
                     $path = $this->storage->strategyScreenshotPath(Auth::id(), $strategy->id, $ext);
                     $this->storage->putFile($path, $this->photo->readStream());
                     $strategyData['image_path'] = $path;
                 }
-
 
                 $strategy->update($strategyData);
 
@@ -338,10 +345,10 @@ class PlaybookPage extends Component
     {
         try {
             DB::transaction(function () use ($id) {
-                $strategy    = Strategy::where('user_id', Auth::id())->findOrFail($id);
+                $strategy = Strategy::where('user_id', Auth::id())->findOrFail($id);
                 $newStrategy = $strategy->replicate();
 
-                $newStrategy->name    = $strategy->name . ' (Copia)';
+                $newStrategy->name = $strategy->name . ' (Copia)';
                 $newStrategy->is_main = false;
 
                 // Reset stats numéricas a 0
@@ -411,21 +418,22 @@ class PlaybookPage extends Component
                 ->latest('exit_time')
                 ->take(100)
                 ->get()
-                ->map(fn($t) => [
-                    'id'             => $t->id,
-                    'ticket'         => $t->ticket,
-                    'entry_time'     => $t->entry_time?->format('Y-m-d H:i') ?? '-',
-                    'exit_time'      => $t->exit_time?->format('Y-m-d H:i') ?? '-',
-                    'direction'      => ucfirst($t->direction),
-                    'pnl'            => (float) $t->pnl,
-                    'duration'       => $t->duration_minutes . ' min',
+                ->map(fn ($t) => [
+                    'id' => $t->id,
+                    'ticket' => $t->ticket,
+                    'entry_time' => $t->entry_time?->format('Y-m-d H:i') ?? '-',
+                    'exit_time' => $t->exit_time?->format('Y-m-d H:i') ?? '-',
+                    'direction' => ucfirst($t->direction),
+                    'pnl' => (float) $t->pnl,
+                    'duration' => $t->duration_minutes . ' min',
                     'screenshot_url' => $t->screenshot ? $this->storage->temporaryUrl($t->screenshot) : null,
-                    'day_iso'        => $t->exit_time?->format('N'),
-                    'hour'           => $t->exit_time?->format('H'),
+                    'day_iso' => $t->exit_time?->format('N'),
+                    'hour' => $t->exit_time?->format('H'),
                 ])
                 ->toArray();
         } catch (\Throwable $e) {
             $this->logError($e, 'Load Strategy Details', 'PlaybookPage', "Failed to load details for Strategy ID: {$strategyId}");
+
             return [];
         }
     }

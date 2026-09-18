@@ -27,7 +27,7 @@ class CreateNewUser implements CreatesNewUsers
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
         ])->validate();
 
-        return User::create([
+        $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
@@ -39,5 +39,16 @@ class CreateNewUser implements CreatesNewUsers
                 ['label' => 'Usuario']
             )->id,
         ]);
+
+        // Prueba de PRO sin tarjeta: se marca la fecha y ya está, no se toca
+        // Stripe. Un diario solo demuestra su valor cuando tiene datos dentro,
+        // así que cerrar el grifo el primer día garantiza que nadie lo sienta.
+        $trialDays = (int) config('billing.trial_days');
+
+        if ($trialDays > 0) {
+            $user->forceFill(['trial_ends_at' => now()->addDays($trialDays)])->save();
+        }
+
+        return $user;
     }
 }

@@ -1,5 +1,7 @@
 <x-app-layout>
     <div class="mt-[55px] py-2">
-        @livewire('backtesting-page')
+        <x-pro-gate :module="__('menu.backtesting')">
+            @livewire('backtesting-page')
+        </x-pro-gate>
     </div>
 </x-app-layout>

@@ -19,6 +19,9 @@ document.addEventListener("alpine:init", () => {
             max_daily_trades: null,
             only_longs: false,
             only_shorts: false,
+
+            // Ids de errores cuyas operaciones se quitan de la curva (P2)
+            exclude_mistakes: [],
         },
 
         // --- CONTROL DE CAMBIOS PENDIENTES ---
@@ -41,7 +44,28 @@ document.addEventListener("alpine:init", () => {
                 max_daily_trades: this.$wire.scenarios.max_daily_trades,
                 only_longs: this.$wire.scenarios.only_longs,
                 only_shorts: this.$wire.scenarios.only_shorts,
+                exclude_mistakes: this.$wire.scenarios.exclude_mistakes || [],
             };
+        },
+
+        /**
+         * Marca o desmarca un error del escenario "sin las operaciones con X"
+         */
+        toggleMistake(mistakeId) {
+            const id = Number(mistakeId);
+            const index = this.scenarios.exclude_mistakes.indexOf(id);
+
+            if (index > -1) {
+                this.scenarios.exclude_mistakes.splice(index, 1);
+            } else {
+                this.scenarios.exclude_mistakes.push(id);
+            }
+
+            this.onScenarioChange();
+        },
+
+        isMistakeExcluded(mistakeId) {
+            return this.scenarios.exclude_mistakes.includes(Number(mistakeId));
         },
 
         /**
@@ -104,6 +128,7 @@ document.addEventListener("alpine:init", () => {
                 max_daily_trades: null,
                 only_longs: false,
                 only_shorts: false,
+                exclude_mistakes: [],
             };
             this.hasUnsavedChanges = true;
         },
@@ -119,7 +144,8 @@ document.addEventListener("alpine:init", () => {
                 this.scenarios.max_daily_trades ||
                 this.scenarios.fixed_sl ||
                 this.scenarios.fixed_tp ||
-                this.scenarios.exclude_days.length > 0
+                this.scenarios.exclude_days.length > 0 ||
+                this.scenarios.exclude_mistakes.length > 0
             );
         },
 
@@ -135,6 +161,7 @@ document.addEventListener("alpine:init", () => {
             if (this.scenarios.fixed_sl) count++;
             if (this.scenarios.fixed_tp) count++;
             if (this.scenarios.exclude_days.length > 0) count++;
+            if (this.scenarios.exclude_mistakes.length > 0) count++;
             return count;
         },
 
@@ -662,6 +689,10 @@ document.addEventListener("alpine:init", () => {
                 d.color ? d.color : palette[index % palette.length],
             );
 
+            // ApexCharts llama a `custom` con su propio `this`: la traducción
+            // hay que resolverla aquí, mientras seguimos en el componente.
+            const timesLabel = this.$l("times");
+
             const options = {
                 series: [
                     {
@@ -671,7 +702,11 @@ document.addEventListener("alpine:init", () => {
                 ],
                 chart: {
                     type: "bar",
-                    height: 280, // Un poco más alto para que respire
+                    height: 300,
+                    // Ancho en píxeles, no al 100%: el gráfico crece con el
+                    // número de errores en vez de repartir la tarjeta entera
+                    // entre las barras que haya.
+                    width: Math.min(880, Math.max(240, data.length * 104 + 72)),
                     fontFamily: "Inter, sans-serif",
                     toolbar: {
                         show: false,
@@ -682,41 +717,42 @@ document.addEventListener("alpine:init", () => {
                 },
                 plotOptions: {
                     bar: {
-                        borderRadius: 3,
-                        horizontal: true,
+                        borderRadius: 4,
+                        horizontal: false,
                         distributed: true,
-                        barHeight: "70%", // Barras más gruesas para que quepa bien el texto
+                        // En píxeles (ApexCharts lo trata como px cuando no
+                        // lleva '%'): una barra sola mide igual que ocho.
+                        columnWidth: "40px",
                         dataLabels: {
-                            position: "bottom", // Obliga al texto a empezar a la izquierda
+                            position: "top",
                         },
                     },
                 },
                 colors: colors,
+                // En vertical el nombre del error va en el eje X, así que la
+                // etiqueta de encima de la barra solo lleva el número.
                 dataLabels: {
                     enabled: true,
-                    textAnchor: "center", // Alineación izquierda
-                    offsetX: 15, // <--- AQUÍ ESTÁ EL PADDING QUE PEDÍAS
+                    offsetY: -18,
                     style: {
-                        colors: ["#fff"],
+                        colors: ["#94a3b8"], // slate-400: legible en claro y en oscuro
                         fontSize: "11px",
                         fontWeight: 800,
                         fontFamily: "Inter, sans-serif",
-                        // Sombra importante para leer texto blanco sobre barras claras (ej: amarillo)
-                        textShadow: "0px 1px 2px rgba(0,0,0,0.6)",
-                    },
-                    formatter: function (val, opt) {
-                        // Formato: "FOMO: 5"
-                        return (
-                            opt.w.globals.labels[opt.dataPointIndex] +
-                            ": " +
-                            val
-                        );
                     },
                 },
                 xaxis: {
                     categories: categories,
                     labels: {
-                        show: false,
+                        show: true,
+                        rotate: -35,
+                        rotateAlways: data.length > 4,
+                        trim: true,
+                        hideOverlappingLabels: false,
+                        style: {
+                            fontSize: "10px",
+                            fontWeight: 600,
+                        },
                     },
                     axisBorder: {
                         show: false,
@@ -732,10 +768,12 @@ document.addEventListener("alpine:init", () => {
                 },
                 grid: {
                     show: false,
+                    // Hueco arriba para la etiqueta que va encima de la barra
+                    // más alta; si no, se recorta contra el borde del gráfico.
                     padding: {
                         left: 0,
                         right: 0,
-                        top: 0,
+                        top: 12,
                         bottom: 0,
                     },
                 },
@@ -764,14 +802,16 @@ document.addEventListener("alpine:init", () => {
                         var color = w.globals.colors[dataPointIndex];
                         var label = w.globals.labels[dataPointIndex];
                         var costClass =
-                            cost < 0 ? "text-rose-600" : "text-emerald-600";
+                            cost < 0
+                                ? "text-rose-600 dark:text-rose-400"
+                                : "text-emerald-600 dark:text-emerald-400";
 
                         return `
-                        <div class="px-3 py-2 text-xs bg-white border border-gray-100 shadow-lg rounded-lg" style="border-left: 4px solid ${color}; min-width: 140px;">
-                            <div class="font-bold text-gray-800 mb-1 truncate">${label}</div>
-                            <div class="flex justify-between items-center text-gray-500 gap-3">
-                                <span>${count} ${this.$l("times")}</span>
-                                <span class="font-black ${costClass}">${cost.toFixed(0)} $</span>
+                        <div class="px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-lg rounded-lg" style="border-left: 4px solid ${color}; min-width: 140px;">
+                            <div class="font-bold text-gray-800 dark:text-gray-100 mb-1 truncate">${label}</div>
+                            <div class="flex justify-between items-center text-gray-500 dark:text-gray-400 gap-3">
+                                <span>${count} ${timesLabel}</span>
+                                <span class="font-black ${costClass}">${Number(cost).toFixed(0)} $</span>
                             </div>
                         </div>
                     `;

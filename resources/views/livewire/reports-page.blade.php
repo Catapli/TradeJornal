@@ -508,13 +508,13 @@
                 </div>
 
                 {{-- Risk Analysis --}}
-                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                <div class="col-span-1 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:col-span-2"
                      x-data>
                     <div class="mb-4">
                         <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-gray-100">
                             <i class="fa-solid fa-skull-crossbones text-gray-800 dark:text-gray-300"></i> {{ __('labels.analysis_risk') }}
                         </h3>
-                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500"> {{ __('labels.maths_probs') }} ({{ $this->riskData['win_rate'] ?? 0 }}%) {{ __('labels.and_rate') }} (1:{{ $this->riskData['payoff'] ?? 0 }}).</p>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500"> {{ __('labels.maths_probs') }} ({{ $this->riskData['win_rate'] ?? 0 }}%) {{ __('labels.and_rate') }} (1:{{ $this->riskData['payoff'] ?? '—' }}).</p>
                     </div>
 
                     @if (empty($this->riskData))
@@ -554,9 +554,9 @@
                                         <span class="font-bold text-rose-600">{{ __('labels.critic_danger') }}</span>
                                     @endif
                                     <p class="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                                        @if ($this->riskData['edge'] > 0)
+                                        @if (($this->riskData['edge'] ?? 0) > 0)
                                             {{ __('labels.statistical_edge') }} ({{ __('labels.edge') }} {{ $this->riskData['edge'] }}).
-                                        @else
+                                        @elseif ($this->riskData['edge'] !== null)
                                             {{ __('labels.negative_math_expect') }}
                                         @endif
                                     </p>
@@ -612,8 +612,86 @@
                     @endif
                 </div>
 
+                {{-- ── DE HALLAZGO A REGLA (P7) ────────────────────────────────
+                     Va delante del resto: un gráfico se mira, una regla se cumple.
+                     Hereda el filtro de cuenta del Laboratorio, así que el hallazgo
+                     habla de las operaciones que estás viendo. --}}
+                <div class="col-span-1 md:col-span-2">
+                    @livewire('findings-panel', ['accountId' => (string) $accountId], key('findings-' . $accountId))
+                </div>
+
+                {{-- ── LO QUE TE HAN COSTADO TUS ERRORES (P2) ──────────────────
+                     El desglose completo del número que sale en portada, más el
+                     escenario que lo enseña sobre la curva y la cola de repaso,
+                     que es lo que hace crecer la cobertura. --}}
+                <div class="col-span-1 space-y-4 md:col-span-2">
+
+                    <x-mistake-cost-card :data="$this->mistakeCost"
+                                         :compact="false" />
+
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+                        {{-- Por franja horaria --}}
+                        @if (!empty($this->mistakeCost['by_slot']))
+                            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                                <h3 class="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-gray-100">
+                                    <i class="fa-solid fa-clock text-amber-500"></i>{{ __('mistake_cost.by_slot') }}
+                                </h3>
+
+                                <div class="space-y-2">
+                                    @foreach ($this->mistakeCost['by_slot'] as $slot)
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span class="text-gray-600 dark:text-gray-300">{{ __('mistake_cost.slots.' . $slot['slot']) }}</span>
+                                            <span class="flex items-center gap-2">
+                                                <span class="text-gray-400">{{ trans_choice('mistake_cost.trades_count', $slot['count'], ['count' => $slot['count']]) }}</span>
+                                                <span @class([
+                                                    'font-mono font-black',
+                                                    'text-rose-600 dark:text-rose-400' => $slot['cost'] > 0,
+                                                    'text-emerald-600 dark:text-emerald-400' => $slot['cost'] <= 0,
+                                                ])>
+                                                    {{ $slot['cost'] > 0 ? '-' : '+' }}{{ number_format(abs((float) $slot['cost']), 2) }} €
+                                                </span>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Escenario: quitar las operaciones con estos errores --}}
+                        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                            <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-gray-100">
+                                <i class="fa-solid fa-flask text-indigo-500"></i>{{ __('mistake_cost.scenario_title') }}
+                            </h3>
+                            <p class="mb-3 mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('mistake_cost.scenario_hint') }}</p>
+
+                            @if (empty($this->mistakeCost['by_mistake']))
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('mistake_cost.scenario_none') }}</p>
+                            @else
+                                <div class="flex flex-wrap gap-1.5">
+                                    @foreach ($this->mistakeCost['by_mistake'] as $row)
+                                        <button class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
+                                                type="button"
+                                                wire:key="scenario-mistake-{{ $row['id'] }}"
+                                                @click="toggleMistake({{ $row['id'] }})"
+                                                :class="isMistakeExcluded({{ $row['id'] }})
+                                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'
+                                                    : 'border-gray-200 text-gray-600 hover:border-gray-300 dark:border-gray-600 dark:text-gray-300'">
+                                            <span class="h-2 w-2 shrink-0 rounded-full"
+                                                  style="background-color: {{ $row['color'] }}"></span>
+                                            {{ $row['name'] }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <x-review-cta />
+                </div>
+
                 {{-- Mistakes Chart --}}
-                <div class="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                <div class="col-span-1 flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:col-span-2"
                      x-data="mistakesChart(@js($this->mistakesData))">
 
                     <div class="mb-2 flex items-center justify-between">
@@ -625,7 +703,7 @@
                         </div>
                     </div>
 
-                    <div class="relative min-h-[250px] w-full flex-1">
+                    <div class="relative min-h-[300px] w-full flex-1">
                         <template x-if="!hasData">
                             <div class="absolute inset-0 flex h-full flex-col items-center justify-center text-center text-gray-400 dark:text-gray-500">
                                 <div class="mb-3 rounded-full bg-emerald-50 p-4 dark:bg-emerald-500/10">
@@ -636,9 +714,56 @@
                         </template>
 
                         <div id="mistakesChart"
-                             class="w-full"
+                             class="flex w-full justify-center"
                              x-show="hasData"></div>
                     </div>
+                </div>
+            </div>
+
+            {{-- ── Informe mensual en PDF (Fase 5 · P10) ──────────────────── --}}
+            <div class="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <h3 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-gray-100">
+                    <i class="fa-solid fa-file-pdf text-rose-500"></i>
+                    {{ __('export.pdf.card_title') }}
+                </h3>
+                <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">{{ __('export.pdf.card_lead') }}</p>
+
+                <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400"
+                               for="report-month">{{ __('export.pdf.month_label') }}</label>
+                        <select class="rounded-lg border-gray-300 text-sm font-bold shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                id="report-month"
+                                wire:model="reportMonth">
+                            @forelse ($this->reportMonths as $mes)
+                                <option value="{{ $mes['value'] }}">{{ $mes['label'] }}</option>
+                            @empty
+                                <option value="{{ $reportMonth }}">{{ $reportMonth }}</option>
+                            @endforelse
+                        </select>
+                    </div>
+
+                    <div>
+                        <span class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('export.pdf.account_label') }}</span>
+                        <p class="py-2 text-sm font-bold text-gray-900 dark:text-gray-100">
+                            {{ $accountId === 'all'
+                                ? __('export.pdf.all_accounts_option')
+                                : ($this->accounts->firstWhere('id', (int) $accountId)?->name ?? __('export.pdf.all_accounts_option')) }}
+                        </p>
+                    </div>
+
+                    {{-- wire:key para que el morphing no reutilice el botón al
+                         repintarse la tarjeta al cambiar de cuenta o de mes. --}}
+                    <button class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 sm:ml-auto"
+                            wire:key="export-monthly-pdf"
+                            wire:click="downloadMonthlyReport"
+                            wire:loading.attr="disabled"
+                            wire:target="downloadMonthlyReport">
+                        <i class="fa-solid fa-download" wire:loading.remove wire:target="downloadMonthlyReport"></i>
+                        <i class="fa-solid fa-spinner fa-spin" wire:loading wire:target="downloadMonthlyReport"></i>
+                        <span wire:loading.remove wire:target="downloadMonthlyReport">{{ __('export.pdf.button') }}</span>
+                        <span wire:loading wire:target="downloadMonthlyReport">{{ __('export.pdf.generating') }}</span>
+                    </button>
                 </div>
             </div>
 

@@ -11,6 +11,7 @@ final class AiResponse
         public readonly bool $truncated = false,
         public readonly bool $fromCache = false,
         public readonly ?string $error = null,
+        public readonly bool $notConfigured = false,
     ) {}
 
     public static function success(string $content): self
@@ -28,6 +29,11 @@ final class AiResponse
         return new self(ok: false, truncated: true);
     }
 
+    public static function notConfigured(): self
+    {
+        return new self(ok: false, notConfigured: true);
+    }
+
     public static function connectionError(string $message): self
     {
         return new self(ok: false, error: $message);
@@ -43,6 +49,10 @@ final class AiResponse
      */
     public function userMessage(): string
     {
+        if ($this->notConfigured) {
+            return __('ai.errors.not_configured');
+        }
+
         if ($this->truncated) {
             return __('ai.errors.truncated');
         }

@@ -122,6 +122,9 @@
                         @livewire('profile.two-factor-authentication-form')
                     @endif
 
+                    {{-- Correo semanal, idioma y huso horario (Fase 4, R1). --}}
+                    @livewire('settings.notification-preferences')
+
                     {{-- Sesiones de navegador (Opcional, si lo usas) --}}
                     <div class="mt-10 sm:mt-0">
                         @livewire('profile.logout-other-browser-sessions-form')

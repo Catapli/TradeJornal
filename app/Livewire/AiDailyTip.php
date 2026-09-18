@@ -2,23 +2,25 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\Attributes\Reactive; // Importante
 use App\Models\Trade;
-use App\Services\AiService;
+use App\Services\AiService; // Importante
 use App\WithAiLimits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Reactive;
+use Livewire\Component;
 
 class AiDailyTip extends Component
 {
     // Recibimos las cuentas del padre en tiempo real
     use WithAiLimits; // <--- 2. Usar el Trait
+
     #[Reactive]
     public $selectedAccounts = [];
 
     public $tip = null;
+
     public $isLoading = false;
 
     public function mount($selectedAccounts = [])
@@ -62,13 +64,14 @@ class AiDailyTip extends Component
         if (!$this->checkAiLimit()) {
             $this->isLoading = false;
             $this->dispatch('notify', __('labels.limit_ai_reached'));
+
             return;
         }
 
         $trades = Trade::forUserActiveAccounts()
             ->when(
                 !empty($this->selectedAccounts) && !in_array('all', $this->selectedAccounts),
-                fn($q) => $q->whereIn('account_id', $this->selectedAccounts)
+                fn ($q) => $q->whereIn('account_id', $this->selectedAccounts)
             )
             ->orderBy('exit_time', 'desc')
             ->take(20)
@@ -78,18 +81,20 @@ class AiDailyTip extends Component
         if ($trades->count() < 5) {
             $this->tip = __('labels.need_min_5_trades');
             $this->isLoading = false;
+
             return;
         }
 
         $dataStr = $trades->map(function ($t) {
-            $hour = $t->exit_time->hour;
-            $session = ($hour >= 8 && $hour < 16) ? 'LON' : (($hour >= 13 && $hour < 22) ? 'NY' : 'ASIA');
-            return "{$t->exit_time->format('d/m H:i')}|{$t->tradeAsset->name}|{$session}|" . strtoupper($t->direction) . "|PnL:{$t->pnl}";
+            return "{$t->exit_time->format('d/m H:i')}|{$t->tradeAsset->name}|" . $this->session($t->exit_time->hour)
+                . '|' . strtoupper($t->direction) . "|PnL:{$t->pnl} $";
         })->join("\n");
 
         $prompt = __('ai.daily_tip', ['datos' => $dataStr]);
 
-        $result = app(AiService::class)->complete($prompt, temperature: 0.5, maxTokens: 700);
+        // 1500 y no 700: gpt-oss razona antes de responder y esos tokens cuentan
+        // contra max_tokens, así que una respuesta de 20 palabras salía truncada.
+        $result = app(AiService::class)->complete($prompt, temperature: 0.5, maxTokens: 1500);
 
         if ($result->ok) {
             $this->tip = $result->content;
@@ -101,6 +106,22 @@ class AiDailyTip extends Component
         }
 
         $this->isLoading = false;
+    }
+
+    /**
+     * Sesión de mercado por hora (Europe/Madrid).
+     *
+     * El ternario anidado anterior mandaba 13-15h a LON porque la primera rama ganaba
+     * siempre, dejando NY reducido a 16-21h. Como el prompt pregunta explícitamente
+     * "si pierde siempre a la misma hora", la etiqueta tiene que ser correcta.
+     */
+    private function session(int $hour): string
+    {
+        return match (true) {
+            $hour >= 14 && $hour < 22 => 'NY',       // Apertura NY en adelante
+            $hour >= 8 && $hour < 14 => 'LON',      // Londres antes del solape
+            default => 'ASIA',
+        };
     }
 
     public function closeTip()

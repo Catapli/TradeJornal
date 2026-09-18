@@ -166,6 +166,20 @@ document.addEventListener("alpine:init", () => {
                 );
             },
 
+            /**
+             * ¿Hoy es un día que decidí no operar?
+             *
+             * El plan de la cuenta guarda horario y topes, pero no días, así que
+             * esta regla se comprueba desde la propia regla adoptada.
+             */
+            get isWeekdayAllowed() {
+                const hoy = new Date().getDay();
+
+                return !(this.currentAccount?.rules || []).some(
+                    (r) => r.kind === "weekday" && Number(r.config?.weekday) === hoy,
+                );
+            },
+
             get canTakeTrade() {
                 const strategyOk =
                     this.activeRules.length > 0 &&
@@ -176,7 +190,13 @@ document.addEventListener("alpine:init", () => {
                 const tradesFull = this.isMaxTradesReached;
                 const timeOk = this.isTimeValid;
 
-                return strategyOk && !limitBreached && !tradesFull && timeOk;
+                return (
+                    strategyOk &&
+                    !limitBreached &&
+                    !tradesFull &&
+                    timeOk &&
+                    this.isWeekdayAllowed
+                );
             },
 
             get tradeButtonText() {
@@ -184,6 +204,7 @@ document.addEventListener("alpine:init", () => {
                 if (this.isLimitBreached) return this.$l("bloqued_max_loss");
                 if (this.isMaxTradesReached) return this.$l("stop_not_ammo");
                 if (!this.isTimeValid) return this.$l("out_schedule");
+                if (!this.isWeekdayAllowed) return this.$l("out_schedule");
                 if (!this.allRulesChecked) return this.$l("checklist_pendint");
                 return this.$l("aproved_setup");
             },
@@ -236,14 +257,19 @@ document.addEventListener("alpine:init", () => {
 
             loadRules(savedState = []) {
                 const strat = this.currentStrategy;
-                if (strat && strat.rules) {
-                    this.activeRules = strat.rules.map((ruleText) => ({
-                        text: ruleText,
-                        checked: savedState.includes(ruleText),
-                    }));
-                } else {
-                    this.activeRules = [];
-                }
+                const deLaEstrategia = (strat && strat.rules) || [];
+
+                // Reglas adoptadas desde el Laboratorio (P7). Van al mismo
+                // checklist que las de la estrategia: para quien opera son lo
+                // mismo, una lista que repasar antes de entrar.
+                const mias = (this.currentAccount?.rules || []).map((r) => r.text);
+
+                const textos = [...new Set([...deLaEstrategia, ...mias])];
+
+                this.activeRules = textos.map((ruleText) => ({
+                    text: ruleText,
+                    checked: savedState.includes(ruleText),
+                }));
             },
 
             syncChecklist() {

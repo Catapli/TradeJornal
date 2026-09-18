@@ -455,3 +455,30 @@ it('mide el drawdown sobre equity sea cual sea el loss_type del programa', funct
 
     expect(onlyRule($account)['current_value'])->toBe(7000.0);
 });
+
+// ---------------------------------------------------------------------------
+// ETIQUETA DE FASE
+// ---------------------------------------------------------------------------
+
+it('traduce la fase en vez de caer al texto genérico', function () {
+    // `phase_number` es un `enum` de Postgres, así que Eloquent lo devuelve como
+    // string. El `match` de getPhaseLabelAttribute() compara en estricto contra
+    // enteros: sin castear, ningún brazo acertaba y todo caía al default.
+    $cuenta = accountWithObjective(['phase_number' => 1]);
+
+    expect($cuenta->phase_label)->toBe(__('labels.phase_1_evaluation'));
+});
+
+it('llama fondeada a la cuenta de fase 0, no «Fase 0»', function () {
+    // Es el caso que de verdad engañaba: una cuenta ya fondeada se anunciaba
+    // como si siguiera en una fase de evaluación numerada.
+    $cuenta = accountWithObjective(['phase_number' => 0]);
+
+    expect($cuenta->phase_label)->toBe(__('labels.account_funded'));
+});
+
+it('cae al texto genérico solo con una fase fuera del enum', function () {
+    $cuenta = accountWithObjective(['phase_number' => 3]);
+
+    expect($cuenta->phase_label)->toBe(__('labels.phase_3'));
+});

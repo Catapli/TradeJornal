@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Concerns\RequiresProAccess;
 use App\LogActions;
 use App\Models\Account;
 use App\Models\Strategy;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class SessionHistory extends Component
 {
+    use RequiresProAccess;
+
     use WithPagination;
     use LogActions;
 

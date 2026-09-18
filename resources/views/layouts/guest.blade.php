@@ -27,6 +27,8 @@
               href="{{ asset('img/favicon/logo_only.ico') }}"
               type="image/x-icon">
 
+        @include('partials.pwa-head')
+
         <!-- Fonts -->
         <link rel="preconnect"
               href="https://fonts.bunny.net">
@@ -43,6 +45,14 @@
     <body class="bg-white transition-colors duration-300 dark:bg-gray-900">
         <div class="font-sans text-gray-900 antialiased dark:text-gray-100">
             <livewire:language-manager />
+
+            {{-- El LanguageManager ya estaba montado aquí, pero sin disparador visible:
+                 en las pantallas de auth no había forma de cambiar de idioma, porque el
+                 selector vivía solo en navigation-menu (layout autenticado). --}}
+            <div class="fixed right-4 top-4 z-50">
+                <x-language-selector />
+            </div>
+
             {{ $slot }}
         </div>
 

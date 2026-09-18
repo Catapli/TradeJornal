@@ -6,7 +6,6 @@ use App\Models\Account;
 use App\Models\Trade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class TradeController extends Controller
 {
@@ -32,7 +31,7 @@ class TradeController extends Controller
                 'exit_price',
                 'entry_time',
                 'exit_time',
-                'pnl'
+                'pnl',
             ]);
 
         return datatables()->of($trades)
@@ -55,22 +54,15 @@ class TradeController extends Controller
             abort(403);
         }
 
-
         $idFilter = $request->input('accounts');
 
-        // Log::info($idFilter);
-
-
-        Log::info($idFilter);
-
-        if (empty($idFilter) || $idFilter[0] === "all") {
+        if (empty($idFilter) || $idFilter[0] === 'all') {
             $authId = Auth::user()->id;
             $idFilter = Account::where('user_id', $authId)
                 ->where('status', '!=', 'burned')
                 ->pluck('id')
                 ->toArray();
         }
-
 
         // Seleccionamos todo lo necesario
         $trades = Trade::whereIn('account_id', $idFilter)
@@ -79,7 +71,7 @@ class TradeController extends Controller
                 'id',
                 'trade_asset_id',
                 'exit_time',
-                'pnl'
+                'pnl',
             ])->limit(10);
 
         return datatables()->of($trades)

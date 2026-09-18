@@ -106,13 +106,66 @@ El tema vive en la clase `dark` del `<html>`:
 
 ---
 
+## Puesta en marcha del scheduler
+
+El resumen semanal por correo y la regeneración nocturna de la demo se declaran en
+[`routes/console.php`](routes/console.php), pero **Laravel no ejecuta nada por su
+cuenta**: hacen falta dos piezas en el servidor.
+
+**1. Cron.** Una única entrada, cada minuto. Laravel decide dentro qué toca:
+
+```cron
+* * * * * cd /ruta/al/proyecto && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**2. Worker de la cola.** `QUEUE_CONNECTION=database`, así que los correos se
+apilan en la tabla `jobs` y alguien tiene que vaciarla. Bajo systemd:
+
+```ini
+# /etc/systemd/system/tradeforge-worker.service
+[Unit]
+Description=TradeForge queue worker
+After=network.target
+
+[Service]
+User=www-data
+Restart=always
+WorkingDirectory=/ruta/al/proyecto
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`systemctl enable --now tradeforge-worker`. Después de cada despliegue,
+`php artisan queue:restart` para que el worker recoja el código nuevo.
+
+**Correo.** El resumen sale por el mailer configurado en `.env`; el driver de
+Resend ya viene incluido:
+
+```dotenv
+MAIL_MAILER=resend
+RESEND_KEY=re_xxx
+MAIL_FROM_ADDRESS=hola@tudominio.com
+```
+
+En local, `MAIL_MAILER=log` deja el correo en `storage/logs/laravel.log`, y
+`php artisan resumen:semanal --user=1 --force` lo genera sin esperar al domingo.
+
+El comando se programa **cada hora** a propósito: la cita con el usuario son las
+18:00 de *su* huso, y en cada pasada solo escribe a quien la tiene en ese momento.
+
+---
+
 ## Comandos útiles
 
 ```bash
-php artisan test           # Suite de tests (ver aviso abajo)
-./vendor/bin/pint          # Formateo PHP
-npm run build              # Build de producción
-php artisan view:clear     # Limpiar vistas compiladas
+php artisan test              # Suite de tests (ver aviso abajo)
+./vendor/bin/pint             # Formateo PHP
+npm run build                 # Build de producción
+php artisan view:clear        # Limpiar vistas compiladas
+php artisan demo:refresh      # Regenerar la demo pública
+php artisan resumen:semanal --user=1 --force --dry-run   # Ver a quién se escribiría
 ```
 
 Los tests corren contra una base de datos Postgres **dedicada** (`tradejornal_test`),

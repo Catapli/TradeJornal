@@ -34,7 +34,7 @@ return new class extends Migration
             $table->string('screenshot')->nullable();
             $table->text('ai_analysis')->nullable();
             $table->string('chart_data_path')->nullable();
-            $table->decimal("pnl_percentage", 8, 4)->nullable();
+            $table->decimal('pnl_percentage', 8, 4)->nullable();
             $table->string('position_id')->nullable();
             $table->json('executions_data')->nullable();
 
@@ -44,7 +44,6 @@ return new class extends Migration
             // MFE: Maximum Favorable Excursion (El mejor precio/ganancia máxima latente)
             $table->decimal('mfe_price', 16, 8)->nullable();
             $table->decimal('pips_traveled', 10, 2)->nullable();
-
 
             $table->index(['account_id', 'position_id']);
             $table->index('entry_time');

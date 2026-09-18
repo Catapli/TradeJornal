@@ -170,8 +170,8 @@ document.addEventListener("alpine:init", () => {
             window.dispatchEvent(
                 new CustomEvent("open-confirm-modal", {
                     detail: {
-                        title: labels.t_delete_strategy,
-                        text: labels.l_delete_strategy,
+                        title: this.$t("delete_strategy"),
+                        text: this.$l("delete_strategy"),
                         type: "red",
                         action: "deleteStrategy",
                         params: id,
@@ -187,8 +187,8 @@ document.addEventListener("alpine:init", () => {
             window.dispatchEvent(
                 new CustomEvent("open-confirm-modal", {
                     detail: {
-                        title: labels.t_clone_strategy,
-                        text: labels.l_clone_strategy,
+                        title: this.$t("clone_strategy"),
+                        text: this.$l("clone_strategy"),
                         type: "indigo",
                         action: "duplicateStrategy",
                         params: id,

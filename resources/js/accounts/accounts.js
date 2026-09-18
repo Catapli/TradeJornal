@@ -89,21 +89,38 @@ document.addEventListener("alpine:init", () => {
             window.tjToast(message, type);
         },
 
-        // 1. ABRIR MODAL
-        confirmDeleteAccount(id) {
-            // this.accountToDeleteId = id;
+        // 1. ABRIR MODAL — archivar (reversible)
+        //
+        // El texto llega compuesto desde Blade porque lleva el número de
+        // operaciones y el helper `$l` no sustituye parámetros. Si no viene,
+        // se cae al literal traducido del JSON, que dice lo mismo sin cifra.
+        confirmArchiveAccount(id, text, title) {
             window.dispatchEvent(
                 new CustomEvent("open-confirm-modal", {
                     detail: {
-                        title: this.$t("delete_account"),
-                        text: this.$l("lost_history_account"),
-                        type: "red",
+                        title,
+                        text: text ?? this.$l("lost_history_account"),
+                        type: "warning",
                         action: "deleteAccount",
                         params: id,
                     },
                 }),
             );
-            // this.showDeleteModal = true;
+        },
+
+        // 1.b ABRIR MODAL — borrado definitivo (con el cascade detrás)
+        confirmDeleteAccountPermanently(id, text, title) {
+            window.dispatchEvent(
+                new CustomEvent("open-confirm-modal", {
+                    detail: {
+                        title,
+                        text: text ?? this.$l("lost_history_account"),
+                        type: "red",
+                        action: "deleteAccountPermanently",
+                        params: id,
+                    },
+                }),
+            );
         },
 
         // 2. EJECUTAR BORRADO (Llamado desde el botón rojo del modal)

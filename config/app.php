@@ -86,6 +86,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Idiomas soportados
+    |--------------------------------------------------------------------------
+    |
+    | Lista blanca de los idiomas que la interfaz tiene traducidos. El selector
+    | y `users.locale` se validan contra ella: sin esto, un idioma inventado
+    | acabaría guardado y el correo semanal saldría con las claves sin traducir.
+    |
+    */
+
+    'supported_locales' => ['es', 'en'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

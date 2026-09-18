@@ -42,7 +42,7 @@
         "lossers": "Losers",
         "acumulative_pnl": "Cumulative PnL",
         "order_active": "Order / Asset",
-        "lost_history_account": "Are you sure you want to delete this account? All trade history will be lost.",
+        "lost_history_account": "The account is archived along with all its trades: it disappears from your dashboards, but nothing is deleted and you can restore it whenever you want.",
         "delete_strategy": "This action cannot be undone. All statistics will be deleted.",
         "clone_strategy": "An identical copy will be created with no trade history.",
         "january": "January",

@@ -2,20 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
 
 class Trade extends Model
 {
-
     /** @use HasFactory<\Database\Factories\TradeFactory> */
     use HasFactory;
 
     protected $guarded = ['id'];
-
-
 
     protected $casts = [
         'entry_price' => 'decimal:5',
@@ -53,6 +51,7 @@ class Trade extends Model
         });
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
@@ -68,9 +67,9 @@ class Trade extends Model
         return $this->belongsTo(Strategy::class);
     }
 
-    public function mistakes()
+    /** @return BelongsToMany<Mistake, $this> */
+    public function mistakes(): BelongsToMany
     {
-        // Asumiendo que ya creaste el modelo Mistake y la tabla pivote trade_mistake
-        return $this->belongsToMany(\App\Models\Mistake::class, 'trade_mistake');
+        return $this->belongsToMany(Mistake::class, 'trade_mistake');
     }
 }

@@ -54,8 +54,17 @@
         </div>
 
         <div class="flex items-center gap-3">
+            {{-- Importar salió del carril lateral: su sitio es aquí, junto a las
+                 operaciones que va a rellenar. El atajo «I» sigue funcionando. --}}
+            <x-page-link :href="route('trades.import')"
+                         icon="fa-solid fa-file-import"
+                         :label="__('menu.go_import')" />
+
             {{-- BOTÓN NUEVA OPERACIÓN --}}
+            {{-- data-shortcut-new: lo pulsa la tecla N (resources/js/core/shortcuts.js). --}}
             <button class="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
+                    data-shortcut-new
+                    title="{{ __('labels.shortcut_new') }}"
                     @click="openFormCreate">
                 <i class="fa-solid fa-plus"></i> {{ __('labels.new') }}
             </button>
@@ -63,8 +72,10 @@
             <div class="relative">
                 <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
                 <input class="rounded-lg border-gray-300 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                       data-shortcut-search
                        wire:model.live.debounce.400ms="search"
                        type="text"
+                       title="{{ __('labels.shortcut_search') }}"
                        placeholder="{{ __('labels.placeholder_search_ticket') }}">
             </div>
 
@@ -72,6 +83,19 @@
                     :class="{ 'ring-2 ring-indigo-500 border-indigo-500 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-400': showFilters, 'bg-white dark:bg-gray-800': !showFilters }"
                     @click="toggleFilters">
                 <i class="fa-solid fa-filter"></i> {{ __('labels.filters') }}
+            </button>
+
+            {{-- Exportar lo que hay en pantalla. El wire:key evita que el morphing
+                 de Livewire reutilice este botón al repintar la barra. --}}
+            <button class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                    wire:key="export-csv"
+                    wire:click="exportCsv"
+                    wire:loading.attr="disabled"
+                    wire:target="exportCsv"
+                    title="{{ __('export.csv.hint') }}">
+                <i class="fa-solid fa-file-csv" wire:loading.remove wire:target="exportCsv"></i>
+                <i class="fa-solid fa-spinner fa-spin" wire:loading wire:target="exportCsv"></i>
+                {{ __('export.csv.button') }}
             </button>
         </div>
     </div>
@@ -92,7 +116,7 @@
                     @endforeach
                 </select>
             </div>
-            @if (Auth::user()->subscribed('default'))
+            @if (Auth::user()->hasProAccess())
                 <div>
                     <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.strategy') }}</label>
                     <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
@@ -111,7 +135,7 @@
                         wire:model.live="filters.mistake_id">
                     <option value="">{{ __('labels.anyone') }}</option>
                     @foreach ($mistakesList as $m)
-                        <option value="{{ $m->id }}">⚠️ {{ $m->name }}</option>
+                        <option value="{{ $m->id }}">⚠️ {{ $m->display_name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -279,8 +303,8 @@
                                         <div class="flex flex-wrap justify-center gap-1">
                                             @foreach ($trade->mistakes as $mistake)
                                                 <span class="rounded border border-rose-200 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400"
-                                                      title="{{ $mistake->name }}">
-                                                    ⚠️ {{ Str::limit($mistake->name, 12) }}
+                                                      title="{{ $mistake->display_description ?: $mistake->display_name }}">
+                                                    ⚠️ {{ Str::limit($mistake->display_name, 12) }}
                                                 </span>
                                             @endforeach
                                         </div>
@@ -342,9 +366,33 @@
                             </td>
                         </tr>
                     @empty
+                        {{-- Dos vacíos distintos: sin operaciones todavía (pide
+                             importador) o sin resultados con estos filtros (pide
+                             quitarlos). Antes ambos decían lo mismo, sin salida. --}}
                         <tr>
-                            <td class="py-12 text-center text-gray-500 dark:text-gray-400"
-                                colspan="8">{{ __('labels.not_operations_with_filters') }}</td>
+                            <td colspan="8">
+                                @if ($this->hasAnyTrades)
+                                    <x-empty-state icon="fa-filter-circle-xmark"
+                                                   :title="__('labels.empty_trades_filtered_title')"
+                                                   :text="__('labels.empty_trades_filtered_text')">
+                                        <button class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700"
+                                                type="button"
+                                                wire:click="resetFilters">{{ __('labels.clean_filters') }}</button>
+                                    </x-empty-state>
+                                @else
+                                    <x-empty-state icon="fa-list-check"
+                                                   :title="__('labels.empty_trades_title')"
+                                                   :text="__('labels.empty_trades_text')">
+                                        <a class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700"
+                                           href="{{ route('trades.import') }}">
+                                            <i class="fa-solid fa-file-import mr-1"></i>{{ __('import.menu') }}
+                                        </a>
+                                        <button class="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                                                type="button"
+                                                wire:click="create">{{ __('labels.new_trade') }}</button>
+                                    </x-empty-state>
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -396,7 +444,7 @@
              @click.away="closeBulkModal">
             <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-gray-100">{{ __('labels.bulk_edit') }}</h3>
 
-            @if (Auth::user()->subscribed('default'))
+            @if (Auth::user()->hasProAccess())
                 <div class="mb-4">
                     <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.strategy') }}</label>
                     <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
@@ -419,7 +467,8 @@
                                    type="checkbox"
                                    wire:model.blur="bulkMistakes"
                                    value="{{ $mistake->id }}">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ $mistake->name }}</span>
+                            <span class="text-sm text-gray-700 dark:text-gray-300"
+                                  title="{{ $mistake->display_description }}">{{ $mistake->display_name }}</span>
                         </label>
                     @endforeach
                 </div>
@@ -595,7 +644,8 @@
                                placeholder="{{ __('labels.optional') }}">
                     </div>
 
-                    @if (Auth::user()->subscribed('default'))
+
+                    @if (Auth::user()->hasProAccess())
                         <div class="md:col-span-2">
                             <label class="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">{{ __('labels.used_strategy') }}</label>
                             <select class="w-full rounded-md border-gray-300 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"

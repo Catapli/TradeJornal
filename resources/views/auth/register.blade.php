@@ -10,18 +10,18 @@
                          (brightness-0 invert), igual que el de la columna derecha de
                          login.blade.php — el wordmark completo invertido salía ilegible
                          a este tamaño, el icono sí funciona en blanco. --}}
-                    <img class="h-auto max-h-20 w-auto object-contain dark:hidden"
+                    <img class="h-auto max-h-32 w-auto object-contain dark:hidden"
                          src="{{ asset('img/logo_trader_h.webp') }}"
                          alt="TradeForge">
-                    <img class="hidden h-auto max-h-20 w-auto object-contain brightness-0 invert dark:block"
+                    <img class="hidden h-auto max-h-32 w-auto object-contain brightness-0 invert dark:block"
                          src="{{ asset('img/logo_o.webp') }}"
                          alt="TradeForge">
                 </a>
             </div>
 
             <div class="w-full">
-                <h2 class="mt-4 text-3xl font-black text-gray-900 dark:text-gray-100">Crea tu cuenta</h2>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Empieza a registrar tus operaciones hoy mismo.</p>
+                <h2 class="mt-4 text-3xl font-black text-gray-900 dark:text-gray-100">{{ __('labels.auth_register_title') }}</h2>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('labels.auth_register_subtitle') }}</p>
             </div>
 
             <div class="mt-8">
@@ -36,7 +36,7 @@
                     <!-- Nombre -->
                     <div>
                         <x-label for="name"
-                                 value="{{ __('Nombre Completo') }}" />
+                                 value="{{ __('labels.auth_name') }}" />
                         <x-input id="name"
                                  name="name"
                                  class="mt-1 block w-full py-3"
@@ -51,7 +51,7 @@
                     <!-- Email -->
                     <div>
                         <x-label for="email"
-                                 value="{{ __('Correo Electrónico') }}" />
+                                 value="{{ __('labels.auth_email') }}" />
                         <x-input id="email"
                                  name="email"
                                  class="mt-1 block w-full py-3"
@@ -59,13 +59,13 @@
                                  :value="old('email')"
                                  required
                                  autocomplete="username"
-                                 placeholder="ejemplo@tradeforge.com" />
+                                 placeholder="{{ __('labels.auth_email_placeholder') }}" />
                     </div>
 
                     <!-- Contraseña -->
                     <div>
                         <x-label for="password"
-                                 value="{{ __('Contraseña') }}" />
+                                 value="{{ __('labels.auth_password') }}" />
                         <div class="relative mt-1">
                             <input id="password"
                                    name="password"
@@ -73,7 +73,7 @@
                                    :type="showPassword ? 'text' : 'password'"
                                    required
                                    autocomplete="new-password"
-                                   placeholder="Mínimo 8 caracteres" />
+                                   placeholder="{{ __('labels.auth_password_placeholder') }}" />
                             <button class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none dark:text-gray-500 dark:hover:text-gray-300"
                                     type="button"
                                     @click="showPassword = !showPassword">
@@ -86,7 +86,7 @@
                     <!-- Confirmar Contraseña -->
                     <div>
                         <x-label for="password_confirmation"
-                                 value="{{ __('Confirmar Contraseña') }}" />
+                                 value="{{ __('labels.auth_password_confirmation') }}" />
                         <div class="relative mt-1">
                             <input id="password_confirmation"
                                    name="password_confirmation"
@@ -112,9 +112,9 @@
                                                 name="terms"
                                                 required />
                                     <div class="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                                        {!! __('Acepto los :terms_of_service y la :privacy_policy', [
-                                            'terms_of_service' => '<a target="_blank" href="' . route('terms.show') . '" class="underline text-sm text-indigo-600 hover:text-indigo-900">' . __('Términos') . '</a>',
-                                            'privacy_policy' => '<a target="_blank" href="' . route('policy.show') . '" class="underline text-sm text-indigo-600 hover:text-indigo-900">' . __('Política de Privacidad') . '</a>',
+                                        {!! __('labels.auth_accept_terms', [
+                                            'terms_of_service' => '<a target="_blank" href="' . route('terms.show') . '" class="underline text-sm text-indigo-600 hover:text-indigo-900">' . __('labels.auth_terms') . '</a>',
+                                            'privacy_policy' => '<a target="_blank" href="' . route('policy.show') . '" class="underline text-sm text-indigo-600 hover:text-indigo-900">' . __('labels.auth_privacy_policy') . '</a>',
                                         ]) !!}
                                     </div>
                                 </div>
@@ -126,7 +126,7 @@
                     <div class="pt-2">
                         <button class="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                 type="submit">
-                            {{ __('Crear Cuenta') }}
+                            {{ __('labels.auth_register_button') }}
                         </button>
                     </div>
                 </form>
@@ -137,7 +137,7 @@
                         <div class="w-full border-t border-gray-300 dark:border-gray-700"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="bg-white px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">O regístrate con</span>
+                        <span class="bg-white px-2 text-gray-500 dark:bg-gray-900 dark:text-gray-400">{{ __('labels.auth_register_with') }}</span>
                     </div>
                 </div>
 
@@ -151,10 +151,10 @@
                 </a>
 
                 <p class="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-                    ¿Ya tienes cuenta?
+                    {{ __('labels.auth_already_account') }}
                     <a class="font-bold text-indigo-600 hover:text-indigo-500"
                        href="{{ route('login') }}">
-                        Inicia Sesión
+                        {{ __('labels.auth_go_to_login') }}
                     </a>
                 </p>
             </div>
@@ -168,16 +168,16 @@
             <div class="absolute inset-0 bg-gradient-to-t from-indigo-900/80 via-gray-900/40"></div>
 
             <div class="absolute bottom-0 left-0 p-20 text-white">
-                <h2 class="text-4xl font-bold leading-tight">Tu viaje hacia la<br>rentabilidad empieza aquí.</h2>
+                <h2 class="text-4xl font-bold leading-tight">{{ __('labels.auth_register_claim_title') }}</h2>
                 <ul class="mt-6 space-y-4 text-gray-300 dark:text-gray-600">
                     <li class="flex items-center gap-3">
-                        <i class="fa-solid fa-check-circle text-emerald-400"></i> Sincronización automática MT4/MT5
+                        <i class="fa-solid fa-check-circle text-emerald-400"></i> {{ __('labels.auth_register_claim_sync') }}
                     </li>
                     <li class="flex items-center gap-3">
-                        <i class="fa-solid fa-check-circle text-emerald-400"></i> Análisis con Inteligencia Artificial
+                        <i class="fa-solid fa-check-circle text-emerald-400"></i> {{ __('labels.auth_register_claim_ai') }}
                     </li>
                     <li class="flex items-center gap-3">
-                        <i class="fa-solid fa-check-circle text-emerald-400"></i> Diario de Trading profesional
+                        <i class="fa-solid fa-check-circle text-emerald-400"></i> {{ __('labels.auth_register_claim_journal') }}
                     </li>
                 </ul>
             </div>

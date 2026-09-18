@@ -5,7 +5,7 @@
         </x-slot>
 
         <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            {{ __('¿Has olvidado tu contraseña? No hay problema. Indícanos tu correo electrónico y te enviaremos un enlace para restablecerla.') }}
+            {{ __('labels.auth_forgot_intro') }}
         </div>
 
         @session('status')
@@ -20,13 +20,13 @@
             @csrf
 
             <div class="block">
-                <x-label for="email" value="{{ __('Correo Electrónico') }}" />
+                <x-label for="email" value="{{ __('labels.auth_email') }}" />
                 <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
             </div>
 
             <div class="flex items-center justify-end mt-4">
                 <x-button>
-                    {{ __('Enviar Enlace de Restablecimiento') }}
+                    {{ __('labels.auth_send_reset_link') }}
                 </x-button>
             </div>
         </form>

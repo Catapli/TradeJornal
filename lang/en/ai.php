@@ -3,6 +3,17 @@
 declare(strict_types=1);
 
 return [
+    // System role: small models honour hard rules far better here than buried at the
+    // end of a long user prompt.
+    'system' => 'You are a professional trading auditor: strict and objective. '
+        . 'You work ONLY with the data you are given: you never receive images or charts, '
+        . 'so never mention screenshots nor lament their absence. '
+        . 'The metrics you receive are ALREADY computed: quote them verbatim and never redo '
+        . 'any arithmetic with prices, pips or ratios. '
+        . 'If a data point is missing, say so in one sentence and do not speculate. '
+        . 'Write no introductions, greetings or dramatic phrases: start directly with the first point '
+        . 'and follow the requested response format to the letter. ALWAYS respond in Spanish.',
+
     'audit_prompt' => "
         Perform a technical and psychological audit of this trading operation.
         Be strict, objective and professional.
@@ -11,15 +22,24 @@ return [
         :context
         
         ANALYSIS INSTRUCTIONS (Use these criteria):
-        1. STRUCTURE ANALYSIS (Visual):
-           - If there is an image: Does the entry respect Support/Resistance, Order Blocks or Trend?
-           - Was it a precise entry ('Sniper') or price chasing (FOMO)?
+        1. STRUCTURE ANALYSIS (Pre-entry chart data):
+           - Position within range: a LONG near 0% buys support; near 100% it chases the top. Inverted for SHORT.
+           - Distance to the extremes: was there room left to the opposite extreme, or was there no space?
+           - EMA side: is the entry with or against the trend?
+           - Entry candle ratio: >1.5 means entering on an already extended impulse (FOMO); ~1 means a calm ('Sniper') entry.
+           - If the structure block reports no data, say so in one sentence and do NOT speculate about the chart.
         2. EXECUTION EFFICIENCY (MAE/MFE Data):
            - MAE vs PnL: Did it hold too much drawdown to gain little? (Inverted Risk/Reward).
            - MFE vs Exit: Did it leave a lot of money on the table out of fear (premature close)?
         3. IMPLIED PSYCHOLOGY:
            - Based on duration and result: Planned or Impulsive?
 
+        DATA RULES (MANDATORY):
+        - You receive NO image. Do not mention screenshots or lament their absence: analyse using the structure data.
+        - The structure and efficiency metrics are ALREADY computed. Quote them verbatim.
+        - If the TRADER PROFILE block carries recurring mistakes or a goal for the month, relate THIS trade to them in a single sentence inside the verdict. If it says there is not enough history, do not mention it.
+        - Do NOT recompute pips, do NOT subtract prices, do NOT convert points or derive the R:R yourself.
+        - PnL is in dollars; entry/exit prices are NOT comparable with it.
 
         FORMAT RULES:
         - Do NOT write introductions, greetings or dramatic phrases.
@@ -106,7 +126,6 @@ REQUIRED RESPONSE FORMAT (Use these icons):
     '🛑 Your obsession with trading the New York open is costing you; wait 30 minutes before entering.' (Prioritise timing)
 ",
 
-
     'backtest_prompt' => "
         Act as a quantitative trading analyst. Audit this backtesting strategy using its real metrics.
         Be strict, objective and professional.
@@ -141,8 +160,45 @@ REQUIRED RESPONSE FORMAT (Use these icons):
         'exit' => 'Exit',
         'result' => 'Result',
         'duration' => 'Duration',
+        'structure' => 'Pre-entry structure',
+        'prior_range' => 'Range of the last :count candles',
+        'entry_position' => 'Entry position within range (0%=low, 100%=high)',
+        'distance_to_low' => 'Distance to range low',
+        'distance_to_high' => 'Distance to range high',
+        'ema_context' => 'EMA at entry: :value (price :side)',
+        'above' => 'above',
+        'below' => 'below',
+        'entry_candle' => 'Candle before entry: :range vs average :avg (ratio :ratio)',
         'efficiency' => 'Efficiency',
+        'mae' => 'MAE (max latent drawdown)',
+        'mfe' => 'MFE (max latent favorable move)',
+        'captured' => 'Captured move',
+        'exit_efficiency' => 'Exit efficiency',
+        'real_rr' => 'Actual R:R',
+        'no_latent_risk' => 'no latent risk',
+        'bt_strategy' => 'Strategy',
+        'bt_direction' => 'Direction',
+        'bt_rules' => 'Setup rules',
+        'bt_undefined' => 'undefined',
+        'bt_total_pnl' => 'Total PnL',
+        'bt_streaks' => 'Streaks',
+        'bt_rules_followed' => 'Rules followed',
+        'bt_rules_broken' => 'Rules broken',
+        'bt_by_session' => 'By session (labels/pnl/wr/counts)',
+        'bt_by_weekday' => 'By weekday',
+        'bt_by_rating' => 'By setup quality (1-5)',
+        'bt_top_confluences' => 'Top confluences',
+        'bt_discipline' => 'Discipline',
+        'bt_rules_kept' => 'rules followed',
+        'bt_aplus' => 'A+ setups',
         'future' => 'POST-CLOSE ANALYSIS',
+        'profile' => 'TRADER PROFILE (recent months)',
+        'profile_none' => 'not enough history',
+        'profile_mistake' => ':name (:count times, :trend)',
+        'profile_goal' => 'Goal for this month: go from :baseline down to :target with ":name". Currently at :so_far.',
+        'trend_down' => 'improving',
+        'trend_up' => 'getting worse',
+        'trend_flat' => 'unchanged',
         'mood' => 'Initial mood',
         'total_result' => 'Total result',
         'total_ops' => 'Total trades',
