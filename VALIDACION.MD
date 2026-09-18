@@ -425,11 +425,12 @@ tests no lo ven: hay que mirarlo)*
 - [ ] **Es por navegador, no por cuenta.** Ábrelo en otro navegador o en una
       ventana privada: salen desplegadas. Es a propósito —es una preferencia de
       vista, no un dato tuyo—, pero conviene que lo sepas.
-- [ ] **Descartar sigue funcionando.** «Ya lo tengo» en la guía la quita del todo
-      y no vuelve al recargar.
+- [ ] **Ya no hay «Ocultar la guía».** Se retiró: el bloque se pliega entero y
+      la guía se va sola al completar los tres pasos, así que un cierre
+      definitivo que no se podía deshacer sobraba.
 - [ ] **El bloque desaparece entero cuando ya no hay tarjetas.** Completa los
-      tres pasos (o descarta la guía con el ritual hecho): no debe quedar ni la
-      barra ni un hueco encima de los números.
+      tres pasos (cuenta, operaciones y un objetivo): no debe quedar ni la barra
+      ni un hueco encima de los números.
 - [ ] **La autopsia de la cuenta quemada se queda fuera del bloque** y no se
       pliega con él. Solo se ve si acabas de quemar una cuenta.
 - [ ] **Al aplicar el filtro de cuentas se nota.** `/dashboard` → abre el

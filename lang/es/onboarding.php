@@ -6,6 +6,9 @@ return [
     'title' => 'Pon TradeForge en marcha',
     'subtitle' => 'Tres pasos y tienes el panel funcionando con tus datos.',
     'progress' => ':done de :total',
+    // El botón se retiró el 2026-09-18 (el bloque entero se pliega). La clave
+    // se conserva porque es el canario del test de regresión: si alguien vuelve
+    // a pintar este texto en la guía, el test lo canta.
     'dismiss' => 'Ocultar la guía',
 
     'steps' => [

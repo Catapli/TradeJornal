@@ -19,20 +19,17 @@
                     <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('onboarding.subtitle') }}</p>
                 </div>
 
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <div class="h-2 w-28 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div class="h-full rounded-full bg-indigo-600 transition-all duration-500"
-                                 style="width: {{ $total > 0 ? round($completed / $total * 100) : 0 }}%"></div>
-                        </div>
-                        <span class="text-xs font-bold tabular-nums text-gray-500 dark:text-gray-400">
-                            {{ __('onboarding.progress', ['done' => $completed, 'total' => $total]) }}
-                        </span>
+                {{-- Sin botón de ocultar: la guía se pliega con el bloque entero y
+                     se retira sola al completarse. Un cierre definitivo que no se
+                     puede deshacer sobra cuando plegar ya resuelve el estorbo. --}}
+                <div class="flex items-center gap-2">
+                    <div class="h-2 w-28 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                        <div class="h-full rounded-full bg-indigo-600 transition-all duration-500"
+                             style="width: {{ $total > 0 ? round($completed / $total * 100) : 0 }}%"></div>
                     </div>
-
-                    <button class="text-xs font-semibold text-gray-400 underline transition hover:text-gray-600 dark:hover:text-gray-200"
-                            type="button"
-                            wire:click="dismiss">{{ __('onboarding.dismiss') }}</button>
+                    <span class="text-xs font-bold tabular-nums text-gray-500 dark:text-gray-400">
+                        {{ __('onboarding.progress', ['done' => $completed, 'total' => $total]) }}
+                    </span>
                 </div>
             </div>
 

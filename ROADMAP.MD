@@ -755,6 +755,11 @@ pasos todavía tiene trabajo pendiente—. Se pueden **plegar**.
   almacenamiento bloqueado el getter lanza.
 - **La autopsia de la cuenta quemada se queda fuera del bloque**: no es puesta
   en marcha, aparece una sola vez y se cierra sola.
+- **Fuera «Ocultar la guía»** (decisión de Jordi al probarlo): con el bloque
+  plegable, un cierre definitivo que además no se podía deshacer sobraba. La
+  guía se retira sola al completar los tres pasos. `onboarding_dismissed_at` se
+  sigue **leyendo** para no resucitarle la guía a quien la cerró cuando el botón
+  existía, pero ya no hay forma de escribirla.
 - **Aviso al aplicar el filtro de cuentas.** Pulsar «Aplicar» iba al servidor sin
   que nada lo dijera. Ahora el botón pasa a «Aplicando…» y el selector a
   «Actualizando datos…» durante exactamente lo que dura la petición (`$refresh()`

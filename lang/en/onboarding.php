@@ -6,6 +6,7 @@ return [
     'title' => 'Get TradeForge running',
     'subtitle' => 'Three steps and your dashboard is working on your own data.',
     'progress' => ':done of :total',
+    // Retirado de la interfaz el 2026-09-18; se conserva como canario del test.
     'dismiss' => 'Hide this guide',
 
     'steps' => [

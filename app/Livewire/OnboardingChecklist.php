@@ -8,7 +8,6 @@ use App\Models\Account;
 use App\Models\Trade;
 use App\Models\TradingObjective;
 use App\Models\TradingPlan;
-use App\Support\Demo;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -26,24 +25,20 @@ class OnboardingChecklist extends Component
     /** @var array<string, bool> */
     public array $done = [];
 
+    /**
+     * Ya no se puede ocultar la guía desde la pantalla.
+     *
+     * El botón se retiró el 2026-09-18: el bloque entero se pliega, así que un
+     * cierre definitivo —que además no se podía deshacer— sobraba. La marca se
+     * sigue leyendo para **no resucitarle la guía** a quien la ocultó cuando el
+     * botón existía; lo que ya no hay es forma nueva de escribirla.
+     */
     public bool $dismissed = false;
 
     public function mount(): void
     {
         $this->dismissed = Auth::user()?->onboarding_dismissed_at !== null;
         $this->refreshSteps();
-    }
-
-    public function dismiss(): void
-    {
-        if (Demo::active()) {
-            $this->dismissed = true;
-
-            return;
-        }
-
-        Auth::user()->forceFill(['onboarding_dismissed_at' => now()])->save();
-        $this->dismissed = true;
     }
 
     public function completed(): int

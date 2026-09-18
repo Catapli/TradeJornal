@@ -43,18 +43,25 @@ it('no da por hecho ningún paso con solo la cuenta de ejemplo', function () {
         ->assertSet('done.trades', false);
 });
 
-it('recuerda que el usuario cerró la guía', function () {
+it('no resucita la guía a quien la ocultó cuando aún se podía', function () {
+    // El botón de ocultar se retiró: la guía se pliega con el bloque entero y se
+    // va sola al completarse. Pero quien la cerró en su día no tiene por qué
+    // volver a encontrársela, así que la marca se sigue respetando.
+    $user = User::factory()->create(['onboarding_dismissed_at' => now()]);
+
+    Livewire::actingAs($user)
+        ->test(OnboardingChecklist::class)
+        ->assertSet('dismissed', true)
+        ->assertDontSee(__('onboarding.title'));
+});
+
+it('ya no ofrece ocultar la guía', function () {
+    // Un cierre definitivo que no se puede deshacer sobra cuando plegar el
+    // bloque resuelve el estorbo.
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
         ->test(OnboardingChecklist::class)
-        ->call('dismiss')
-        ->assertSet('dismissed', true)
-        ->assertDontSee(__('onboarding.title'));
-
-    expect($user->fresh()->onboarding_dismissed_at)->not->toBeNull();
-
-    Livewire::actingAs($user->fresh())
-        ->test(OnboardingChecklist::class)
-        ->assertSet('dismissed', true);
+        ->assertSee(__('onboarding.title'))
+        ->assertDontSee(__('onboarding.dismiss'));
 });
